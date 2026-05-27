@@ -284,10 +284,10 @@ packages:
     dependency: "direct main"
     description:
       name: overlayer_ui_flutter
-      sha256: "9dab27a1955180f154e2fc0f9fb8f1d260fa92bce7c7ada3e258758eb2f6c91e"
+      sha256: e0c28170ced89973b96f8c582877426a8a6986fe50fc2f3de6564b317d79d60e
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.0.1"
   package_config:
     dependency: transitive
     description:

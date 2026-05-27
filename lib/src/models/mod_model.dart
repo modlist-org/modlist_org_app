@@ -33,6 +33,7 @@ class ModVersion {
   final bool isApproved;
   final bool isBeta;
   final String createdAt;
+  final String? gameVersion;
 
   ModVersion({
     required this.version,
@@ -41,6 +42,7 @@ class ModVersion {
     required this.isApproved,
     this.isBeta = false,
     required this.createdAt,
+    this.gameVersion,
   });
 
   factory ModVersion.fromJson(Map<String, dynamic> json) {
@@ -51,6 +53,7 @@ class ModVersion {
       isApproved: json['isApproved'] ?? false,
       isBeta: json['isBeta'] ?? false,
       createdAt: json['createdAt'] ?? '',
+      gameVersion: json['gameVersion'],
     );
   }
 }
@@ -71,6 +74,8 @@ class ModItem {
   final List<ModVersion> versions;
   final ModVersion? latestVersion;
   final ModVersion? latestBetaVersion;
+  final String? sourceUrl;
+  final String? communityUrl;
 
   ModItem({
     required this.id,
@@ -88,6 +93,8 @@ class ModItem {
     required this.versions,
     this.latestVersion,
     this.latestBetaVersion,
+    this.sourceUrl,
+    this.communityUrl,
   });
 
   ModItem copyWith({
@@ -110,6 +117,8 @@ class ModItem {
       versions: versions,
       latestVersion: latestVersion ?? this.latestVersion,
       latestBetaVersion: latestBetaVersion ?? this.latestBetaVersion,
+      sourceUrl: sourceUrl,
+      communityUrl: communityUrl,
     );
   }
 
@@ -153,6 +162,8 @@ class ModItem {
       latestBetaVersion: json['latestBetaVersion'] != null
           ? ModVersion.fromJson(json['latestBetaVersion'])
           : null,
+      sourceUrl: json['sourceUrl'],
+      communityUrl: json['communityUrl'],
     );
   }
 }

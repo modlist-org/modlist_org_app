@@ -373,6 +373,15 @@ class _InstalledTabState extends State<InstalledTab> {
                                             fontWeight: hasUpdate ? FontWeight.bold : FontWeight.normal,
                                           ),
                                         ),
+                                        if (onlineMod.latestVersion?.gameVersion != null) ...[
+                                          const SizedBox(width: 12.0),
+                                          Text(
+                                            widget.state.t('installed_game_ver_prefix', args: {
+                                              'version': onlineMod.latestVersion!.gameVersion!
+                                            }),
+                                            style: const TextStyle(color: Colors.white38, fontSize: 12.0),
+                                          ),
+                                        ],
                                       ],
                                     ],
                                   ),

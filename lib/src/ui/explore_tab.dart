@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:convert';
+import 'dart:io';
 import '../core/installer_state.dart';
 import '../models/mod_model.dart';
+
+const String _githubSvg = '''
+<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+  <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/>
+</svg>
+''';
+
+const String _discordSvg = '''
+<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+  <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.094 13.094 0 01-1.873-.894.077.077 0 01-.008-.128c.126-.093.252-.19.372-.287a.075.075 0 01.077-.011c3.92 1.793 8.18 1.793 12.061 0a.073.073 0 01.078.009c.12.099.246.195.373.289a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.894.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.156 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.156-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.156 2.418z"/>
+</svg>
+''';
+
+Future<void> _launchUrl(String url) async {
+  try {
+    if (Platform.isWindows) {
+      await Process.run('start', [url], runInShell: true);
+    } else if (Platform.isMacOS) {
+      await Process.run('open', [url]);
+    } else if (Platform.isLinux) {
+      await Process.run('xdg-open', [url]);
+    }
+  } catch (_) {}
+}
 
 String _getImageUrl(String? path, String baseUrl) {
   if (path == null || path.isEmpty) return '';
@@ -278,19 +304,23 @@ class _ExploreTabState extends State<ExploreTab> {
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: widget.state.t('explore_search_placeholder'),
-                  hintStyle: const TextStyle(color: Colors.white24),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 14.0),
+                  suffixIcon: const Icon(Icons.search, color: Colors.white30, size: 20.0),
                   filled: true,
-                  fillColor: const Color(0xFF1E1C28),
+                  fillColor: const Color(0xFF3C3A4B),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.04)),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
-                    borderSide: const BorderSide(color: Color(0xFF919AFF)),
+                    borderSide: const BorderSide(color: Color(0xFF919AFF), width: 1.5),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
                 ),
               ),
             ],
@@ -315,18 +345,25 @@ class _ExploreTabState extends State<ExploreTab> {
                   : Column(
                       children: [
                         Expanded(
-                          child: GridView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 2.1,
-                              crossAxisSpacing: 16.0,
-                              mainAxisSpacing: 16.0,
-                            ),
-                            itemCount: _mods.length,
-                            itemBuilder: (context, index) {
-                              final mod = _mods[index];
-                              return _buildModCard(mod);
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final double width = constraints.maxWidth;
+                              final int crossAxisCount = width > 1350 ? 3 : 2;
+                              final double childAspectRatio = width > 1350 ? 1.7 : (width > 900 ? 2.15 : 1.9);
+                              return GridView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  childAspectRatio: childAspectRatio,
+                                  crossAxisSpacing: 16.0,
+                                  mainAxisSpacing: 16.0,
+                                ),
+                                itemCount: _mods.length,
+                                itemBuilder: (context, index) {
+                                  final mod = _mods[index];
+                                  return _buildModCard(mod);
+                                },
+                              );
                             },
                           ),
                         ),
@@ -340,17 +377,32 @@ class _ExploreTabState extends State<ExploreTab> {
   }
 
   Widget _buildModCard(ModItem mod) {
-    final isInstalled = widget.state.installedMods.any((m) {
-      return m.slug.toLowerCase() == mod.slug.toLowerCase() || isModMatched(m.slug, mod.slug);
-    });
-    final localMod = isInstalled
-        ? widget.state.installedMods.firstWhere((m) {
-            return m.slug.toLowerCase() == mod.slug.toLowerCase() || isModMatched(m.slug, mod.slug);
-          })
-        : null;
-    final hasUpdate = localMod != null &&
-        mod.latestVersion != null &&
-        localMod.version != mod.latestVersion!.version;
+    // Authors list
+    final List<Author> authors = [];
+    if (mod.author != null) {
+      authors.add(mod.author!);
+    }
+    authors.addAll(mod.collaborators);
+    final List<String> names = [];
+    if (mod.author != null) {
+      names.add(mod.author!.displayName);
+    }
+    if (mod.collaborators.isNotEmpty) {
+      final displayed = mod.collaborators.take(2);
+      for (final collab in displayed) {
+        names.add(collab.displayName);
+      }
+    }
+    String authorNamesStr = names.join(', ');
+    if (mod.collaborators.length > 2) {
+      authorNamesStr += widget.state.locale == 'ko' ? ' 외' : ' and more';
+    }
+    final String authorNames = authorNamesStr;
+    final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
+
+    final String gameLabel = mod.game.toLowerCase() == 'adofai'
+        ? (widget.state.locale == 'ko' ? '얼불춤 (ADOFAI)' : 'ADOFAI')
+        : mod.game.toUpperCase();
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -369,14 +421,14 @@ class _ExploreTabState extends State<ExploreTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Top: Logo and Title info
+              // 1. Logo and Title/Summary info (Row)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Logo
                   Container(
-                    width: 50.0,
-                    height: 50.0,
+                    width: 44.0,
+                    height: 44.0,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8.0),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
@@ -386,43 +438,32 @@ class _ExploreTabState extends State<ExploreTab> {
                       logoPath: mod.logo,
                       fallbackName: mod.name,
                       apiUrl: widget.state.apiUrl,
-                      width: 50.0,
-                      height: 50.0,
-                      fallbackFontSize: 20.0,
+                      width: 44.0,
+                      height: 44.0,
+                      fallbackFontSize: 18.0,
                       getFallbackGradient: _getFallbackGradient,
                     ),
                   ),
                   const SizedBox(width: 12.0),
-                  // Title / Author
+                  // Title and Subtitle
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                mod.name,
-                                style: const TextStyle(
-                                  fontSize: 15.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (mod.isFeatured)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 4.0),
-                                child: Text('⭐', style: TextStyle(fontSize: 12.0)),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4.0),
                         Text(
-                          'By ${mod.author?.displayName ?? "알 수 없음"}',
-                          style: const TextStyle(color: Colors.white30, fontSize: 12.0),
+                          mod.name,
+                          style: const TextStyle(
+                            fontSize: 15.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3.0),
+                        Text(
+                          mod.summary,
+                          style: const TextStyle(color: Colors.white38, fontSize: 11.5),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -432,75 +473,239 @@ class _ExploreTabState extends State<ExploreTab> {
                 ],
               ),
               const SizedBox(height: 10.0),
-              // Summary
-              Expanded(
-                child: Text(
-                  mod.summary,
-                  style: const TextStyle(color: Colors.white60, fontSize: 13.0, height: 1.3),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+
+              // 2. Badges Row
+              Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          if (mod.isFeatured) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1FFFB300),
+                                borderRadius: BorderRadius.circular(4.0),
+                                border: Border.all(color: const Color(0xFFFFB300)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star, color: Color(0xFFFFB300), size: 10.0),
+                                  const SizedBox(width: 2.0),
+                                  Text(
+                                    widget.state.t('explore_card_featured'),
+                                    style: const TextStyle(color: Color(0xFFFFB300), fontSize: 9.5, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6.0),
+                          ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0x1F7E808F),
+                              borderRadius: BorderRadius.circular(4.0),
+                              border: Border.all(color: const Color(0x5F7E808F)),
+                            ),
+                            child: Text(
+                              gameLabel,
+                              style: const TextStyle(color: Color(0xFFC2C3D3), fontSize: 9.5, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const SizedBox(width: 6.0),
+                          ...mod.categories.map((cat) => Container(
+                            margin: const EdgeInsets.only(right: 6.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0x1F919AFF),
+                              borderRadius: BorderRadius.circular(4.0),
+                              border: Border.all(color: const Color(0x3F919AFF)),
+                            ),
+                            child: Text(
+                              widget.state.locale == 'ko' ? widget.state.t('category_$cat') : cat.toUpperCase(),
+                              style: const TextStyle(color: Color(0xFF919AFF), fontSize: 9.5, fontWeight: FontWeight.w600),
+                            ),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+
+              // 3. Divider
+              Divider(
+                color: Colors.white.withValues(alpha: 0.04),
+                height: 1.0,
+                thickness: 1.0,
               ),
               const SizedBox(height: 10.0),
-              // Footer: badgess
+
+              // 4. Footer
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Author Info
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (authors.isNotEmpty) ...[
+                          _buildOverlappingAvatars(authors),
+                          const SizedBox(width: 8.0),
+                        ],
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  authorNames,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 11.0),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isAnyAuthorVerified) ...[
+                                const SizedBox(width: 3.0),
+                                const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 12.0),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  // Mod Version, Game Version & Downloads
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (mod.categories.isEmpty)
+                      // Mod Version Pill
+                      if (mod.latestVersion != null) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: const Color(0x1F919AFF),
+                            color: const Color(0xFF2B283D),
                             borderRadius: BorderRadius.circular(4.0),
-                            border: Border.all(color: const Color(0x3F919AFF)),
-                          ),
-                          child: const Text(
-                            'UI',
-                            style: TextStyle(color: Color(0xFF919AFF), fontSize: 10.0, fontWeight: FontWeight.w600),
-                          ),
-                        )
-                      else
-                        ...mod.categories.map((cat) => Container(
-                          margin: const EdgeInsets.only(right: 6.0),
-                          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
-                          decoration: BoxDecoration(
-                            color: const Color(0x1F919AFF),
-                            borderRadius: BorderRadius.circular(4.0),
-                            border: Border.all(color: const Color(0x3F919AFF)),
                           ),
                           child: Text(
-                            cat.toUpperCase(),
-                            style: const TextStyle(color: Color(0xFF919AFF), fontSize: 10.0, fontWeight: FontWeight.w600),
+                            'v${mod.latestVersion!.version}',
+                            style: const TextStyle(color: Color(0xFF919AFF), fontSize: 10.5, fontWeight: FontWeight.w600),
                           ),
-                        )),
-                      const SizedBox(width: 4.0),
+                        ),
+                        const SizedBox(width: 5.0),
+                      ],
+                      // Game Version Pill
+                      if (mod.latestVersion?.gameVersion != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0x1FFFFFFF),
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                          child: Text(
+                            '🎮 ${mod.latestVersion!.gameVersion}',
+                            style: const TextStyle(color: Colors.white54, fontSize: 10.5, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 5.0),
+                      ],
+                      // Download count
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.download, color: Colors.white38, size: 12.0),
-                          const SizedBox(width: 2.0),
-                          Text('${mod.downloads}', style: const TextStyle(color: Colors.white38, fontSize: 11.0)),
+                          const Icon(Icons.download, color: Colors.white30, size: 12.0),
+                          const SizedBox(width: 1.5),
+                          Text('${mod.downloads}', style: const TextStyle(color: Colors.white30, fontSize: 10.5)),
                         ],
                       ),
                     ],
                   ),
-                  // Install Status Badge
-                  if (hasUpdate)
-                    Text(
-                      widget.state.t('explore_badge_update_req'),
-                      style: const TextStyle(color: Colors.orangeAccent, fontSize: 11.0, fontWeight: FontWeight.bold),
-                    )
-                  else if (isInstalled)
-                    Text(
-                      widget.state.t('explore_badge_installed'),
-                      style: const TextStyle(color: Color(0xFF919AFF), fontSize: 11.0, fontWeight: FontWeight.bold),
-                    ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMiniAvatar(Author author) {
+    if (author.avatar == null || author.avatar!.isEmpty) {
+      return CircleAvatar(
+        radius: 8.0,
+        backgroundColor: const Color(0xFF919AFF),
+        child: Text(
+          author.displayName.isNotEmpty ? author.displayName[0].toUpperCase() : 'A',
+          style: const TextStyle(color: Colors.white, fontSize: 7.0, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+    
+    // data:image 또는 http url
+    if (author.avatar!.startsWith('data:image')) {
+      try {
+        final commaIndex = author.avatar!.indexOf(',');
+        if (commaIndex != -1) {
+          final base64Str = author.avatar!.substring(commaIndex + 1);
+          final bytes = base64.decode(base64Str);
+          return ClipOval(
+            child: Image.memory(bytes, width: 16.0, height: 16.0, fit: BoxFit.cover),
+          );
+        }
+      } catch (_) {}
+    }
+    
+    return ClipOval(
+      child: Image.network(
+        author.avatar!,
+        width: 16.0,
+        height: 16.0,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => CircleAvatar(
+          radius: 8.0,
+          backgroundColor: const Color(0xFF919AFF),
+          child: Text(
+            author.displayName.isNotEmpty ? author.displayName[0].toUpperCase() : 'A',
+            style: const TextStyle(color: Colors.white, fontSize: 7.0, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlappingAvatars(List<Author> authors) {
+    if (authors.isEmpty) return const SizedBox.shrink();
+
+    final List<Widget> avatarWidgets = [];
+    final int displayCount = authors.length > 3 ? 3 : authors.length;
+
+    for (int i = 0; i < displayCount; i++) {
+      avatarWidgets.add(
+        Positioned(
+          left: i * 12.0,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF1E1C28), width: 1.5),
+            ),
+            child: _buildMiniAvatar(authors[i]),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: 16.0 + (displayCount - 1) * 12.0 + 3.0,
+      height: 19.0,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: avatarWidgets,
       ),
     );
   }
@@ -650,6 +855,13 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     }
 
     final mod = _mod!;
+    final List<Author> authors = [];
+    if (mod.author != null) {
+      authors.add(mod.author!);
+    }
+    authors.addAll(mod.collaborators);
+    final String authorNames = authors.map((a) => a.displayName).join(', ');
+    final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
     final isInstalled = widget.state.installedMods.any((m) {
       return m.slug.toLowerCase() == mod.slug.toLowerCase() || isModMatched(m.slug, mod.slug);
     });
@@ -658,9 +870,6 @@ class _ModDetailModalState extends State<_ModDetailModal> {
             return m.slug.toLowerCase() == mod.slug.toLowerCase() || isModMatched(m.slug, mod.slug);
           })
         : null;
-    final hasUpdate = localMod != null &&
-        mod.latestVersion != null &&
-        localMod.version != mod.latestVersion!.version;
 
     return Dialog(
       backgroundColor: const Color(0xFF1E1C28),
@@ -672,10 +881,11 @@ class _ModDetailModalState extends State<_ModDetailModal> {
       child: Container(
         width: 600.0,
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Top Close Button & Game Label
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -699,7 +909,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 )
               ],
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 12.0),
 
             // Header (Logo, Name, Author)
             Row(
@@ -747,25 +957,38 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const SizedBox(height: 4.0),
-                      Text(
-                        'By ${mod.author?.displayName ?? "알 수 없음"}',
-                        style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'By ${authorNames.isNotEmpty ? authorNames : "알 수 없음"}',
+                              style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isAnyAuthorVerified) ...[
+                            const SizedBox(width: 4.0),
+                            const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 14.0),
+                          ],
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20.0),
+            const SizedBox(height: 14.0),
 
             // Tabs / Description / Changelog
             Text(
               widget.state.t('explore_modal_desc'),
               style: const TextStyle(color: Colors.white38, fontSize: 12.0, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 6.0),
             Container(
-              height: 120.0,
+              height: 90.0,
               padding: const EdgeInsets.all(12.0),
               decoration: BoxDecoration(
                 color: const Color(0xFF16151D),
@@ -785,18 +1008,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 ),
               ),
             ),
-            const SizedBox(height: 16.0),
-
-            // Mod metadata
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildMetaInfo(widget.state.t('explore_modal_categories'), mod.categories.join(', ').toUpperCase()),
-                _buildMetaInfo(widget.state.t('explore_modal_downloads'), widget.state.t('explore_modal_downloads_unit', args: {'count': '${mod.downloads}'})),
-                _buildMetaInfo(widget.state.t('explore_modal_latest_ver'), 'v${_latestVersion?.version ?? "0.0.0"}'),
-              ],
-            ),
-            const SizedBox(height: 24.0),
+            const SizedBox(height: 12.0),
 
             // Installation status and Installer logic
             if (widget.state.isProcessing) ...[
@@ -822,71 +1034,266 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 ],
               ),
             ] else ...[
-              // Action Buttons
+              // Warnings
               if (!widget.state.isValidPath)
-                Text(
-                  widget.state.t('explore_modal_warn_path'),
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12.0, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Text(
+                    widget.state.t('explore_modal_warn_path'),
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12.0, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
                 )
               else if (!widget.state.isLoaderInstalled)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      widget.state.t('explore_modal_warn_loader'),
-                      style: const TextStyle(color: Colors.white30, fontSize: 12.0),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12.0),
-                    UIButton(
-                      label: widget.state.t('explore_modal_btn_auto_loader'),
-                      fontSize: 14.0,
-                      onClick: () async {
-                        await widget.state.installMelonLoader();
-                      },
-                    ),
-                  ],
-                )
-              else
-                Row(
-                  children: [
-                    if (isInstalled) ...[
-                      Expanded(
-                        child: UIButton(
-                          label: widget.state.t('explore_modal_btn_delete'),
-                          fontSize: 14.0,
-                          onClick: () async {
-                            await widget.state.uninstallMod(mod.slug, mod.name);
-                          },
-                        ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        widget.state.t('explore_modal_warn_loader'),
+                        style: const TextStyle(color: Colors.white30, fontSize: 12.0),
+                        textAlign: TextAlign.center,
                       ),
-                      if (hasUpdate) ...[
-                        const SizedBox(width: 12.0),
-                        Expanded(
-                          child: UIButton(
-                            label: '${widget.state.t('installed_btn_update_mod')} (v${mod.latestVersion!.version})',
-                            fontSize: 14.0,
-                            onClick: () async {
-                              await widget.state.installMod(mod, version: mod.latestVersion!.version);
-                            },
-                          ),
-                        ),
-                      ],
-                    ] else ...[
-                      Expanded(
-                        child: UIButton(
-                          label: widget.state.t('explore_modal_btn_install'),
-                          fontSize: 14.0,
-                          onClick: () async {
-                            await widget.state.installMod(mod, version: mod.latestVersion?.version);
-                          },
+                      const SizedBox(height: 8.0),
+                      _DownloadButton(
+                        height: 44.0,
+                        backgroundColor: const Color(0xFF6C78FF),
+                        onTap: () async {
+                          await widget.state.installMelonLoader();
+                        },
+                        child: Text(
+                          widget.state.t('explore_modal_btn_auto_loader'),
+                          style: const TextStyle(color: Colors.white, fontSize: 14.0, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
+                  ),
+                )
+              else ...[
+                // Stable version download button
+                if (_latestVersion != null) ...[
+                  _DownloadButton(
+                    height: 50.0,
+                    backgroundColor: const Color(0xFF5865F2),
+                    onTap: () async {
+                      await widget.state.installMod(mod, version: _latestVersion!.version);
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.download, color: Colors.white, size: 20.0),
+                        const SizedBox(width: 8.0),
+                        Text(
+                          'v${_latestVersion!.version}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'SUIT',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                ],
+
+                // Beta version download button
+                if (mod.latestBetaVersion != null) ...[
+                  _DownloadButton(
+                    height: 50.0,
+                    backgroundColor: const Color(0xFF352920),
+                    border: Border.all(color: const Color(0xFFC8945A), width: 1.5),
+                    onTap: () async {
+                      await widget.state.installMod(mod, version: mod.latestBetaVersion!.version, isBeta: true);
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.download, color: Color(0xFFC8945A), size: 20.0),
+                        const SizedBox(width: 8.0),
+                        Text(
+                          'v${mod.latestBetaVersion!.version} (${widget.state.locale == 'ko' ? '베타' : 'Beta'})',
+                          style: const TextStyle(
+                            color: Color(0xFFC8945A),
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'SUIT',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                ],
+              ],
+
+              // Social GitHub & Discord buttons row
+              if ((mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty) || (mod.communityUrl != null && mod.communityUrl!.isNotEmpty)) ...[
+                Row(
+                  children: [
+                    if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty)
+                      Expanded(
+                        child: _DownloadButton(
+                          height: 44.0,
+                          backgroundColor: const Color(0xFF1F2026),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
+                          onTap: () => _launchUrl(mod.sourceUrl!),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.string(
+                                _githubSvg,
+                                width: 18.0,
+                                height: 18.0,
+                                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                              ),
+                              const SizedBox(width: 8.0),
+                              const Text(
+                                'GitHub',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.0,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'SUIT',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty && mod.communityUrl != null && mod.communityUrl!.isNotEmpty)
+                      const SizedBox(width: 12.0),
+                    if (mod.communityUrl != null && mod.communityUrl!.isNotEmpty)
+                      Expanded(
+                        child: _DownloadButton(
+                          height: 44.0,
+                          backgroundColor: const Color(0xFF1B1E30),
+                          border: Border.all(color: const Color(0xFF5865F2).withValues(alpha: 0.15), width: 1.0),
+                          onTap: () => _launchUrl(mod.communityUrl!),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.string(
+                                _discordSvg,
+                                width: 18.0,
+                                height: 18.0,
+                                colorFilter: const ColorFilter.mode(Color(0xFF5865F2), BlendMode.srcIn),
+                              ),
+                              const SizedBox(width: 8.0),
+                              const Text(
+                                'Discord',
+                                style: TextStyle(
+                                  color: Color(0xFF5865F2),
+                                  fontSize: 14.0,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'SUIT',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
+              ],
+
+              // Delete button if installed
+              if (isInstalled && localMod != null && widget.state.isValidPath && widget.state.isLoaderInstalled) ...[
+                const SizedBox(height: 8.0),
+                _DownloadButton(
+                  height: 44.0,
+                  backgroundColor: const Color(0xFF2C1E21),
+                  border: Border.all(color: const Color(0xFFE74C3C).withValues(alpha: 0.3), width: 1.0),
+                  onTap: () async {
+                    await widget.state.uninstallMod(mod.slug, mod.name);
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.delete_outline, color: Color(0xFFE74C3C), size: 18.0),
+                      const SizedBox(width: 8.0),
+                      Text(
+                        '${widget.state.t('explore_modal_btn_delete')} (v${localMod.version})',
+                        style: const TextStyle(
+                          color: Color(0xFFE74C3C),
+                          fontSize: 14.0,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'SUIT',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
+
+            Divider(
+              color: Colors.white.withValues(alpha: 0.05),
+              height: 16.0,
+              thickness: 1.0,
+            ),
+
+            // 다운로드 수
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.state.t('explore_modal_downloads'),
+                    style: const TextStyle(color: Colors.white38, fontSize: 13.0, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '${mod.downloads}',
+                    style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+
+            // 제작자
+            if (mod.author != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.state.t('explore_modal_author'),
+                      style: const TextStyle(color: Colors.white38, fontSize: 13.0, fontWeight: FontWeight.w500),
+                    ),
+                    _buildUserBadge(mod.author!),
+                  ],
+                ),
+              ),
+
+            // 협업자
+            if (mod.collaborators.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.state.t('explore_modal_collaborators'),
+                      style: const TextStyle(color: Colors.white38, fontSize: 13.0, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 12.0),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8.0,
+                        runSpacing: 6.0,
+                        alignment: WrapAlignment.end,
+                        children: mod.collaborators.map((c) => _buildUserBadge(c)).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             const SizedBox(height: 12.0),
             // Global status response helper
             if (widget.state.statusMessage != null && !widget.state.isProcessing)
@@ -905,17 +1312,154 @@ class _ModDetailModalState extends State<_ModDetailModal> {
           ],
         ),
       ),
+    ),
+  );
+}
+
+  Widget _buildAvatar(Author author, {double size = 24.0}) {
+    final double radius = size / 2;
+    if (author.avatar == null || author.avatar!.isEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: const Color(0xFF919AFF),
+        child: Text(
+          author.displayName.isNotEmpty ? author.displayName[0].toUpperCase() : 'A',
+          style: TextStyle(color: Colors.white, fontSize: size * 0.45, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+    
+    if (author.avatar!.startsWith('data:image')) {
+      try {
+        final commaIndex = author.avatar!.indexOf(',');
+        if (commaIndex != -1) {
+          final base64Str = author.avatar!.substring(commaIndex + 1);
+          final bytes = base64.decode(base64Str);
+          return ClipOval(
+            child: Image.memory(bytes, width: size, height: size, fit: BoxFit.cover),
+          );
+        }
+      } catch (_) {}
+    }
+    
+    return ClipOval(
+      child: Image.network(
+        author.avatar!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => CircleAvatar(
+          radius: radius,
+          backgroundColor: const Color(0xFF919AFF),
+          child: Text(
+            author.displayName.isNotEmpty ? author.displayName[0].toUpperCase() : 'A',
+            style: TextStyle(color: Colors.white, fontSize: size * 0.45, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildMetaInfo(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11.0)),
-        const SizedBox(height: 4.0),
-        Text(value, style: const TextStyle(color: Colors.white70, fontSize: 13.0, fontWeight: FontWeight.w600)),
-      ],
+  Widget _buildUserBadge(Author author) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16151D),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildAvatar(author, size: 20.0),
+          const SizedBox(width: 6.0),
+          Text(
+            author.displayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13.0,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (author.isVerifiedDeveloper) ...[
+            const SizedBox(width: 6.0),
+            Container(
+              padding: const EdgeInsets.all(1.0),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFF1B4D3E), width: 1.0),
+                borderRadius: BorderRadius.circular(4.0),
+                color: const Color(0xFF0F2C22),
+              ),
+              child: const Icon(
+                Icons.check,
+                color: Color(0xFF2ECC71),
+                size: 10.0,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final Color backgroundColor;
+  final Border? border;
+  final double height;
+
+  const _DownloadButton({
+    required this.child,
+    required this.onTap,
+    required this.backgroundColor,
+    this.border,
+    this.height = 50.0,
+  });
+
+  @override
+  State<_DownloadButton> createState() => _DownloadButtonState();
+}
+
+class _DownloadButtonState extends State<_DownloadButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _isPressed = false;
+      }),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: _isPressed
+                  ? widget.backgroundColor.withValues(alpha: 0.8)
+                  : (_isHovered
+                      ? widget.backgroundColor.withValues(alpha: 0.9)
+                      : widget.backgroundColor),
+              borderRadius: BorderRadius.circular(12.0),
+              border: widget.border,
+            ),
+            alignment: Alignment.center,
+            child: widget.child,
+          ),
+        ),
+      ),
     );
   }
 }

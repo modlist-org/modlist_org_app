@@ -185,22 +185,26 @@ abstract class Game {
 
     // 3. 파일 존재 여부 검사 (Managed)
     if (managedPath != null) {
-      if (File(p.join(managedPath, 'UnityModManager.dll')).existsSync())
+      if (File(p.join(managedPath, 'UnityModManager.dll')).existsSync()) {
         return true;
+      }
       if (File(
         p.join(managedPath, 'UnityModManager', 'UnityModManager.dll'),
-      ).existsSync())
+      ).existsSync()) {
         return true;
+      }
     }
 
     // 4. 파일 존재 여부 검사 (Assembly)
     if (assemblyPath != null) {
-      if (File(p.join(assemblyPath, 'UnityModManager.dll')).existsSync())
+      if (File(p.join(assemblyPath, 'UnityModManager.dll')).existsSync()) {
         return true;
+      }
       if (File(
         p.join(assemblyPath, 'UnityModManager', 'UnityModManager.dll'),
-      ).existsSync())
+      ).existsSync()) {
         return true;
+      }
     }
 
     return false;

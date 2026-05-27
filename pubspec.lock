@@ -283,9 +283,10 @@ packages:
   overlayer_ui_flutter:
     dependency: "direct main"
     description:
-      path: "../overlayer_ui_flutter"
-      relative: true
-    source: path
+      name: overlayer_ui_flutter
+      sha256: "9dab27a1955180f154e2fc0f9fb8f1d260fa92bce7c7ada3e258758eb2f6c91e"
+      url: "https://pub.dev"
+    source: hosted
     version: "1.0.0"
   package_config:
     dependency: transitive

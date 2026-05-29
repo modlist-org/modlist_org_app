@@ -275,14 +275,10 @@ class AdofaiGame extends Game {
   }) async {
     // 0. 기존 모드가 설치되어 있는 경우 안전하게 먼저 언인스톨을 수행합니다.
     try {
-      final cleanTargetSlug = mod.slug.startsWith('umm-') ? mod.slug.substring(4) : mod.slug;
       final installed = await getInstalledMods(gamePath);
-      final existingIndex = installed.indexWhere((m) {
-        final cleanM = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
-        return cleanM.toLowerCase() == cleanTargetSlug.toLowerCase();
-      });
-      if (existingIndex != -1) {
-        await uninstallMod(gamePath, installed[existingIndex].slug);
+      final matchingMods = installed.where((m) => isModMatched(m.slug, mod.slug)).toList();
+      for (final matching in matchingMods) {
+        await uninstallMod(gamePath, matching.slug);
       }
     } catch (_) {
       // 기존 모드 삭제 실패 시에도 설치 계속 진행
@@ -452,12 +448,10 @@ class AdofaiGame extends Game {
     // 로컬 메타데이터 갱신
     final installedMods = await getInstalledMods(gamePath);
     // 기존에 이미 동일한 모드가 설치되어 있었으면 제거 후 갱신
-    final cleanTargetSlug = mod.slug.startsWith('umm-') ? mod.slug.substring(4) : mod.slug;
-    installedMods.removeWhere((m) {
-      final cleanM = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
-      return cleanM.toLowerCase() == cleanTargetSlug.toLowerCase() ||
-             m.id.toLowerCase() == finalSlug.toLowerCase();
-    });
+    installedMods.removeWhere((m) =>
+      isModMatched(m.slug, mod.slug) ||
+      m.id.toLowerCase() == finalSlug.toLowerCase()
+    );
 
     installedMods.add(InstalledMod(
       id: finalSlug, // 'umm-Tweaks'
@@ -476,15 +470,11 @@ class AdofaiGame extends Game {
   Future<void> uninstallMod(String gamePath, String modSlug) async {
     final installedMods = await getInstalledMods(gamePath);
     
-    final cleanTargetSlug = modSlug.startsWith('umm-') ? modSlug.substring(4) : modSlug;
-    final modIndex = installedMods.indexWhere((m) {
-      final cleanM = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
-      return cleanM.toLowerCase() == cleanTargetSlug.toLowerCase();
-    });
-    
+    final modIndex = installedMods.indexWhere((m) => isModMatched(m.slug, modSlug));
     if (modIndex == -1) return;
 
     final targetMod = installedMods[modIndex];
+    final cleanTargetSlug = modSlug.startsWith('umm-') ? modSlug.substring(4) : modSlug;
 
     // 안전하게 디렉토리를 지우면서 배포 파일만 삭제하고 세이브데이터/커스텀 리소스를 보존하는 헬퍼 함수
     Future<void> safeDeleteDirectory(Directory dir) async {
@@ -573,10 +563,7 @@ class AdofaiGame extends Game {
     }
 
     // 메타데이터 리스트에서 제거 및 저장
-    installedMods.removeWhere((m) {
-      final cleanM = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
-      return cleanM.toLowerCase() == cleanTargetSlug.toLowerCase();
-    });
+    installedMods.removeWhere((m) => isModMatched(m.slug, modSlug));
     await saveInstalledMods(gamePath, installedMods);
   }
 

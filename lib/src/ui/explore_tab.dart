@@ -93,22 +93,7 @@ Widget _buildFallbackLogo(String name, double fontSize, LinearGradient Function(
   );
 }
 
-// UMM ID(예: Tweaks)와 서버 슬러그(예: adofai-tweaks) 간의 유연한 매칭 지원 헬퍼
-bool isModMatched(String localSlug, String serverSlug) {
-  final cleanLocal = localSlug.startsWith('umm-') ? localSlug.substring(4).toLowerCase() : localSlug.toLowerCase();
-  final cleanServer = serverSlug.toLowerCase();
-  
-  if (cleanLocal == cleanServer) return true;
-  
-  final normLocal = cleanLocal.replaceAll('-', '').replaceAll('_', '').replaceAll(' ', '');
-  final normServer = cleanServer.replaceAll('-', '').replaceAll('_', '').replaceAll(' ', '');
-  
-  if (normServer == normLocal) return true;
-  if (normServer.endsWith(normLocal)) return true;
-  if (normLocal.endsWith(normServer)) return true;
-  
-  return false;
-}
+
 
 class ExploreTab extends StatefulWidget {
   final InstallerState state;
@@ -863,11 +848,11 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     final String authorNames = authors.map((a) => a.displayName).join(', ');
     final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
     final isInstalled = widget.state.installedMods.any((m) {
-      return m.slug.toLowerCase() == mod.slug.toLowerCase() || isModMatched(m.slug, mod.slug);
+      return m.slug.toLowerCase() == mod.slug.toLowerCase() || widget.state.game.isModMatched(m.slug, mod.slug);
     });
     final localMod = isInstalled
         ? widget.state.installedMods.firstWhere((m) {
-            return m.slug.toLowerCase() == mod.slug.toLowerCase() || isModMatched(m.slug, mod.slug);
+            return m.slug.toLowerCase() == mod.slug.toLowerCase() || widget.state.game.isModMatched(m.slug, mod.slug);
           })
         : null;
 

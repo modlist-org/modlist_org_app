@@ -61,8 +61,24 @@ class _InstalledTabState extends State<InstalledTab> {
         try {
           // UMM 모드 접두사 'umm-'가 있으면 제거하여 온라인 API 조회 시 호환성 확보
           final cleanSlug = slug.startsWith('umm-') ? slug.substring(4) : slug;
-          final result = await widget.state.apiService.fetchModDetails(cleanSlug);
-          return {'localSlug': slug, 'data': result};
+          try {
+            final result = await widget.state.apiService.fetchModDetails(cleanSlug);
+            return {'localSlug': slug, 'data': result};
+          } catch (e) {
+            // 상세 조회 실패 시, 검색 API를 통해 매칭 시도 (예: UMM ID 'Tweaks' -> 'adofai-tweaks')
+            final searchResult = await widget.state.apiService.fetchMods(
+              game: widget.state.game.id,
+              search: cleanSlug,
+            );
+            final List<ModItem> searchMods = searchResult['mods'] as List<ModItem>;
+            for (final searchMod in searchMods) {
+              if (widget.state.game.isModMatched(slug, searchMod.slug)) {
+                final detailResult = await widget.state.apiService.fetchModDetails(searchMod.slug);
+                return {'localSlug': slug, 'data': detailResult};
+              }
+            }
+            rethrow;
+          }
         } catch (_) {
           return null;
         }

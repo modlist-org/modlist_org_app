@@ -273,4 +273,21 @@ abstract class Game {
 
   // 스팀 런치 옵션 가이드 스트링 (Linux/macOS 비네이티브용)
   String? getSteamLaunchOptionsGuide();
+
+  // UMM ID(예: Tweaks)와 서버 슬러그(예: adofai-tweaks) 간의 유연한 매칭 지원 헬퍼
+  bool isModMatched(String localSlug, String serverSlug) {
+    final cleanLocal = localSlug.startsWith('umm-') ? localSlug.substring(4).toLowerCase() : localSlug.toLowerCase();
+    final cleanServer = serverSlug.startsWith('umm-') ? serverSlug.substring(4).toLowerCase() : serverSlug.toLowerCase();
+    
+    if (cleanLocal == cleanServer) return true;
+    
+    final normLocal = cleanLocal.replaceAll('-', '').replaceAll('_', '').replaceAll(' ', '');
+    final normServer = cleanServer.replaceAll('-', '').replaceAll('_', '').replaceAll(' ', '');
+    
+    if (normServer == normLocal) return true;
+    if (normServer.endsWith(normLocal)) return true;
+    if (normLocal.endsWith(normServer)) return true;
+    
+    return false;
+  }
 }

@@ -63,69 +63,74 @@ class _MainLayoutState extends State<MainLayout> {
           );
         }
 
-        return OverlayerStateProvider(
-          state: _overlayerState,
-          child: Scaffold(
-            backgroundColor: const Color(0xFF16151D),
-            body: Stack(
-              children: [
-                // 배경 Radial Glow 효과
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: RadialGradient(
-                        colors: [
-                          Color(0x13919AFF), // Soft accent glow
-                          Colors.transparent,
-                        ],
-                        center: Alignment(0.3, -0.4),
-                        radius: 1.4,
-                      ),
+        return child!;
+      },
+      child: OverlayerStateProvider(
+        state: _overlayerState,
+        child: Scaffold(
+          backgroundColor: const Color(0xFF16151D),
+          body: Stack(
+            children: [
+              // 배경 Radial Glow 효과
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        Color(0x13919AFF), // Soft accent glow
+                        Colors.transparent,
+                      ],
+                      center: Alignment(0.3, -0.4),
+                      radius: 1.4,
                     ),
                   ),
                 ),
+              ),
 
-                // 메인 콘텐츠
-                Row(
-                  children: [
-                    // 1. 좌측 사이드바
-                    _buildSidebar(),
-                    
-                    // 구분선
-                    Container(
-                      width: 1,
-                      color: Colors.white.withValues(alpha: 0.03),
-                    ),
+              // 메인 콘텐츠
+              Row(
+                children: [
+                  // 1. 좌측 사이드바
+                  _buildSidebar(),
+                  
+                  // 구분선
+                  Container(
+                    width: 1,
+                    color: Colors.white.withValues(alpha: 0.03),
+                  ),
 
-                    // 2. 우측 메인 영역
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // 상단 글로벌 프로세싱 안내 바
-                          if (_installerState.isProcessing)
-                            _buildGlobalProgressBar(),
+                  // 2. 우측 메인 영역
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 상단 글로벌 프로세싱 안내 바
+                        if (_installerState.isProcessing)
+                          _buildGlobalProgressBar(),
 
-                          // 탭별 콘텐츠 영역
-                          Expanded(
-                            child: IndexedStack(
-                              index: _activeTabIndex,
-                              children: [
-                                ExploreTab(state: _installerState),
-                                InstalledTab(state: _installerState),
-                                SettingsTab(state: _installerState),
-                              ],
-                            ),
+                        // 탭별 콘텐츠 영역
+                        Expanded(
+                          child: IndexedStack(
+                            index: _activeTabIndex,
+                            children: [
+                              ExploreTab(state: _installerState),
+                              InstalledTab(state: _installerState),
+                              SettingsTab(state: _installerState),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
 
-                // 3. 글로벌 툴팁 오버레이 렌더러 (overlayer_ui_flutter 사양)
-                if (_overlayerState.tooltipVisible)
-                  Positioned(
+              // 3. 글로벌 툴팁 오버레이 렌더러 (overlayer_ui_flutter 사양)
+              ListenableBuilder(
+                listenable: _overlayerState,
+                builder: (context, _) {
+                  if (!_overlayerState.tooltipVisible) return const SizedBox.shrink();
+                  return Positioned(
                     left: _overlayerState.tooltipX + 16.0,
                     top: _overlayerState.tooltipY + 16.0,
                     child: IgnorePointer(
@@ -159,12 +164,13 @@ class _MainLayoutState extends State<MainLayout> {
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
+                  );
+                },
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

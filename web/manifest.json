@@ -1,6 +1,6 @@
 {
-    "name": "modlist_org_app",
-    "short_name": "modlist_org_app",
+    "name": "modlist.org app",
+    "short_name": "modlist.org app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

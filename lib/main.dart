@@ -42,7 +42,7 @@ class ModlistApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'modlist.org Mod Installer',
+      title: 'modlist.org app',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,

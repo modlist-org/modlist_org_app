@@ -1,0 +1,22 @@
+[
+  {
+    "directory": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner",
+    "command": "clang++ -std=c++17 -DUNICODE -D_UNICODE -DNOMINMAX -I../ -I../flutter/ephemeral -I../flutter/ephemeral/cpp_client_wrapper/include -c main.cpp",
+    "file": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner/main.cpp"
+  },
+  {
+    "directory": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner",
+    "command": "clang++ -std=c++17 -DUNICODE -D_UNICODE -DNOMINMAX -I../ -I../flutter/ephemeral -I../flutter/ephemeral/cpp_client_wrapper/include -c flutter_window.cpp",
+    "file": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner/flutter_window.cpp"
+  },
+  {
+    "directory": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner",
+    "command": "clang++ -std=c++17 -DUNICODE -D_UNICODE -DNOMINMAX -I../ -I../flutter/ephemeral -I../flutter/ephemeral/cpp_client_wrapper/include -c utils.cpp",
+    "file": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner/utils.cpp"
+  },
+  {
+    "directory": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner",
+    "command": "clang++ -std=c++17 -DUNICODE -D_UNICODE -DNOMINMAX -I../ -I../flutter/ephemeral -I../flutter/ephemeral/cpp_client_wrapper/include -c win32_window.cpp",
+    "file": "c:/Users/square3ang/Documents/modlist_org_app/windows/runner/win32_window.cpp"
+  }
+]

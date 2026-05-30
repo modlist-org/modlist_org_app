@@ -75,7 +75,7 @@ class Localization {
       'explore_badge_update_req': '업데이트 필요',
       'explore_badge_installed': '설치 완료',
       'explore_card_featured': '추천',
-      'explore_modal_desc': '설명 (DESCRIPTION)',
+      'explore_modal_desc': '설명',
       'explore_modal_categories': '카테고리',
       'explore_modal_downloads': '다운로드 수',
       'explore_modal_author': '제작자',

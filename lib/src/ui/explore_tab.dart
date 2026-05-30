@@ -168,7 +168,7 @@ class ExploreTab extends StatefulWidget {
 class _ExploreTabState extends State<ExploreTab> {
   final TextEditingController _searchController = TextEditingController();
 
-  List<String> _selectedCategories = [];
+  final List<String> _selectedCategories = [];
   String _selectedSort = 'downloads_desc';
 
   List<ModItem> _mods = [];

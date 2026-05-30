@@ -391,7 +391,7 @@ class _ExploreTabState extends State<ExploreTab> {
                   SizedBox(
                     width: 180,
                     height: 42,
-                    child: UIDropdown<String>(
+                    child: _SortDropdown<String>(
                       modelValue: _selectedSort,
                       defaultValue: 'downloads_desc',
                       values: const [
@@ -1904,4 +1904,403 @@ bool _checkOverflow(String text, double maxWidth) {
   )..layout(maxWidth: maxWidth);
 
   return tp.height > 160.0;
+}
+
+class _SortDropdown<T> extends StatefulWidget {
+  final T modelValue;
+  final T defaultValue;
+  final List<T> values;
+  final String Function(T) display;
+  final ValueChanged<T> onChanged;
+  final double? fontSize;
+  final bool disableReset;
+
+  const _SortDropdown({
+    super.key,
+    required this.modelValue,
+    required this.defaultValue,
+    required this.values,
+    required this.display,
+    required this.onChanged,
+    this.fontSize,
+    this.disableReset = false,
+  });
+
+  @override
+  State<_SortDropdown<T>> createState() => _SortDropdownState<T>();
+}
+
+class _SortDropdownState<T> extends State<_SortDropdown<T>> {
+  final LayerLink _layerLink = LayerLink();
+  bool _isHovered = false;
+  bool _isExpanded = false;
+  OverlayEntry? _overlayEntry;
+
+  bool get _isChanged {
+    if (widget.disableReset) return false;
+    return widget.modelValue != widget.defaultValue;
+  }
+
+  void _toggleDropdown() {
+    if (_isExpanded) {
+      _closeDropdown();
+    } else {
+      _openDropdown();
+    }
+  }
+
+  void _openDropdown() {
+    if (_isExpanded) return;
+    setState(() {
+      _isExpanded = true;
+    });
+
+    _overlayEntry = _createOverlayEntry();
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _closeDropdown() {
+    if (!_isExpanded) return;
+    setState(() {
+      _isExpanded = false;
+    });
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _selectItem(T item) {
+    widget.onChanged(item);
+    _closeDropdown();
+  }
+
+  OverlayEntry _createOverlayEntry() {
+    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    Size size = renderBox.size;
+
+    double resolvedFontSize = widget.fontSize ?? 14.0;
+
+    return OverlayEntry(
+      builder: (context) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _closeDropdown,
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+            Positioned(
+              width: size.width,
+              child: CompositedTransformFollower(
+                link: _layerLink,
+                showWhenUnlinked: false,
+                offset: Offset(0.0, size.height + 6.0),
+                child: Material(
+                  color: Colors.transparent,
+                  child: _SortDropdownListOverlay<T>(
+                    values: widget.values,
+                    display: widget.display,
+                    fontSize: resolvedFontSize,
+                    onSelect: _selectItem,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _closeDropdown();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double resolvedFontSize = widget.fontSize ?? 14.0;
+
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: _toggleDropdown,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                height: double.infinity,
+                padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3C3A4B),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.display(widget.modelValue),
+                        style: TextStyle(
+                          color: const Color(0xFFFFFFFF),
+                          fontFamily: 'SUIT',
+                          fontSize: resolvedFontSize,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0,
+                          overflow: TextOverflow.ellipsis,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 30.0,
+                      height: 30.0,
+                      child: TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 300),
+                        curve: const Cubic(0.175, 0.885, 0.32, 1.275),
+                        tween: Tween<double>(
+                          begin: 0.0,
+                          end: _isExpanded ? 180.0 : 0.0,
+                        ),
+                        builder: (context, angle, child) {
+                          final double radians = angle * 3.1415926535 / 180.0;
+                          final Color color = _isExpanded
+                              ? const Color(0xFF919AFF)
+                              : const Color(0xFFF3F4FF);
+                          return Transform.rotate(
+                            angle: radians,
+                            child: CustomPaint(
+                              size: const Size(30.0, 30.0),
+                              painter: _SortTrianglePainter(color: color),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 100),
+                    opacity: _isHovered ? 1.0 : 0.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: const Color(0xFF919AFF),
+                          width: 2.0,
+                        ),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_isChanged)
+                Positioned(
+                  top: 4.0,
+                  left: 4.0,
+                  child: Container(
+                    width: 8.0,
+                    height: 8.0,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF626696),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortTrianglePainter extends CustomPainter {
+  final Color color;
+
+  _SortTrianglePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final double sx = size.width / 24.0;
+    final double sy = size.height / 24.0;
+
+    final path = Path()
+      ..moveTo(6.0 * sx, 9.0 * sy)
+      ..lineTo(18.0 * sx, 9.0 * sy)
+      ..lineTo(12.0 * sx, 15.0 * sy)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SortTrianglePainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
+
+class _SortDropdownListOverlay<T> extends StatefulWidget {
+  final List<T> values;
+  final String Function(T) display;
+  final double fontSize;
+  final ValueChanged<T> onSelect;
+
+  const _SortDropdownListOverlay({
+    required this.values,
+    required this.display,
+    required this.fontSize,
+    required this.onSelect,
+  });
+
+  @override
+  State<_SortDropdownListOverlay<T>> createState() => _SortDropdownListOverlayState<T>();
+}
+
+class _SortDropdownListOverlayState<T> extends State<_SortDropdownListOverlay<T>>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _expandController;
+  late final Animation<double> _heightFactorAnimation;
+  late final Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _expandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+    );
+    _heightFactorAnimation = CurvedAnimation(
+      parent: _expandController,
+      curve: Curves.easeOut,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _expandController,
+        curve: const Interval(0.0, 1.0, curve: Curves.easeOut),
+      ),
+    );
+    _expandController.forward();
+  }
+
+  @override
+  void dispose() {
+    _expandController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizeTransition(
+      sizeFactor: _heightFactorAnimation,
+      alignment: Alignment.topCenter,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF3C3A4B),
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.05),
+              width: 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 25.0,
+                offset: const Offset(0.0, 10.0),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 10.0,
+                offset: const Offset(0.0, 8.0),
+              ),
+            ],
+          ),
+          constraints: const BoxConstraints(
+            maxHeight: 350.0,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8.0),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: widget.values.length,
+              itemBuilder: (context, index) {
+                final item = widget.values[index];
+                return _SortDropdownRow(
+                  label: widget.display(item),
+                  fontSize: widget.fontSize,
+                  onTap: () => widget.onSelect(item),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortDropdownRow extends StatefulWidget {
+  final String label;
+  final double fontSize;
+  final VoidCallback onTap;
+
+  const _SortDropdownRow({
+    required this.label,
+    required this.fontSize,
+    required this.onTap,
+  });
+
+  @override
+  State<_SortDropdownRow> createState() => _SortDropdownRowState();
+}
+
+class _SortDropdownRowState extends State<_SortDropdownRow> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          height: 42.0,
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          color: _isHovered ? const Color(0xFF919AFF) : Colors.transparent,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              color: const Color(0xFFFFFFFF),
+              fontFamily: 'SUIT',
+              fontSize: widget.fontSize,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

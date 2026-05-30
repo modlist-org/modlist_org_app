@@ -139,6 +139,19 @@ final markdownStyleSheet = MarkdownStyleSheet(
   listBullet: const TextStyle(
     color: Color(0xFF919AFF),
   ),
+  code: const TextStyle(
+    color: Color.fromARGB(255, 193, 194, 255),
+    fontFamily: 'Consolas',
+    fontSize: 13.0,
+  ),
+  codeblockDecoration: BoxDecoration(
+    color: const Color(0xFF111118),
+    borderRadius: BorderRadius.circular(8.0),
+    border: Border.all(
+      color: Colors.white10,
+    ),
+  ),
+  codeblockPadding: const EdgeInsets.all(12.0),
 );
 
 class ExploreTab extends StatefulWidget {

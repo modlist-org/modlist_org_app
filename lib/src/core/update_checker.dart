@@ -37,12 +37,12 @@ class UpdateChecker {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('최신 버전을 사용 중입니다.')));
+        ).showSnackBar(SnackBar(content: Text(state.t('update_status_latest'))));
       }
     } catch (_) {
       if (showNoUpdate && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('업데이트 정보를 가져오는 동안 오류가 발생했습니다.')),
+          SnackBar(content: Text(state.t('update_status_error'))),
         );
       }
     }

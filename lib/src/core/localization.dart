@@ -101,7 +101,9 @@ class Localization {
       'update_dialog_title': '새로운 버전 업데이트 안내',
       'update_dialog_body': '새로운 버전 v{version}이 출시되었습니다!\n\n현재 버전: v{currentVersion}\n\n최신 버전을 다운로드하고 설치하시겠습니까?',
       'update_dialog_btn_yes': '업데이트 받기',
-      'update_dialog_btn_no': '나중에 하기'
+      'update_dialog_btn_no': '나중에 하기',
+      'update_status_latest': '최신 버전을 사용 중입니다.',
+      'update_status_error': '업데이트 정보를 가져오는 동안 오류가 발생했습니다.'
     },
     'en-US': {
       // Sidebar
@@ -204,7 +206,9 @@ class Localization {
       'update_dialog_title': 'New Update Available',
       'update_dialog_body': 'A new version v{version} is available!\n\nCurrent version: v{currentVersion}\n\nWould you like to download and install the update now?',
       'update_dialog_btn_yes': 'Update Now',
-      'update_dialog_btn_no': 'Later'
+      'update_dialog_btn_no': 'Later',
+      'update_status_latest': 'You are already running the latest version.',
+      'update_status_error': 'An error occurred while fetching update information.'
     }
   };
 

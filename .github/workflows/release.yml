@@ -47,12 +47,8 @@ jobs:
       - name: Enable Windows Build
         run: flutter config --enable-windows-desktop
 
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
-
       - name: Build & Package Windows
-        run: |
-          dart pub global run flutter_distributor:main release --name windows
+        run: dart run flutter_distributor release --name windows
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -94,15 +90,11 @@ jobs:
       - name: Enable macOS Build
         run: flutter config --enable-macos-desktop
 
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
-
       - name: Install appdmg
         run: npm install -g appdmg
 
       - name: Build & Package macOS
-        run: |
-          dart pub global run flutter_distributor:main release --name macos
+        run: dart run flutter_distributor release --name macos
 
       - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
@@ -149,12 +141,8 @@ jobs:
       - name: Enable Linux Build
         run: flutter config --enable-linux-desktop
 
-      - name: Install flutter_distributor
-        run: dart pub global activate flutter_distributor
-
       - name: Build & Package Linux
-        run: |
-          dart pub global run flutter_distributor:main release --name linux
+        run: dart run flutter_distributor release --name linux
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4

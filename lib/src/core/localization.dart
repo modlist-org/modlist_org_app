@@ -92,7 +92,10 @@ class Localization {
       'explore_modal_warn_loader': '모드를 설치하려면 먼저 MelonLoader 설치가 필요합니다.',
       'explore_modal_btn_auto_loader': 'MelonLoader 자동 설치',
       'explore_modal_loading': '처리 중...',
-      "explore_modal_expand": "펼치기"
+      "explore_modal_expand": "펼치기",
+      'explore_card_author_more': ' 외',
+      'game_adofai': '얼불춤 (ADOFAI)',
+      'explore_modal_beta': '베타'
     },
     'en-US': {
       // Sidebar
@@ -186,7 +189,10 @@ class Localization {
       'explore_modal_warn_loader': 'MelonLoader installation is required first to install mods.',
       'explore_modal_btn_auto_loader': 'Auto-Install MelonLoader',
       'explore_modal_loading': 'Processing...',
-      "explore_modal_expand": "Expend"
+      "explore_modal_expand": "Expend",
+      'explore_card_author_more': ' and more',
+      'game_adofai': 'ADOFAI',
+      'explore_modal_beta': 'Beta'
     }
   };
 

@@ -380,13 +380,13 @@ class _ExploreTabState extends State<ExploreTab> {
     }
     String authorNamesStr = names.join(', ');
     if (mod.collaborators.length > 2) {
-      authorNamesStr += widget.state.locale == 'ko' ? ' 외' : ' and more';
+      authorNamesStr += widget.state.locale == 'ko-KR' ? ' 외' : ' and more';
     }
     final String authorNames = authorNamesStr;
     final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
 
     final String gameLabel = mod.game.toLowerCase() == 'adofai'
-        ? (widget.state.locale == 'ko' ? '얼불춤 (ADOFAI)' : 'ADOFAI')
+        ? (widget.state.locale == 'ko-KR' ? '얼불춤 (ADOFAI)' : 'ADOFAI')
         : mod.game.toUpperCase();
 
     return MouseRegion(
@@ -511,7 +511,7 @@ class _ExploreTabState extends State<ExploreTab> {
                               border: Border.all(color: const Color(0x3F919AFF)),
                             ),
                             child: Text(
-                              widget.state.locale == 'ko' ? widget.state.t('category_$cat') : cat.toUpperCase(),
+                              widget.state.locale == 'ko-KR' ? widget.state.t('category_$cat') : cat.toUpperCase(),
                               style: const TextStyle(color: Color(0xFF919AFF), fontSize: 9.5, fontWeight: FontWeight.w600),
                             ),
                           )),
@@ -1099,7 +1099,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         const Icon(Icons.download, color: Color(0xFFC8945A), size: 20.0),
                         const SizedBox(width: 8.0),
                         Text(
-                          'v${mod.latestBetaVersion!.version} (${widget.state.locale == 'ko' ? '베타' : 'Beta'})',
+                          'v${mod.latestBetaVersion!.version} (${widget.state.locale == 'ko-KR' ? '베타' : 'Beta'})',
                           style: const TextStyle(
                             color: Color(0xFFC8945A),
                             fontSize: 16.0,

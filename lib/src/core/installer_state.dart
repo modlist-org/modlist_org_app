@@ -22,7 +22,7 @@ class InstallerState extends ChangeNotifier {
   String _loaderVersion = 'None';
   bool _isLoaderOutdated = false;
   
-  String _locale = 'ko';
+  String _locale = 'en-US';
   
   double _progress = 0.0;
   bool _isProcessing = false;
@@ -52,7 +52,7 @@ class InstallerState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     
     // 언어 설정 로드
-    _locale = prefs.getString('modlist_app_locale') ?? 'ko';
+    _locale = prefs.getString('modlist_app_locale') ?? 'en-US';
     
     // API URL 로드
     _apiUrl = prefs.getString('modlist_api_base_url') ?? 'https://modlist.org';

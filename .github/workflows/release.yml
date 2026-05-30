@@ -93,6 +93,9 @@ jobs:
       - name: Install appdmg
         run: npm install -g appdmg
 
+      - name: Copy icon for DMG packaging
+        run: cp web/icons/Icon-512.png macos/packaging/dmg/app_icon.png
+
       - name: Build & Package macOS
         run: dart run flutter_distributor:main release --name macos
 
@@ -133,7 +136,12 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev rpm patchelf
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev rpm patchelf libfuse2
+
+      - name: Install appimagetool
+        run: |
+          sudo wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          sudo chmod +x /usr/local/bin/appimagetool
 
       - name: Install dependencies
         run: flutter pub get

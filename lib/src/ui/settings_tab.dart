@@ -218,9 +218,9 @@ class _SettingsTabState extends State<SettingsTab> {
               height: 42,
               child: UIDropdown<String>(
                 modelValue: widget.state.locale,
-                defaultValue: 'ko',
-                values: const ['ko', 'en'],
-                display: (val) => val == 'ko' ? '한국어 (Korean)' : 'English (영어)',
+                defaultValue: 'en-US',
+                values: const ['en-US', 'ko-KR'],
+                display: (val) => val == 'en-US' ?  'English (en-US)' : '한국어 (ko-KR)',
                 fontSize: 14.0,
                 disableReset: true,
                 onChanged: (val) async {

@@ -315,7 +315,7 @@ class InstallerState extends ChangeNotifier {
 
   // locale 변경 및 저장
   Future<void> setLocale(String lang) async {
-    if (lang != 'ko' && lang != 'en') return;
+    if (lang != 'ko-KR' && lang != 'en-US') return;
     _locale = lang;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('modlist_app_locale', lang);

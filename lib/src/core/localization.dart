@@ -1,6 +1,6 @@
 class Localization {
   static const Map<String, Map<String, String>> _strings = {
-    'ko': {
+    'ko-KR': {
       // Sidebar
       'tab_explore': '모드 탐색',
       'tab_installed': '설치 관리',
@@ -93,7 +93,7 @@ class Localization {
       'explore_modal_btn_auto_loader': 'MelonLoader 자동 설치',
       'explore_modal_loading': '처리 중...',
     },
-    'en': {
+    'en-US': {
       // Sidebar
       'tab_explore': 'Explore',
       'tab_installed': 'Installed',
@@ -189,8 +189,8 @@ class Localization {
   };
 
   static String get(String locale, String key, {Map<String, String>? args}) {
-    final language = _strings[locale] ?? _strings['en']!;
-    var text = language[key] ?? _strings['en']![key] ?? key;
+    final language = _strings[locale] ?? _strings['en-US']!;
+    var text = language[key] ?? _strings['en-US']![key] ?? key;
     
     if (args != null) {
       args.forEach((k, v) {

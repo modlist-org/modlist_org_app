@@ -97,7 +97,11 @@ class Localization {
       "explore_modal_expand": "펼치기",
       'explore_card_author_more': ' 외',
       'game_adofai': '얼불춤 (ADOFAI)',
-      'explore_modal_beta': '베타'
+      'explore_modal_beta': '베타',
+      'update_dialog_title': '새로운 버전 업데이트 안내',
+      'update_dialog_body': '새로운 버전 v{version}이 출시되었습니다!\n\n현재 버전: v{currentVersion}\n\n최신 버전을 다운로드하고 설치하시겠습니까?',
+      'update_dialog_btn_yes': '업데이트 받기',
+      'update_dialog_btn_no': '나중에 하기'
     },
     'en-US': {
       // Sidebar
@@ -196,7 +200,11 @@ class Localization {
       "explore_modal_expand": "Expend",
       'explore_card_author_more': ' and more',
       'game_adofai': 'ADOFAI',
-      'explore_modal_beta': 'Beta'
+      'explore_modal_beta': 'Beta',
+      'update_dialog_title': 'New Update Available',
+      'update_dialog_body': 'A new version v{version} is available!\n\nCurrent version: v{currentVersion}\n\nWould you like to download and install the update now?',
+      'update_dialog_btn_yes': 'Update Now',
+      'update_dialog_btn_no': 'Later'
     }
   };
 

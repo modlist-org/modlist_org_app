@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../core/installer_state.dart';
+import '../core/update_checker.dart';
 import 'explore_tab.dart';
 import 'installed_tab.dart';
 import 'settings_tab.dart';
@@ -31,6 +32,9 @@ class _MainLayoutState extends State<MainLayout> {
   void initState() {
     super.initState();
     _installerState.addListener(_onStateChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateChecker.check(context, _installerState);
+    });
   }
 
   @override

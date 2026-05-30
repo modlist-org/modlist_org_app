@@ -1,0 +1,43 @@
+output: dist/
+
+releases:
+  - name: windows
+    jobs:
+      - name: windows-zip
+        package:
+          platform: windows
+          target: zip
+      - name: windows-exe
+        package:
+          platform: windows
+          target: exe
+
+  - name: macos
+    jobs:
+      - name: macos-zip
+        package:
+          platform: macos
+          target: zip
+      - name: macos-dmg
+        package:
+          platform: macos
+          target: dmg
+
+  - name: linux
+    jobs:
+      - name: linux-zip
+        package:
+          platform: linux
+          target: zip
+      - name: linux-deb
+        package:
+          platform: linux
+          target: deb
+      - name: linux-rpm
+        package:
+          platform: linux
+          target: rpm
+      - name: linux-appimage
+        package:
+          platform: linux
+          target: appimage

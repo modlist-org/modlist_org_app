@@ -1,0 +1,8 @@
+display_name: modlist.org
+name: modlist-org-app
+summary: modlist.org desktop client
+vendor: modlist.org
+icon: web/icons/Icon-512.png
+license: MIT
+categories:
+  - Utility

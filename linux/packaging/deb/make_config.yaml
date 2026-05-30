@@ -1,0 +1,13 @@
+display_name: modlist.org
+name: modlist-org-app
+maintainer: modlist.org <support@modlist.org>
+icon: web/icons/Icon-512.png
+summary: modlist.org desktop client
+description: The official desktop app for installing and managing game mods from modlist.org.
+categories:
+  - Utility
+keywords:
+  - game
+  - mod
+  - installer
+  - adofai

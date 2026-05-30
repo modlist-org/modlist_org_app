@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/installer_state.dart';
+import '../core/update_checker.dart';
 
 class SettingsTab extends StatefulWidget {
   final InstallerState state;
@@ -238,8 +239,23 @@ class _SettingsTabState extends State<SettingsTab> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildInfoRow(widget.state.t('settings_sys_os'), Platform.operatingSystem.toUpperCase()),
-                _buildInfoRow(widget.state.t('settings_sys_ver'), 'v1.0.0 (Beta)'),
+                _buildInfoRow(widget.state.t('settings_sys_ver'), 'v${UpdateChecker.currentVersion} (Beta)'),
                 _buildInfoRow(widget.state.t('settings_sys_loader'), 'MelonLoader (Mono/IL2CPP)'),
+                const SizedBox(height: 16.0),
+                ElevatedButton(
+                  onPressed: () {
+                    UpdateChecker.check(context, widget.state, showNoUpdate: true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF919AFF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                  child: const Text('업데이트 확인 (Check for Updates)'),
+                ),
               ],
             ),
           ),

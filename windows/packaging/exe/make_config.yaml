@@ -1,0 +1,7 @@
+app_id: "{{B6FF90DF-7650-4545-81EC-C66C93C0C46F}}"
+display_name: modlist.org
+publisher_name: modlist.org
+publisher_url: https://modlist.org
+create_desktop_icon: true
+install_dir_name: "{autopf64}\\modlist.org"
+executable_name: modlist_org_app.exe

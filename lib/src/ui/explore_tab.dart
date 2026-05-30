@@ -926,475 +926,480 @@ class _ModDetailModalState extends State<_ModDetailModal> {
       child: Container(
         width: 680.0,
         padding: const EdgeInsets.all(24.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-            // Top Close Button & Game Label
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: ScrollConfiguration(
+        behavior: const MaterialScrollBehavior().copyWith(
+          scrollbars: false,
+        ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16151D),
-                    borderRadius: BorderRadius.circular(4.0),
+              // Top Close Button & Game Label
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16151D),
+                      borderRadius: BorderRadius.circular(4.0),
+                    ),
+                    child: Text(
+                      mod.game.toUpperCase(),
+                      style: const TextStyle(color: Colors.white38, fontSize: 11.0, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                  child: Text(
-                    mod.game.toUpperCase(),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11.0, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white54),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                )
-              ],
-            ),
-            const SizedBox(height: 12.0),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white54),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  )
+                ],
+              ),
+              const SizedBox(height: 12.0),
 
-            // Header (Logo, Name, Author)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 64.0,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: buildModLogo(
-                    logoPath: mod.logo,
-                    fallbackName: mod.name,
-                    apiUrl: widget.state.apiUrl,
+              // Header (Logo, Name, Author)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
                     width: 64.0,
                     height: 64.0,
-                    fallbackFontSize: 28.0,
-                    getFallbackGradient: (name) {
-                      int hash = 0;
-                      for (int i = 0; i < name.length; i++) {
-                        hash = name.codeUnitAt(i) + ((hash << 5) - hash);
-                      }
-                      final double h1 = (hash.abs() % 360).toDouble();
-                      final double h2 = ((h1 + 40) % 360).toDouble();
-                      return LinearGradient(
-                        colors: [
-                          HSLColor.fromAHSL(1.0, h1, 0.7, 0.5).toColor(),
-                          HSLColor.fromAHSL(1.0, h2, 0.7, 0.4).toColor(),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      );
-                    },
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.0),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: buildModLogo(
+                      logoPath: mod.logo,
+                      fallbackName: mod.name,
+                      apiUrl: widget.state.apiUrl,
+                      width: 64.0,
+                      height: 64.0,
+                      fallbackFontSize: 28.0,
+                      getFallbackGradient: (name) {
+                        int hash = 0;
+                        for (int i = 0; i < name.length; i++) {
+                          hash = name.codeUnitAt(i) + ((hash << 5) - hash);
+                        }
+                        final double h1 = (hash.abs() % 360).toDouble();
+                        final double h2 = ((h1 + 40) % 360).toDouble();
+                        return LinearGradient(
+                          colors: [
+                            HSLColor.fromAHSL(1.0, h1, 0.7, 0.5).toColor(),
+                            HSLColor.fromAHSL(1.0, h2, 0.7, 0.4).toColor(),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16.0),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        mod.name,
-                        style: const TextStyle(
-                          fontSize: 20.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mod.name,
+                          style: const TextStyle(
+                            fontSize: 20.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
 
-                      const SizedBox(height: 4.0),
+                        const SizedBox(height: 4.0),
 
-                      Row(
-                        children: [
-                          if (mod.author != null)
-                            _buildUserBadge(mod.author!),
+                        Row(
+                          children: [
+                            if (mod.author != null)
+                              _buildUserBadge(mod.author!),
 
-                          if (mod.collaborators.isNotEmpty) ...[
-                            const SizedBox(width: 10.0),
+                            if (mod.collaborators.isNotEmpty) ...[
+                              const SizedBox(width: 10.0),
 
-                            Text(
-                              '+${mod.collaborators.length}',
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12.0,
-                                fontWeight: FontWeight.w600,
+                              Text(
+                                '+${mod.collaborators.length}',
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12.0,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(width: 6.0),
+                              const SizedBox(width: 6.0),
 
-                            Transform.translate(
-                              offset: const Offset(0.0, -1.0),
-                              child: SizedBox(
-                                width: mod.collaborators.take(8).length * 12.0 + 20.0,
-                                height: 20.0,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    for (int i = 0; i < mod.collaborators.take(8).length; i++)
-                                      Positioned(
-                                        left: i * 14.0,
-                                        child: Opacity(
-                                          opacity: (1.0 - i * 0.08).clamp(0.4, 1.0),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF16151D),
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
+                              Transform.translate(
+                                offset: const Offset(0.0, -1.0),
+                                child: SizedBox(
+                                  width: mod.collaborators.take(8).length * 12.0 + 20.0,
+                                  height: 20.0,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      for (int i = 0; i < mod.collaborators.take(8).length; i++)
+                                        Positioned(
+                                          left: i * 14.0,
+                                          child: Opacity(
+                                            opacity: (1.0 - i * 0.08).clamp(0.4, 1.0),
+                                            child: Container(
+                                              decoration: BoxDecoration(
                                                 color: const Color(0xFF16151D),
-                                                width: 2.0,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: const Color(0xFF16151D),
+                                                  width: 2.0,
+                                                ),
                                               ),
-                                            ),
-                                            child: _buildAvatar(
-                                              mod.collaborators[i],
-                                              size: 20.0,
+                                              child: _buildAvatar(
+                                                mod.collaborators[i],
+                                                size: 20.0,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                ),
+                                    ],
+                                  ),
+                                )
                               )
-                            )
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Download Conut
-                Padding(
-                  padding: const EdgeInsets.only(left: 16.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.download_rounded,
-                        size: 18.0,
-                        color: Colors.white54,
-                      ),
-
-                      const SizedBox(width: 6.0),
-
-                      Text(
-                        '${mod.downloads}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14.0),
-
-            // Tabs / Description / Changelog
-            const SizedBox(height: 6.0),
-            Stack(
-              children: [
-                Container(
-                  height: 280.0,
-                  padding: const EdgeInsets.all(12.0),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16151D),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: ScrollConfiguration(
-                    behavior: const ScrollBehavior().copyWith(
-                      scrollbars: false,
-                    ),
-                    child: SingleChildScrollView(
-                      child: MarkdownBody(
-                        data: mod.description ?? mod.summary,
-                        styleSheet: markdownStyleSheet,
-                      ),
+                      ],
                     ),
                   ),
-                ),
-
-                Positioned(
-                  top: 8.0,
-                  right: 8.0,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.open_in_full,
-                      size: 18.0,
-                      color: Colors.white54,
-                    ),
-                    tooltip: widget.state.t('explore_modal_expand'),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => Dialog(
-                          backgroundColor: const Color(0xFF1E1C28),
-                          insetPadding: const EdgeInsets.all(40.0),
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              maxWidth: 1000.0,
-                              maxHeight: 900.0,
-                            ),
-                            padding: const EdgeInsets.all(24.0),
-                            child: SingleChildScrollView(
-                              child: MarkdownBody(
-                                data: mod.description ?? mod.summary,
-                                styleSheet: markdownStyleSheet,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12.0),
-
-            // Installation status and Installer logic
-            if (widget.state.isProcessing) ...[
-              // Progress indicator
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4.0),
-                    child: LinearProgressIndicator(
-                      value: widget.state.progress,
-                      backgroundColor: const Color(0xFF16151D),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
-                      minHeight: 6.0,
-                    ),
-                  ),
-                  const SizedBox(height: 8.0),
-                  Text(
-                    widget.state.statusMessage ?? widget.state.t('explore_modal_loading'),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12.0, fontStyle: FontStyle.italic),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ] else ...[
-              // Warnings
-              if (!widget.state.isValidPath)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text(
-                    widget.state.t('explore_modal_warn_path'),
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12.0, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else if (!widget.state.isLoaderInstalled)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        widget.state.t('explore_modal_warn_loader'),
-                        style: const TextStyle(color: Colors.white30, fontSize: 12.0),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8.0),
-                      _DownloadButton(
-                        height: 44.0,
-                        backgroundColor: const Color(0xFF6C78FF),
-                        onTap: () async {
-                          await widget.state.installMelonLoader();
-                        },
-                        child: Text(
-                          widget.state.t('explore_modal_btn_auto_loader'),
-                          style: const TextStyle(color: Colors.white, fontSize: 14.0, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else ...[
-                // Stable version download button
-                if (_latestVersion != null) ...[
-                  _DownloadButton(
-                    height: 50.0,
-                    backgroundColor: const Color(0xFF5865F2),
-                    onTap: () async {
-                      await widget.state.installMod(mod, version: _latestVersion!.version);
-                    },
+                  // Download Conut
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.download, color: Colors.white, size: 20.0),
-                        const SizedBox(width: 8.0),
+                        const Icon(
+                          Icons.download_rounded,
+                          size: 18.0,
+                          color: Colors.white54,
+                        ),
+
+                        const SizedBox(width: 6.0),
+
                         Text(
-                          'v${_latestVersion!.version}',
+                          '${mod.downloads}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16.0,
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'SUIT',
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8.0),
+                ],
+              ),
+              const SizedBox(height: 14.0),
+
+              // Tabs / Description / Changelog
+              const SizedBox(height: 6.0),
+              Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16151D),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: ScrollConfiguration(
+                      behavior: const ScrollBehavior().copyWith(
+                        scrollbars: false,
+                      ),
+                      child: SingleChildScrollView(
+                        child: MarkdownBody(
+                          data: mod.description ?? mod.summary,
+                          styleSheet: markdownStyleSheet,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    top: 8.0,
+                    right: 8.0,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.open_in_full,
+                        size: 18.0,
+                        color: Colors.white54,
+                      ),
+                      tooltip: widget.state.t('explore_modal_expand'),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => Dialog(
+                            backgroundColor: const Color(0xFF1E1C28),
+                            insetPadding: const EdgeInsets.all(40.0),
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                maxWidth: 1000.0,
+                                maxHeight: 900.0,
+                              ),
+                              padding: const EdgeInsets.all(24.0),
+                              child: SingleChildScrollView(
+                                child: MarkdownBody(
+                                  data: mod.description ?? mod.summary,
+                                  styleSheet: markdownStyleSheet,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12.0),
+
+              // Installation status and Installer logic
+              if (widget.state.isProcessing) ...[
+                // Progress indicator
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4.0),
+                      child: LinearProgressIndicator(
+                        value: widget.state.progress,
+                        backgroundColor: const Color(0xFF16151D),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
+                        minHeight: 6.0,
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
+                    Text(
+                      widget.state.statusMessage ?? widget.state.t('explore_modal_loading'),
+                      style: const TextStyle(color: Colors.white54, fontSize: 12.0, fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ] else ...[
+                // Warnings
+                if (!widget.state.isValidPath)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Text(
+                      widget.state.t('explore_modal_warn_path'),
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 12.0, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else if (!widget.state.isLoaderInstalled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          widget.state.t('explore_modal_warn_loader'),
+                          style: const TextStyle(color: Colors.white30, fontSize: 12.0),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8.0),
+                        _DownloadButton(
+                          height: 44.0,
+                          backgroundColor: const Color(0xFF6C78FF),
+                          onTap: () async {
+                            await widget.state.installMelonLoader();
+                          },
+                          child: Text(
+                            widget.state.t('explore_modal_btn_auto_loader'),
+                            style: const TextStyle(color: Colors.white, fontSize: 14.0, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  // Stable version download button
+                  if (_latestVersion != null) ...[
+                    _DownloadButton(
+                      height: 50.0,
+                      backgroundColor: const Color(0xFF5865F2),
+                      onTap: () async {
+                        await widget.state.installMod(mod, version: _latestVersion!.version);
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.download, color: Colors.white, size: 20.0),
+                          const SizedBox(width: 8.0),
+                          Text(
+                            'v${_latestVersion!.version}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'SUIT',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
+                  ],
+
+                  // Beta version download button
+                  if (mod.latestBetaVersion != null) ...[
+                    _DownloadButton(
+                      height: 50.0,
+                      backgroundColor: const Color(0xFF352920),
+                      border: Border.all(color: const Color(0xFFC8945A), width: 1.5),
+                      onTap: () async {
+                        await widget.state.installMod(mod, version: mod.latestBetaVersion!.version, isBeta: true);
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.download, color: Color(0xFFC8945A), size: 20.0),
+                          const SizedBox(width: 8.0),
+                          Text(
+                            'v${mod.latestBetaVersion!.version} (${widget.state.locale == 'ko-KR' ? '베타' : 'Beta'})',
+                            style: const TextStyle(
+                              color: Color(0xFFC8945A),
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'SUIT',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
+                  ],
                 ],
 
-                // Beta version download button
-                if (mod.latestBetaVersion != null) ...[
+                // Social GitHub & Discord buttons row
+                if ((mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty) || (mod.communityUrl != null && mod.communityUrl!.isNotEmpty)) ...[
+                  Row(
+                    children: [
+                      if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty)
+                        Expanded(
+                          child: _DownloadButton(
+                            height: 44.0,
+                            backgroundColor: const Color(0xFF1F2026),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
+                            onTap: () => _launchUrl(mod.sourceUrl!),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SvgPicture.string(
+                                  _githubSvg,
+                                  width: 18.0,
+                                  height: 18.0,
+                                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                                ),
+                                const SizedBox(width: 8.0),
+                                const Text(
+                                  'GitHub',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14.0,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'SUIT',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty && mod.communityUrl != null && mod.communityUrl!.isNotEmpty)
+                        const SizedBox(width: 12.0),
+                      if (mod.communityUrl != null && mod.communityUrl!.isNotEmpty)
+                        Expanded(
+                          child: _DownloadButton(
+                            height: 44.0,
+                            backgroundColor: const Color(0xFF1B1E30),
+                            border: Border.all(color: const Color(0xFF5865F2).withValues(alpha: 0.15), width: 1.0),
+                            onTap: () => _launchUrl(mod.communityUrl!),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SvgPicture.string(
+                                  _discordSvg,
+                                  width: 18.0,
+                                  height: 18.0,
+                                  colorFilter: const ColorFilter.mode(Color(0xFF5865F2), BlendMode.srcIn),
+                                ),
+                                const SizedBox(width: 8.0),
+                                const Text(
+                                  'Discord',
+                                  style: TextStyle(
+                                    color: Color(0xFF5865F2),
+                                    fontSize: 14.0,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'SUIT',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+
+                // Delete button if installed
+                if (isInstalled && localMod != null && widget.state.isValidPath && widget.state.isLoaderInstalled) ...[
+                  const SizedBox(height: 8.0),
                   _DownloadButton(
-                    height: 50.0,
-                    backgroundColor: const Color(0xFF352920),
-                    border: Border.all(color: const Color(0xFFC8945A), width: 1.5),
+                    height: 44.0,
+                    backgroundColor: const Color(0xFF2C1E21),
+                    border: Border.all(color: const Color(0xFFE74C3C).withValues(alpha: 0.3), width: 1.0),
                     onTap: () async {
-                      await widget.state.installMod(mod, version: mod.latestBetaVersion!.version, isBeta: true);
+                      await widget.state.uninstallMod(mod.slug, mod.name);
                     },
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.download, color: Color(0xFFC8945A), size: 20.0),
+                        const Icon(Icons.delete_outline, color: Color(0xFFE74C3C), size: 18.0),
                         const SizedBox(width: 8.0),
                         Text(
-                          'v${mod.latestBetaVersion!.version} (${widget.state.locale == 'ko-KR' ? '베타' : 'Beta'})',
+                          '${widget.state.t('explore_modal_btn_delete')} (v${localMod.version})',
                           style: const TextStyle(
-                            color: Color(0xFFC8945A),
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE74C3C),
+                            fontSize: 14.0,
+                            fontWeight: FontWeight.w600,
                             fontFamily: 'SUIT',
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8.0),
                 ],
               ],
 
-              // Social GitHub & Discord buttons row
-              if ((mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty) || (mod.communityUrl != null && mod.communityUrl!.isNotEmpty)) ...[
-                Row(
-                  children: [
-                    if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty)
-                      Expanded(
-                        child: _DownloadButton(
-                          height: 44.0,
-                          backgroundColor: const Color(0xFF1F2026),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
-                          onTap: () => _launchUrl(mod.sourceUrl!),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SvgPicture.string(
-                                _githubSvg,
-                                width: 18.0,
-                                height: 18.0,
-                                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                              ),
-                              const SizedBox(width: 8.0),
-                              const Text(
-                                'GitHub',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.0,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'SUIT',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty && mod.communityUrl != null && mod.communityUrl!.isNotEmpty)
-                      const SizedBox(width: 12.0),
-                    if (mod.communityUrl != null && mod.communityUrl!.isNotEmpty)
-                      Expanded(
-                        child: _DownloadButton(
-                          height: 44.0,
-                          backgroundColor: const Color(0xFF1B1E30),
-                          border: Border.all(color: const Color(0xFF5865F2).withValues(alpha: 0.15), width: 1.0),
-                          onTap: () => _launchUrl(mod.communityUrl!),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SvgPicture.string(
-                                _discordSvg,
-                                width: 18.0,
-                                height: 18.0,
-                                colorFilter: const ColorFilter.mode(Color(0xFF5865F2), BlendMode.srcIn),
-                              ),
-                              const SizedBox(width: 8.0),
-                              const Text(
-                                'Discord',
-                                style: TextStyle(
-                                  color: Color(0xFF5865F2),
-                                  fontSize: 14.0,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'SUIT',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-
-              // Delete button if installed
-              if (isInstalled && localMod != null && widget.state.isValidPath && widget.state.isLoaderInstalled) ...[
-                const SizedBox(height: 8.0),
-                _DownloadButton(
-                  height: 44.0,
-                  backgroundColor: const Color(0xFF2C1E21),
-                  border: Border.all(color: const Color(0xFFE74C3C).withValues(alpha: 0.3), width: 1.0),
-                  onTap: () async {
-                    await widget.state.uninstallMod(mod.slug, mod.name);
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.delete_outline, color: Color(0xFFE74C3C), size: 18.0),
-                      const SizedBox(width: 8.0),
-                      Text(
-                        '${widget.state.t('explore_modal_btn_delete')} (v${localMod.version})',
-                        style: const TextStyle(
-                          color: Color(0xFFE74C3C),
-                          fontSize: 14.0,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'SUIT',
-                        ),
-                      ),
-                    ],
+              const SizedBox(height: 12.0),
+              // Global status response helper
+              if (widget.state.statusMessage != null && !widget.state.isProcessing)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    widget.state.statusMessage!,
+                    style: TextStyle(
+                      color: widget.state.statusMessage!.contains('실패') ? Colors.redAccent : const Color(0xFF919AFF),
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ],
             ],
-
-            const SizedBox(height: 12.0),
-            // Global status response helper
-            if (widget.state.statusMessage != null && !widget.state.isProcessing)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  widget.state.statusMessage!,
-                  style: TextStyle(
-                    color: widget.state.statusMessage!.contains('실패') ? Colors.redAccent : const Color(0xFF919AFF),
-                    fontSize: 12.0,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     ),

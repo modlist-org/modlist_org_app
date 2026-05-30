@@ -44,7 +44,7 @@ jobs:
 
       - name: Build & Package Windows
         run: |
-          dart pub global run flutter_distributor release --name windows
+          dart pub global run flutter_distributor:main release --name windows
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -83,7 +83,7 @@ jobs:
 
       - name: Build & Package macOS
         run: |
-          dart pub global run flutter_distributor release --name macos
+          dart pub global run flutter_distributor:main release --name macos
 
       - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
@@ -127,7 +127,7 @@ jobs:
 
       - name: Build & Package Linux
         run: |
-          dart pub global run flutter_distributor release --name linux
+          dart pub global run flutter_distributor:main release --name linux
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4

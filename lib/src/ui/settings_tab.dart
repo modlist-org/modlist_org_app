@@ -37,12 +37,16 @@ class _SettingsTabState extends State<SettingsTab> {
   }
 
   Future<void> _detectPath() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     final defaultPath = widget.state.game.getPlatformDefaultPath();
     if (widget.state.game.isValidGamePath(defaultPath)) {
       await widget.state.setGamePath(defaultPath);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.state.t('settings_path_detected'))),
+        SnackBar(
+          content: Text(widget.state.t('settings_path_detected')),
+          duration: Duration(milliseconds: 2100),
+        ),
       );
     } else {
       if (!mounted) return;
@@ -50,6 +54,7 @@ class _SettingsTabState extends State<SettingsTab> {
         SnackBar(
           content: Text(widget.state.t('settings_path_not_found')),
           backgroundColor: Colors.redAccent,
+          duration: Duration(milliseconds: 2100),
         ),
       );
     }

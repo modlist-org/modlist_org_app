@@ -304,10 +304,11 @@ class _ExploreTabState extends State<ExploreTab> {
                               'library',
                             ],
                             display: (val) {
-                              if (val == 'all')
+                              if (val == 'all') {
                                 return widget.state.t(
                                   'explore_filter_category_all',
                                 );
+                              }
                               return widget.state.t('category_$val');
                             },
                             fontSize: 14.0,
@@ -349,22 +350,26 @@ class _ExploreTabState extends State<ExploreTab> {
                               'name_asc',
                             ],
                             display: (val) {
-                              if (val == 'downloads_desc')
+                              if (val == 'downloads_desc') {
                                 return widget.state.t(
                                   'explore_filter_sort_downloads',
                                 );
-                              if (val == 'updated')
+                              }
+                              if (val == 'updated') {
                                 return widget.state.t(
                                   'explore_filter_sort_updated',
                                 );
-                              if (val == 'created')
+                              }
+                              if (val == 'created') {
                                 return widget.state.t(
                                   'explore_filter_sort_created',
                                 );
-                              if (val == 'name_asc')
+                              }
+                              if (val == 'name_asc') {
                                 return widget.state.t(
                                   'explore_filter_sort_name',
                                 );
+                              }
                               return val;
                             },
                             fontSize: 14.0,

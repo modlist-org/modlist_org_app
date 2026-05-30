@@ -168,7 +168,7 @@ class ExploreTab extends StatefulWidget {
 class _ExploreTabState extends State<ExploreTab> {
   final TextEditingController _searchController = TextEditingController();
 
-  String _selectedCategory = 'all';
+  List<String> _selectedCategories = [];
   String _selectedSort = 'downloads_desc';
 
   List<ModItem> _mods = [];
@@ -207,7 +207,7 @@ class _ExploreTabState extends State<ExploreTab> {
     try {
       final result = await widget.state.apiService.fetchMods(
         game: widget.state.game.id,
-        categories: _selectedCategory,
+        categories: _selectedCategories.isEmpty ? 'all' : _selectedCategories.join(','),
         search: _searchController.text,
         sortBy: _selectedSort,
         page: _currentPage,
@@ -264,6 +264,74 @@ class _ExploreTabState extends State<ExploreTab> {
     );
   }
 
+  Widget _buildCategoryChip(String cat) {
+    final bool isSelected = cat == 'all'
+        ? _selectedCategories.isEmpty
+        : _selectedCategories.contains(cat);
+
+    final String label = cat == 'all'
+        ? widget.state.t('explore_filter_category_all')
+        : widget.state.t('category_$cat');
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            if (cat == 'all') {
+              _selectedCategories.clear();
+            } else {
+              if (_selectedCategories.contains(cat)) {
+                _selectedCategories.remove(cat);
+              } else {
+                _selectedCategories.add(cat);
+              }
+            }
+            _currentPage = 1;
+          });
+          _fetchMods();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF919AFF).withValues(alpha: 0.15)
+                : const Color(0xFF1E1C28),
+            borderRadius: BorderRadius.circular(20.0),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF919AFF)
+                  : Colors.white.withValues(alpha: 0.08),
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isSelected) ...[
+                const Icon(
+                  Icons.check,
+                  color: Color(0xFF919AFF),
+                  size: 14.0,
+                ),
+                const SizedBox(width: 6.0),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? const Color(0xFF919AFF) : Colors.white70,
+                  fontSize: 13.0,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -277,154 +345,114 @@ class _ExploreTabState extends State<ExploreTab> {
             children: [
               Row(
                 children: [
-                  // 카테고리 필터
+                  // 검색어 입력
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          widget.state.t('explore_filter_category'),
-                          style: const TextStyle(
-                            color: Colors.white38,
-                            fontSize: 12.0,
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: widget.state.t('explore_search_placeholder'),
+                        hintStyle: const TextStyle(
+                          color: Colors.white24,
+                          fontSize: 14.0,
+                        ),
+                        suffixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.white30,
+                          size: 20.0,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF3C3A4B),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 12.0,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF919AFF),
+                            width: 1.5,
                           ),
                         ),
-                        const SizedBox(height: 6.0),
-                        SizedBox(
-                          height: 42,
-                          child: UIDropdown<String>(
-                            modelValue: _selectedCategory,
-                            defaultValue: 'all',
-                            values: const [
-                              'all',
-                              'ui',
-                              'gameplay',
-                              'utility',
-                              'visuals',
-                              'library',
-                            ],
-                            display: (val) {
-                              if (val == 'all') {
-                                return widget.state.t(
-                                  'explore_filter_category_all',
-                                );
-                              }
-                              return widget.state.t('category_$val');
-                            },
-                            fontSize: 14.0,
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedCategory = val;
-                                _currentPage = 1;
-                              });
-                              _fetchMods();
-                            },
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16.0),
                   // 정렬 필터
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          widget.state.t('explore_filter_sort'),
-                          style: const TextStyle(
-                            color: Colors.white38,
-                            fontSize: 12.0,
-                          ),
-                        ),
-                        const SizedBox(height: 6.0),
-                        SizedBox(
-                          height: 42,
-                          child: UIDropdown<String>(
-                            modelValue: _selectedSort,
-                            defaultValue: 'downloads_desc',
-                            values: const [
-                              'downloads_desc',
-                              'updated',
-                              'created',
-                              'name_asc',
-                            ],
-                            display: (val) {
-                              if (val == 'downloads_desc') {
-                                return widget.state.t(
-                                  'explore_filter_sort_downloads',
-                                );
-                              }
-                              if (val == 'updated') {
-                                return widget.state.t(
-                                  'explore_filter_sort_updated',
-                                );
-                              }
-                              if (val == 'created') {
-                                return widget.state.t(
-                                  'explore_filter_sort_created',
-                                );
-                              }
-                              if (val == 'name_asc') {
-                                return widget.state.t(
-                                  'explore_filter_sort_name',
-                                );
-                              }
-                              return val;
-                            },
-                            fontSize: 14.0,
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedSort = val;
-                                _currentPage = 1;
-                              });
-                              _fetchMods();
-                            },
-                          ),
-                        ),
+                  SizedBox(
+                    width: 180,
+                    height: 42,
+                    child: UIDropdown<String>(
+                      modelValue: _selectedSort,
+                      defaultValue: 'downloads_desc',
+                      values: const [
+                        'downloads_desc',
+                        'updated',
+                        'created',
+                        'name_asc',
                       ],
+                      display: (val) {
+                        if (val == 'downloads_desc') {
+                          return widget.state.t(
+                            'explore_filter_sort_downloads',
+                          );
+                        }
+                        if (val == 'updated') {
+                          return widget.state.t(
+                            'explore_filter_sort_updated',
+                          );
+                        }
+                        if (val == 'created') {
+                          return widget.state.t(
+                            'explore_filter_sort_created',
+                          );
+                        }
+                        if (val == 'name_asc') {
+                          return widget.state.t(
+                            'explore_filter_sort_name',
+                          );
+                        }
+                        return val;
+                      },
+                      fontSize: 14.0,
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedSort = val;
+                          _currentPage = 1;
+                        });
+                        _fetchMods();
+                      },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16.0),
-              // 검색어 입력
-              TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: widget.state.t('explore_search_placeholder'),
-                  hintStyle: const TextStyle(
-                    color: Colors.white24,
-                    fontSize: 14.0,
-                  ),
-                  suffixIcon: const Icon(
-                    Icons.search,
-                    color: Colors.white30,
-                    size: 20.0,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF3C3A4B),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 12.0,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF919AFF),
-                      width: 1.5,
-                    ),
-                  ),
+              // 카테고리 필터 (Chips)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildCategoryChip('all'),
+                    const SizedBox(width: 8.0),
+                    _buildCategoryChip('ui'),
+                    const SizedBox(width: 8.0),
+                    _buildCategoryChip('gameplay'),
+                    const SizedBox(width: 8.0),
+                    _buildCategoryChip('utility'),
+                    const SizedBox(width: 8.0),
+                    _buildCategoryChip('visuals'),
+                    const SizedBox(width: 8.0),
+                    _buildCategoryChip('library'),
+                  ],
                 ),
               ),
             ],

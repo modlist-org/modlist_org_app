@@ -89,6 +89,12 @@ abstract class Game {
     void Function(double)? onProgress,
   });
 
+  // 파일에서 모드 설치
+  Future<void> installModFromFile(
+    String gamePath,
+    String filePath,
+  );
+
   // 모드 제거
   Future<void> uninstallMod(String gamePath, String modSlug);
 

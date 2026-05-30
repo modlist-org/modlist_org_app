@@ -467,6 +467,173 @@ class AdofaiGame extends Game {
   }
 
   @override
+  Future<void> installModFromFile(
+    String gamePath,
+    String filePath,
+  ) async {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      throw Exception('File does not exist: $filePath');
+    }
+
+    final filenameWithExt = p.basename(filePath);
+    final filenameNoExt = p.basenameWithoutExtension(filePath);
+    final ext = p.extension(filePath).toLowerCase();
+
+    final List<String> installedFiles = [];
+    final fileBytes = await file.readAsBytes();
+
+    bool isZip = ext == '.zip';
+    Archive? archive;
+    if (isZip) {
+      try {
+        archive = ZipDecoder().decodeBytes(fileBytes);
+        isZip = archive.isNotEmpty;
+      } catch (_) {
+        isZip = false;
+      }
+    }
+
+    bool isUmm = false;
+    String finalSlug = filenameNoExt.toLowerCase();
+    String finalName = filenameNoExt;
+    String finalVersion = 'Local';
+
+    if (isZip && archive != null) {
+      // UMM vs MelonLoader 감지
+      final List<String> infoJsonPaths = [];
+      for (final archiveFile in archive) {
+        final filename = archiveFile.name;
+        final baseName = p.basename(filename).toLowerCase();
+        if (baseName == 'info.json' && archiveFile.isFile) {
+          isUmm = true;
+          infoJsonPaths.add(filename);
+        }
+      }
+
+      if (isUmm) {
+        // UMM 모드 설치
+        final ummBaseDir = Directory(p.join(gamePath, 'UMMMods'));
+        if (!ummBaseDir.existsSync()) {
+          await ummBaseDir.create(recursive: true);
+        }
+
+        final parentFolders = infoJsonPaths.map((path) => p.dirname(path)).toList();
+        final bool isRootOnly = parentFolders.every((parent) => parent == '.' || parent == '');
+
+        for (final archiveFile in archive) {
+          final filename = archiveFile.name;
+          String outPath;
+          String relativePath;
+
+          if (isRootOnly) {
+            outPath = p.join(ummBaseDir.path, finalSlug, filename);
+            relativePath = p.join('UMMMods', finalSlug, filename);
+          } else {
+            outPath = p.join(ummBaseDir.path, filename);
+            relativePath = p.join('UMMMods', filename);
+          }
+
+          if (archiveFile.isFile) {
+            final data = archiveFile.content as List<int>;
+            final outFile = File(outPath);
+            await outFile.create(recursive: true);
+            await outFile.writeAsBytes(data);
+            installedFiles.add(relativePath);
+          } else {
+            await Directory(outPath).create(recursive: true);
+            installedFiles.add(relativePath);
+          }
+        }
+
+        // info.json 내용 읽어서 metadata 획득
+        ArchiveFile? firstInfoFile;
+        for (final archiveFile in archive) {
+          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' && archiveFile.isFile) {
+            firstInfoFile = archiveFile;
+            break;
+          }
+        }
+
+        if (firstInfoFile != null) {
+          try {
+            final data = firstInfoFile.content as List<int>;
+            final content = utf8.decode(data);
+            final Map<String, dynamic> infoJson = jsonDecode(content);
+            final String id = infoJson['Id'] ?? finalSlug;
+            final String displayName = infoJson['DisplayName'] ?? finalName;
+            finalVersion = infoJson['Version'] ?? 'Local';
+            finalSlug = 'umm-$id';
+            finalName = '$displayName (UMM)';
+          } catch (_) {
+            finalSlug = 'umm-$finalSlug';
+            finalName = '$finalName (UMM)';
+          }
+        }
+      } else {
+        // MelonLoader 모드 설치 (zip)
+        bool hasStructuredDirs = false;
+        for (final archiveFile in archive) {
+          final filename = archiveFile.name;
+          final firstDir = p.split(filename).first.toLowerCase();
+          if (firstDir == 'mods' || firstDir == 'plugins' || firstDir == 'userlibs') {
+            hasStructuredDirs = true;
+            break;
+          }
+        }
+
+        final String targetBaseDir = hasStructuredDirs ? gamePath : p.join(gamePath, 'Mods');
+
+        for (final archiveFile in archive) {
+          final filename = archiveFile.name;
+          final outPath = p.join(targetBaseDir, filename);
+          final relativePath = hasStructuredDirs ? filename : p.join('Mods', filename);
+
+          if (archiveFile.isFile) {
+            final data = archiveFile.content as List<int>;
+            final outFile = File(outPath);
+            await outFile.create(recursive: true);
+            await outFile.writeAsBytes(data);
+            installedFiles.add(relativePath);
+          } else {
+            await Directory(outPath).create(recursive: true);
+            installedFiles.add(relativePath);
+          }
+        }
+      }
+    } else {
+      // DLL 파일 단일 설치
+      final modsDir = Directory(p.join(gamePath, 'Mods'));
+      if (!modsDir.existsSync()) {
+        await modsDir.create(recursive: true);
+      }
+      final destPath = p.join(modsDir.path, filenameWithExt);
+      final destFile = File(destPath);
+      await destFile.writeAsBytes(fileBytes);
+      installedFiles.add(p.join('Mods', filenameWithExt));
+    }
+
+    // 로컬 메타데이터 갱신
+    final installedMods = await getInstalledMods(gamePath);
+    installedMods.removeWhere((m) =>
+      isModMatched(m.slug, finalSlug) ||
+      m.id.toLowerCase() == finalSlug.toLowerCase()
+    );
+
+    installedMods.add(InstalledMod(
+      id: finalSlug,
+      slug: finalSlug, // 수동 설치이므로 id와 동일하게 처리
+      name: finalName,
+      version: finalVersion,
+      isBeta: false,
+      installedAt: DateTime.now().toIso8601String(),
+      installedFiles: installedFiles,
+    ));
+
+    await saveInstalledMods(gamePath, installedMods);
+  }
+
+  @override
   Future<void> uninstallMod(String gamePath, String modSlug) async {
     final installedMods = await getInstalledMods(gamePath);
     

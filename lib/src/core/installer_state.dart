@@ -283,6 +283,26 @@ class InstallerState extends ChangeNotifier {
     }
   }
 
+  // 파일에서 모드 설치
+  Future<void> installModFromFile(String filePath) async {
+    if (_isProcessing || !_isValidPath) return;
+
+    _isProcessing = true;
+    _progress = 0.0;
+    _statusMessage = '로컬 모드 설치 중...';
+    notifyListeners();
+
+    try {
+      await game.installModFromFile(_gamePath, filePath);
+      _statusMessage = '모드가 성공적으로 수동 설치되었습니다!';
+    } catch (e) {
+      _statusMessage = '모드 수동 설치 실패: $e';
+    } finally {
+      _isProcessing = false;
+      await refreshStatus();
+    }
+  }
+
   // 모드 삭제
   Future<void> uninstallMod(String slug, String name) async {
     if (_isProcessing || !_isValidPath) return;

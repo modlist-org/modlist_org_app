@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/installer_state.dart';
 import '../models/mod_model.dart';
@@ -111,6 +112,27 @@ class _InstalledTabState extends State<InstalledTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(widget.state.t('installed_copied_clipboard'))),
     );
+  }
+
+  Future<void> _pickAndInstallMod() async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['zip', 'dll'],
+        dialogTitle: widget.state.t('installed_btn_add_mod_manually'),
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        await widget.state.installModFromFile(filePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('파일 선택 중 오류가 발생했습니다: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -331,6 +353,21 @@ class _InstalledTabState extends State<InstalledTab> {
           // 2. 로컬 설치 모드 관리 카드
           _buildCard(
             title: widget.state.t('installed_list_title'),
+            action: widget.state.isProcessing || !widget.state.isValidPath
+                ? null
+                : Tooltip(
+                    message: widget.state.t('installed_btn_add_mod_manually'),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.file_open_outlined,
+                        color: Color(0xFF919AFF),
+                        size: 20.0,
+                      ),
+                      hoverColor: const Color(0xFF919AFF).withValues(alpha: 0.08),
+                      splashRadius: 20.0,
+                      onPressed: _pickAndInstallMod,
+                    ),
+                  ),
             child: widget.state.installedMods.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32.0),
@@ -556,7 +593,7 @@ class _InstalledTabState extends State<InstalledTab> {
     );
   }
 
-  Widget _buildCard({required String title, required Widget child}) {
+  Widget _buildCard({required String title, Widget? action, required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1E1C28),
@@ -570,13 +607,19 @@ class _InstalledTabState extends State<InstalledTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16.0,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF919AFF),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF919AFF),
+                ),
+              ),
+              action ?? const SizedBox.shrink(),
+            ],
           ),
           const SizedBox(height: 16.0),
           child,

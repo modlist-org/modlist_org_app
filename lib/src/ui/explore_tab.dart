@@ -1292,85 +1292,90 @@ class _ModDetailModalState extends State<_ModDetailModal> {
 
                 // Tabs / Description / Changelog
                 const SizedBox(height: 6.0),
-                Stack(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 240.0,
-                      padding: const EdgeInsets.all(12.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF16151D),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8.0),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: ShaderMask(
-                                shaderCallback: (rect) {
-                                  return const LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white,
-                                      Colors.white,
-                                      Colors.white,
-                                      Colors.transparent,
-                                    ],
-                                    stops: [0.0, 0.75, 0.9, 1.0],
-                                  ).createShader(rect);
-                                },
-                                blendMode: BlendMode.dstIn,
-                                child: SingleChildScrollView(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  child: MarkdownBody(
-                                    data: mod.description ?? mod.summary,
-                                    styleSheet: markdownStyleSheet,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final text = mod.description ?? mod.summary;
 
-                    Positioned(
-                      top: 8.0,
-                      right: 8.0,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.open_in_full,
-                          size: 18.0,
-                          color: Colors.white54,
-                        ),
-                        tooltip: widget.state.t('explore_modal_expand'),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => Dialog(
-                              backgroundColor: const Color(0xFF1E1C28),
-                              insetPadding: const EdgeInsets.all(40.0),
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 1000.0,
-                                  maxHeight: 900.0,
-                                ),
-                                padding: const EdgeInsets.all(24.0),
-                                child: SingleChildScrollView(
-                                  child: MarkdownBody(
-                                    data: mod.description ?? mod.summary,
-                                    styleSheet: markdownStyleSheet,
-                                  ),
+                    final overflow = _checkOverflow(
+                      text,
+                      constraints.maxWidth - 24,
+                    );
+
+                    return Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          height: 220.0,
+                          padding: const EdgeInsets.all(12.0),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16151D),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: ShaderMask(
+                              shaderCallback: (rect) {
+                                return const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white,
+                                    Colors.white,
+                                    Colors.transparent,
+                                  ],
+                                  stops: [0.0, 0.5, 0.75, 1.0],
+                                ).createShader(rect);
+                              },
+                              blendMode: BlendMode.dstIn,
+                              child: SingleChildScrollView(
+                                physics: const NeverScrollableScrollPhysics(),
+                                child: MarkdownBody(
+                                  data: text,
+                                  styleSheet: markdownStyleSheet,
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                          ),
+                        ),
+
+                        if (overflow)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.open_in_full,
+                                size: 18,
+                                color: Colors.white54,
+                              ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => Dialog(
+                                    backgroundColor: const Color(0xFF1E1C28),
+                                    insetPadding: const EdgeInsets.all(40.0),
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 1000.0,
+                                        maxHeight: 900.0,
+                                      ),
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: SingleChildScrollView(
+                                        child: MarkdownBody(
+                                          data: mod.description ?? mod.summary,
+                                          styleSheet: markdownStyleSheet,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12.0),
 
@@ -1848,4 +1853,17 @@ class _DownloadButtonState extends State<_DownloadButton> {
       ),
     );
   }
+}
+
+bool _checkOverflow(String text, double maxWidth) {
+  final tp = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: const TextStyle(fontSize: 13.5, height: 1.4, fontFamily: 'SUIT'),
+    ),
+    maxLines: null,
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: maxWidth);
+
+  return tp.height > 160.0;
 }

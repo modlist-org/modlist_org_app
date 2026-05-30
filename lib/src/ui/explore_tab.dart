@@ -395,17 +395,14 @@ class _ExploreTabState extends State<ExploreTab> {
                       modelValue: _selectedSort,
                       defaultValue: 'downloads_desc',
                       values: const [
-                        'downloads_desc',
                         'updated',
                         'created',
+                        'downloads_desc',
+                        'downloads_asc',
                         'name_asc',
+                        'name_desc',
                       ],
                       display: (val) {
-                        if (val == 'downloads_desc') {
-                          return widget.state.t(
-                            'explore_filter_sort_downloads',
-                          );
-                        }
                         if (val == 'updated') {
                           return widget.state.t(
                             'explore_filter_sort_updated',
@@ -416,9 +413,24 @@ class _ExploreTabState extends State<ExploreTab> {
                             'explore_filter_sort_created',
                           );
                         }
+                        if (val == 'downloads_desc') {
+                          return widget.state.t(
+                            'explore_filter_sort_downloads',
+                          );
+                        }
+                        if (val == 'downloads_asc') {
+                          return widget.state.t(
+                            'explore_filter_sort_downloads_asc',
+                          );
+                        }
                         if (val == 'name_asc') {
                           return widget.state.t(
                             'explore_filter_sort_name',
+                          );
+                        }
+                        if (val == 'name_desc') {
+                          return widget.state.t(
+                            'explore_filter_sort_name_desc',
                           );
                         }
                         return val;

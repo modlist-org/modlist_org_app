@@ -97,6 +97,9 @@ jobs:
       - name: Install flutter_distributor
         run: dart pub global activate flutter_distributor
 
+      - name: Install appdmg
+        run: npm install -g appdmg
+
       - name: Build & Package macOS
         run: |
           dart pub global run flutter_distributor:main release --name macos

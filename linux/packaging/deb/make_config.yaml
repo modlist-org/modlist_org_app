@@ -1,5 +1,5 @@
 display_name: modlist.org
-name: modlist-org-app
+package_name: modlist-org-app
 maintainer:
   name: modlist.org
   email: admin@modlist.org

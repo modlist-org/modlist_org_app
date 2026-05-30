@@ -378,21 +378,24 @@ class _ExploreTabState extends State<ExploreTab> {
                         Expanded(
                           child: LayoutBuilder(
                             builder: (context, constraints) {
-                              final double width = constraints.maxWidth;
-                              final int crossAxisCount = width > 1350 ? 3 : 2;
-                              final double childAspectRatio = width > 1350 ? 1.7 : (width > 900 ? 2.15 : 1.9);
+                              const double minCardWidth = 388.0;
+                              const double spacing = 16.0;
+
+                              final count = ((constraints.maxWidth + spacing) / (minCardWidth + spacing))
+                                  .floor()
+                                  .clamp(1, 999);
+
                               return GridView.builder(
                                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  childAspectRatio: childAspectRatio,
-                                  crossAxisSpacing: 16.0,
-                                  mainAxisSpacing: 16.0,
+                                  crossAxisCount: count,
+                                  crossAxisSpacing: spacing,
+                                  mainAxisSpacing: spacing,
+                                  mainAxisExtent: 154.0,
                                 ),
                                 itemCount: _mods.length,
                                 itemBuilder: (context, index) {
-                                  final mod = _mods[index];
-                                  return _buildModCard(mod);
+                                  return _buildModCard(_mods[index]);
                                 },
                               );
                             },

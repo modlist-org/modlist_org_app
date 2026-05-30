@@ -75,7 +75,6 @@ class Localization {
       'explore_badge_update_req': '업데이트 필요',
       'explore_badge_installed': '설치 완료',
       'explore_card_featured': '추천',
-      'explore_modal_desc': '설명',
       'explore_modal_categories': '카테고리',
       'explore_modal_downloads': '다운로드 수',
       'explore_modal_author': '제작자',
@@ -92,6 +91,7 @@ class Localization {
       'explore_modal_warn_loader': '모드를 설치하려면 먼저 MelonLoader 설치가 필요합니다.',
       'explore_modal_btn_auto_loader': 'MelonLoader 자동 설치',
       'explore_modal_loading': '처리 중...',
+      "explore_modal_expand": "펼치기"
     },
     'en-US': {
       // Sidebar
@@ -168,7 +168,6 @@ class Localization {
       'explore_badge_update_req': 'Update Req.',
       'explore_badge_installed': 'Installed',
       'explore_card_featured': 'Featured',
-      'explore_modal_desc': 'DESCRIPTION',
       'explore_modal_categories': 'Category',
       'explore_modal_downloads': 'Downloads',
       'explore_modal_author': 'Author',
@@ -185,6 +184,7 @@ class Localization {
       'explore_modal_warn_loader': 'MelonLoader installation is required first to install mods.',
       'explore_modal_btn_auto_loader': 'Auto-Install MelonLoader',
       'explore_modal_loading': 'Processing...',
+      "explore_modal_expand": "Expend"
     }
   };
 

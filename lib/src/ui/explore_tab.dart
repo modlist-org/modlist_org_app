@@ -93,7 +93,53 @@ Widget _buildFallbackLogo(String name, double fontSize, LinearGradient Function(
   );
 }
 
-
+final markdownStyleSheet = MarkdownStyleSheet(
+  p: const TextStyle(
+    color: Colors.white70,
+    fontSize: 13.5,
+    height: 1.4,
+    fontFamily: 'SUIT',
+  ),
+  blockquote: const TextStyle(
+    color: Colors.white60,
+    fontStyle: FontStyle.italic,
+    fontFamily: 'SUIT',
+  ),
+  blockquoteDecoration: const BoxDecoration(
+    border: Border(
+      left: BorderSide(
+        color: Color(0xFF919AFF),
+        width: 3.0,
+      ),
+    ),
+  ),
+  blockquotePadding: const EdgeInsets.symmetric(
+    horizontal: 12.0,
+    vertical: 6.0,
+  ),
+  h1: const TextStyle(
+    color: Colors.white,
+    fontSize: 16.0,
+    fontWeight: FontWeight.bold,
+    fontFamily: 'SUIT',
+  ),
+  h2: const TextStyle(
+    color: Colors.white,
+    fontSize: 14.0,
+    fontWeight: FontWeight.bold,
+    fontFamily: 'SUIT',
+  ),
+  strong: const TextStyle(
+    color: Colors.white,
+    fontWeight: FontWeight.bold,
+  ),
+  em: const TextStyle(
+    fontStyle: FontStyle.italic,
+  ),
+  listBullet: const TextStyle(
+    color: Color(0xFF919AFF),
+  ),
+);
 
 class ExploreTab extends StatefulWidget {
   final InstallerState state;
@@ -845,8 +891,6 @@ class _ModDetailModalState extends State<_ModDetailModal> {
       authors.add(mod.author!);
     }
     authors.addAll(mod.collaborators);
-    final String authorNames = authors.map((a) => a.displayName).join(', ');
-    final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
     final isInstalled = widget.state.installedMods.any((m) {
       return m.slug.toLowerCase() == mod.slug.toLowerCase() || widget.state.game.isModMatched(m.slug, mod.slug);
     });
@@ -864,7 +908,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
       ),
       insetPadding: const EdgeInsets.all(40.0),
       child: Container(
-        width: 600.0,
+        width: 680.0,
         padding: const EdgeInsets.all(24.0),
         child: SingleChildScrollView(
           child: Column(
@@ -898,6 +942,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
 
             // Header (Logo, Name, Author)
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   width: 64.0,
@@ -935,29 +980,100 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 const SizedBox(width: 16.0),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         mod.name,
-                        style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(
+                          fontSize: 20.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+
                       const SizedBox(height: 4.0),
+
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'By ${authorNames.isNotEmpty ? authorNames : "알 수 없음"}',
-                              style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          if (mod.author != null)
+                            _buildUserBadge(mod.author!),
+
+                          if (mod.collaborators.isNotEmpty) ...[
+                            const SizedBox(width: 10.0),
+
+                            Text(
+                              '+${mod.collaborators.length}',
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12.0,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          if (isAnyAuthorVerified) ...[
-                            const SizedBox(width: 4.0),
-                            const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 14.0),
+
+                            const SizedBox(width: 6.0),
+
+                            Transform.translate(
+                              offset: const Offset(0.0, -1.0),
+                              child: SizedBox(
+                                width: mod.collaborators.take(8).length * 12.0 + 20.0,
+                                height: 20.0,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    for (int i = 0; i < mod.collaborators.take(8).length; i++)
+                                      Positioned(
+                                        left: i * 14.0,
+                                        child: Opacity(
+                                          opacity: (1.0 - i * 0.08).clamp(0.4, 1.0),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF16151D),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: const Color(0xFF16151D),
+                                                width: 2.0,
+                                              ),
+                                            ),
+                                            child: _buildAvatar(
+                                              mod.collaborators[i],
+                                              size: 20.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              )
+                            )
                           ],
                         ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Download Conut
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.download_rounded,
+                        size: 18.0,
+                        color: Colors.white54,
+                      ),
+
+                      const SizedBox(width: 6.0),
+
+                      Text(
+                        '${mod.downloads}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -967,31 +1083,64 @@ class _ModDetailModalState extends State<_ModDetailModal> {
             const SizedBox(height: 14.0),
 
             // Tabs / Description / Changelog
-            Text(
-              widget.state.t('explore_modal_desc'),
-              style: const TextStyle(color: Colors.white38, fontSize: 12.0, fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 6.0),
-            Container(
-              height: 90.0,
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFF16151D),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: SingleChildScrollView(
-                child: MarkdownBody(
-                  data: mod.description ?? mod.summary,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4, fontFamily: 'SUIT'),
-                    h1: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold, fontFamily: 'SUIT'),
-                    h2: const TextStyle(color: Colors.white, fontSize: 14.0, fontWeight: FontWeight.bold, fontFamily: 'SUIT'),
-                    strong: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    em: const TextStyle(fontStyle: FontStyle.italic),
-                    listBullet: const TextStyle(color: Color(0xFF919AFF)),
+            Stack(
+              children: [
+                Container(
+                  height: 280.0,
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16151D),
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: ScrollConfiguration(
+                    behavior: const ScrollBehavior().copyWith(
+                      scrollbars: false,
+                    ),
+                    child: SingleChildScrollView(
+                      child: MarkdownBody(
+                        data: mod.description ?? mod.summary,
+                        styleSheet: markdownStyleSheet,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+
+                Positioned(
+                  top: 8.0,
+                  right: 8.0,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.open_in_full,
+                      size: 18.0,
+                      color: Colors.white54,
+                    ),
+                    tooltip: widget.state.t('explore_modal_expand'),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          backgroundColor: const Color(0xFF1E1C28),
+                          insetPadding: const EdgeInsets.all(40.0),
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              maxWidth: 1000.0,
+                              maxHeight: 900.0,
+                            ),
+                            padding: const EdgeInsets.all(24.0),
+                            child: SingleChildScrollView(
+                              child: MarkdownBody(
+                                data: mod.description ?? mod.summary,
+                                styleSheet: markdownStyleSheet,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12.0),
 
@@ -1213,71 +1362,6 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 ),
               ],
             ],
-
-            Divider(
-              color: Colors.white.withValues(alpha: 0.05),
-              height: 16.0,
-              thickness: 1.0,
-            ),
-
-            // 다운로드 수
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.state.t('explore_modal_downloads'),
-                    style: const TextStyle(color: Colors.white38, fontSize: 13.0, fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    '${mod.downloads}',
-                    style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-
-            // 제작자
-            if (mod.author != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      widget.state.t('explore_modal_author'),
-                      style: const TextStyle(color: Colors.white38, fontSize: 13.0, fontWeight: FontWeight.w500),
-                    ),
-                    _buildUserBadge(mod.author!),
-                  ],
-                ),
-              ),
-
-            // 협업자
-            if (mod.collaborators.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.state.t('explore_modal_collaborators'),
-                      style: const TextStyle(color: Colors.white38, fontSize: 13.0, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(width: 12.0),
-                    Expanded(
-                      child: Wrap(
-                        spacing: 8.0,
-                        runSpacing: 6.0,
-                        alignment: WrapAlignment.end,
-                        children: mod.collaborators.map((c) => _buildUserBadge(c)).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
             const SizedBox(height: 12.0),
             // Global status response helper

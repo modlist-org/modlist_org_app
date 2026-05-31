@@ -643,6 +643,15 @@ class AdofaiGame extends Game {
     final targetMod = installedMods[modIndex];
     final cleanTargetSlug = modSlug.startsWith('umm-') ? modSlug.substring(4) : modSlug;
 
+    // 타겟 모드가 설치한 파일 목록 중, 다른 모드에서도 공유하는 파일이 있는지 체크
+    final otherMods = installedMods.where((m) => !isModMatched(m.slug, modSlug)).toList();
+    final Set<String> sharedFiles = {};
+    for (final other in otherMods) {
+      for (final file in other.installedFiles) {
+        sharedFiles.add(file.toLowerCase().replaceAll('\\', '/'));
+      }
+    }
+
     // 안전하게 디렉토리를 지우면서 배포 파일만 삭제하고 세이브데이터/커스텀 리소스를 보존하는 헬퍼 함수
     Future<void> safeDeleteDirectory(Directory dir) async {
       if (!dir.existsSync()) return;
@@ -652,6 +661,12 @@ class AdofaiGame extends Game {
         // 1. 배포 바이너리 및 메타데이터 파일만 삭제
         for (final entity in entities) {
           if (entity is File) {
+            final relativeEntityPath = p.relative(entity.path, from: gamePath).toLowerCase().replaceAll('\\', '/');
+            if (sharedFiles.contains(relativeEntityPath)) {
+              // 다른 모드에서 의존하거나 공유하는 파일이므로 삭제하지 않고 건너뜁니다.
+              continue;
+            }
+
             final filename = p.basename(entity.path).toLowerCase();
             final ext = p.extension(entity.path).toLowerCase();
             
@@ -694,6 +709,12 @@ class AdofaiGame extends Game {
 
     // 기록되어 있던 설치 파일들을 차례대로 삭제
     for (final relPath in targetMod.installedFiles) {
+      final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
+      if (sharedFiles.contains(normalizedRelPath)) {
+        // 다른 모드에서도 의존하거나 공유하는 파일이므로 삭제하지 않고 건너뜁니다.
+        continue;
+      }
+
       final fullPath = p.join(gamePath, relPath);
       if (FileSystemEntity.isFileSync(fullPath)) {
         final filename = p.basename(fullPath).toLowerCase();
@@ -714,18 +735,28 @@ class AdofaiGame extends Game {
           } catch (_) {}
         }
       } else if (FileSystemEntity.isDirectorySync(fullPath)) {
-        final dir = Directory(fullPath);
-        await safeDeleteDirectory(dir);
+        // 공용 폴더(Mods, Plugins, UserLibs, UMMMods 등) 자체는 삭제하거나 내부를 전체 스캔하여 지우지 않도록 보호합니다.
+        final relativeToGame = p.relative(fullPath, from: gamePath).toLowerCase().replaceAll('\\', '/');
+        final isSharedDir = relativeToGame == '.' ||
+                            relativeToGame == 'mods' ||
+                            relativeToGame == 'plugins' ||
+                            relativeToGame == 'userlibs' ||
+                            relativeToGame == 'ummmods';
+        
+        if (!isSharedDir) {
+          final dir = Directory(fullPath);
+          await safeDeleteDirectory(dir);
+        }
       }
     }
 
     // 혹시라도 지워지지 않았을 경우를 대비해 slug.dll 이 존재하면 삭제
     final fallbackDll = File(p.join(gamePath, 'Mods', '$cleanTargetSlug.dll'));
-    if (fallbackDll.existsSync()) {
+    if (fallbackDll.existsSync() && !sharedFiles.contains('mods/${cleanTargetSlug.toLowerCase()}.dll')) {
       await fallbackDll.delete();
     }
     final fallbackDllLower = File(p.join(gamePath, 'Mods', '${cleanTargetSlug.toLowerCase()}.dll'));
-    if (fallbackDllLower.existsSync()) {
+    if (fallbackDllLower.existsSync() && !sharedFiles.contains('mods/${cleanTargetSlug.toLowerCase()}.dll')) {
       await fallbackDllLower.delete();
     }
 
@@ -855,7 +886,9 @@ class AdofaiGame extends Game {
               version: metaMod.version,
               isBeta: metaMod.isBeta,
               installedAt: metaMod.installedAt,
-              installedFiles: result[index].installedFiles,
+              installedFiles: metaMod.installedFiles.isNotEmpty
+                  ? metaMod.installedFiles
+                  : result[index].installedFiles,
             );
           }
         }

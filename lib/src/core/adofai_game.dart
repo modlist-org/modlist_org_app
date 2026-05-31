@@ -403,8 +403,9 @@ class AdofaiGame extends Game {
         // MelonLoader 모드 설치 로직
         bool hasStructuredDirs = false;
         for (final archiveFile in archive) {
-          final filename = archiveFile.name;
-          final firstDir = p.split(filename).first.toLowerCase();
+          final normalizedPath = archiveFile.name.replaceAll('\\', '/').toLowerCase();
+          final parts = normalizedPath.split('/');
+          final firstDir = parts.firstWhere((p) => p.isNotEmpty && p != '.', orElse: () => '');
           if (firstDir == 'mods' || firstDir == 'plugins' || firstDir == 'userlibs') {
             hasStructuredDirs = true;
             break;
@@ -574,8 +575,9 @@ class AdofaiGame extends Game {
         // MelonLoader 모드 설치 (zip)
         bool hasStructuredDirs = false;
         for (final archiveFile in archive) {
-          final filename = archiveFile.name;
-          final firstDir = p.split(filename).first.toLowerCase();
+          final normalizedPath = archiveFile.name.replaceAll('\\', '/').toLowerCase();
+          final parts = normalizedPath.split('/');
+          final firstDir = parts.firstWhere((p) => p.isNotEmpty && p != '.', orElse: () => '');
           if (firstDir == 'mods' || firstDir == 'plugins' || firstDir == 'userlibs') {
             hasStructuredDirs = true;
             break;
@@ -672,10 +674,10 @@ class AdofaiGame extends Game {
             
             // 삭제 대상 핵심 배포 파일 규칙:
             // - info.json / Info.json
-            // - *.dll / *.pdb / *.mdb
+            // - *.dll / *.pdb / *.mdb / *.so / *.dylib (바이너리 라이브러리)
             // - readme / changelog / license 관련 텍스트/마크다운 파일
             final isInfoJson = filename == 'info.json';
-            final isBinary = ext == '.dll' || ext == '.pdb' || ext == '.mdb';
+            final isBinary = ext == '.dll' || ext == '.pdb' || ext == '.mdb' || ext == '.so' || ext == '.dylib';
             final isDoc = filename.startsWith('readme') || 
                           filename.startsWith('changelog') || 
                           filename.startsWith('license');
@@ -717,23 +719,9 @@ class AdofaiGame extends Game {
 
       final fullPath = p.join(gamePath, relPath);
       if (FileSystemEntity.isFileSync(fullPath)) {
-        final filename = p.basename(fullPath).toLowerCase();
-        final ext = p.extension(fullPath).toLowerCase();
-        
-        // 메타데이터에 등록된 파일이라도 세이브나 커스텀 파일로 보이는 것은 보존
-        final isInfoJson = filename == 'info.json';
-        final isBinary = ext == '.dll' || ext == '.pdb' || ext == '.mdb';
-        final isDoc = filename.startsWith('readme') || 
-                      filename.startsWith('changelog') || 
-                      filename.startsWith('license');
-        
-        final shouldDelete = isInfoJson || isBinary || isDoc;
-        
-        if (shouldDelete) {
-          try {
-            await File(fullPath).delete();
-          } catch (_) {}
-        }
+        try {
+          await File(fullPath).delete();
+        } catch (_) {}
       } else if (FileSystemEntity.isDirectorySync(fullPath)) {
         // 공용 폴더(Mods, Plugins, UserLibs, UMMMods 등) 자체는 삭제하거나 내부를 전체 스캔하여 지우지 않도록 보호합니다.
         final relativeToGame = p.relative(fullPath, from: gamePath).toLowerCase().replaceAll('\\', '/');

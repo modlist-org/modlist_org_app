@@ -311,6 +311,10 @@ class AdofaiGame extends Game {
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
 
+    // 파일 추출 전에 로컬 메타데이터를 먼저 불러옵니다.
+    // 이렇게 하면 압축 해제되어 생성된 DLL이 unclaimed 파일로 감지되어 이중 등록되는 것을 방지합니다.
+    final installedMods = await getInstalledMods(gamePath);
+
     // zip 여부 확인 및 아카이브 스캔
     bool isZip = false;
     Archive? archive;
@@ -446,8 +450,6 @@ class AdofaiGame extends Game {
     // 임시 다운로드 파일 삭제
     await file.delete();
 
-    // 로컬 메타데이터 갱신
-    final installedMods = await getInstalledMods(gamePath);
     // 기존에 이미 동일한 모드가 설치되어 있었으면 제거 후 갱신
     installedMods.removeWhere((m) =>
       isModMatched(m.slug, mod.slug) ||
@@ -483,6 +485,9 @@ class AdofaiGame extends Game {
 
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
+
+    // 파일 추출 전에 로컬 메타데이터를 먼저 불러옵니다.
+    final installedMods = await getInstalledMods(gamePath);
 
     bool isZip = ext == '.zip';
     Archive? archive;
@@ -615,8 +620,6 @@ class AdofaiGame extends Game {
       installedFiles.add(p.join('Mods', filenameWithExt));
     }
 
-    // 로컬 메타데이터 갱신
-    final installedMods = await getInstalledMods(gamePath);
     installedMods.removeWhere((m) =>
       isModMatched(m.slug, finalSlug) ||
       m.id.toLowerCase() == finalSlug.toLowerCase()
@@ -756,9 +759,69 @@ class AdofaiGame extends Game {
   @override
   Future<List<InstalledMod>> getInstalledMods(String gamePath) async {
     final List<InstalledMod> result = [];
-    final Set<String> scannedSlugs = {};
+    final Set<String> claimedFiles = {};
 
-    // 1. UMMMods/ 폴더 스캔
+    // 1. modlist_installed.json (메타데이터 파일) 로드
+    final metaFile = File(getInstalledModsMetaPath(gamePath));
+    final List<InstalledMod> metaMods = [];
+    if (metaFile.existsSync()) {
+      try {
+        final content = metaFile.readAsStringSync();
+        final List<dynamic> jsonList = jsonDecode(content);
+        metaMods.addAll(jsonList.map((j) => InstalledMod.fromJson(j)));
+      } catch (_) {}
+    }
+
+    // 파일 개수가 많은(상세 정보가 있는) 메타데이터 모드를 우선 처리하여
+    // 나중에 단순 스캔 모드가 클레임되거나 중복 검사로 스킵되도록 내림차순 정렬합니다.
+    metaMods.sort((a, b) => b.installedFiles.length.compareTo(a.installedFiles.length));
+
+    // 2. 메타데이터에 등록된 모드 중 실제로 파일이 존재하는 모드를 결과 리스트에 추가
+    for (final metaMod in metaMods) {
+      bool exists = false;
+      // 설치 기록된 파일 중 하나라도 실제 존재하면 설치된 것으로 간주
+      for (final relPath in metaMod.installedFiles) {
+        final fullPath = p.join(gamePath, relPath);
+        if (FileSystemEntity.isFileSync(fullPath) || FileSystemEntity.isDirectorySync(fullPath)) {
+          exists = true;
+          break;
+        }
+      }
+
+      // 만약 설치 기록 파일 목록 자체가 비어있다면, UMM 폴더나 DLL이 있는지 fallback으로 체크
+      if (metaMod.installedFiles.isEmpty) {
+        final cleanSlug = metaMod.slug.startsWith('umm-') ? metaMod.slug.substring(4) : metaMod.slug;
+        final ummDir = Directory(p.join(gamePath, 'UMMMods', cleanSlug));
+        final modDll = File(p.join(gamePath, 'Mods', '$cleanSlug.dll'));
+        final pluginDll = File(p.join(gamePath, 'Plugins', '$cleanSlug.dll'));
+        if (ummDir.existsSync() || modDll.existsSync() || pluginDll.existsSync()) {
+          exists = true;
+        }
+      }
+
+      if (exists) {
+        bool allFilesClaimed = true;
+        for (final relPath in metaMod.installedFiles) {
+          final normalized = relPath.toLowerCase().replaceAll('\\', '/');
+          if (!claimedFiles.contains(normalized)) {
+            allFilesClaimed = false;
+            break;
+          }
+        }
+
+        // 만약 모드의 모든 설치 파일이 이미 다른 상세한 모드에 의해 점유(Claimed)되었다면 중복 모드로 판단하고 스킵
+        if (metaMod.installedFiles.isNotEmpty && allFilesClaimed) {
+          continue;
+        }
+
+        result.add(metaMod);
+        for (final relPath in metaMod.installedFiles) {
+          claimedFiles.add(relPath.toLowerCase().replaceAll('\\', '/'));
+        }
+      }
+    }
+
+    // 3. UMMMods/ 폴더 스캔 (메타데이터에 등록되지 않은 수동 설치 모드 감지)
     final ummModsDir = Directory(p.join(gamePath, 'UMMMods'));
     if (ummModsDir.existsSync()) {
       try {
@@ -766,6 +829,12 @@ class AdofaiGame extends Game {
         for (final entity in entities) {
           if (entity is Directory) {
             final folderName = p.basename(entity.path);
+            final relPath = p.join('UMMMods', folderName);
+            final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
+
+            // 이미 메타데이터에 의해 클레임된 폴더인 경우 건너뜁니다.
+            if (claimedFiles.contains(normalizedRelPath)) continue;
+
             final infoFile = File(p.join(entity.path, 'info.json'));
             final infoFileAlt = File(p.join(entity.path, 'Info.json'));
             
@@ -793,9 +862,8 @@ class AdofaiGame extends Game {
                   version: version,
                   isBeta: false,
                   installedAt: entity.statSync().modified.toIso8601String(),
-                  installedFiles: [p.join('UMMMods', folderName)],
+                  installedFiles: [relPath],
                 ));
-                scannedSlugs.add(slug);
               } catch (_) {}
             }
           }
@@ -803,7 +871,7 @@ class AdofaiGame extends Game {
       } catch (_) {}
     }
 
-    // 2. Mods/ 폴더 스캔 (MelonLoader 모드)
+    // 4. Mods/ 폴더 스캔 (메타데이터에 등록되지 않은 수동 설치 MelonLoader 모드 감지)
     final modsDir = Directory(p.join(gamePath, 'Mods'));
     if (modsDir.existsSync()) {
       try {
@@ -811,8 +879,13 @@ class AdofaiGame extends Game {
         for (final entity in entities) {
           if (entity is File && p.extension(entity.path).toLowerCase() == '.dll') {
             final fileName = p.basenameWithoutExtension(entity.path);
-            final slug = fileName.toLowerCase();
+            final relPath = p.join('Mods', p.basename(entity.path));
+            final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
 
+            // 이미 메타데이터에 의해 클레임된 파일인 경우 건너뜁니다.
+            if (claimedFiles.contains(normalizedRelPath)) continue;
+
+            final slug = fileName.toLowerCase();
             result.add(InstalledMod(
               id: slug,
               slug: slug,
@@ -820,15 +893,14 @@ class AdofaiGame extends Game {
               version: 'Local',
               isBeta: false,
               installedAt: entity.statSync().modified.toIso8601String(),
-              installedFiles: [p.join('Mods', p.basename(entity.path))],
+              installedFiles: [relPath],
             ));
-            scannedSlugs.add(slug);
           }
         }
       } catch (_) {}
     }
 
-    // 3. Plugins/ 폴더 스캔 (MelonLoader 플러그인)
+    // 5. Plugins/ 폴더 스캔 (메타데이터에 등록되지 않은 수동 설치 MelonLoader 플러그인 감지)
     final pluginsDir = Directory(p.join(gamePath, 'Plugins'));
     if (pluginsDir.existsSync()) {
       try {
@@ -836,8 +908,13 @@ class AdofaiGame extends Game {
         for (final entity in entities) {
           if (entity is File && p.extension(entity.path).toLowerCase() == '.dll') {
             final fileName = p.basenameWithoutExtension(entity.path);
-            final slug = fileName.toLowerCase();
+            final relPath = p.join('Plugins', p.basename(entity.path));
+            final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
 
+            // 이미 메타데이터에 의해 클레임된 파일인 경우 건너뜁니다.
+            if (claimedFiles.contains(normalizedRelPath)) continue;
+
+            final slug = fileName.toLowerCase();
             result.add(InstalledMod(
               id: slug,
               slug: slug,
@@ -845,39 +922,8 @@ class AdofaiGame extends Game {
               version: 'Local',
               isBeta: false,
               installedAt: entity.statSync().modified.toIso8601String(),
-              installedFiles: [p.join('Plugins', p.basename(entity.path))],
+              installedFiles: [relPath],
             ));
-            scannedSlugs.add(slug);
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 4. modlist_installed.json (메타데이터 파일) 로드 및 병합
-    final metaFile = File(getInstalledModsMetaPath(gamePath));
-    if (metaFile.existsSync()) {
-      try {
-        final content = metaFile.readAsStringSync();
-        final List<dynamic> jsonList = jsonDecode(content);
-        final metaMods = jsonList.map((j) => InstalledMod.fromJson(j)).toList();
-
-        for (final metaMod in metaMods) {
-          final index = result.indexWhere((m) => 
-            m.slug.toLowerCase() == metaMod.slug.toLowerCase() ||
-            m.id.toLowerCase() == metaMod.id.toLowerCase()
-          );
-          if (index != -1) {
-            result[index] = InstalledMod(
-              id: metaMod.id,
-              slug: metaMod.slug, // 메타데이터에 기록된 서버 슬러그로 병합
-              name: metaMod.name,
-              version: metaMod.version,
-              isBeta: metaMod.isBeta,
-              installedAt: metaMod.installedAt,
-              installedFiles: metaMod.installedFiles.isNotEmpty
-                  ? metaMod.installedFiles
-                  : result[index].installedFiles,
-            );
           }
         }
       } catch (_) {}

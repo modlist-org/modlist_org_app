@@ -30,10 +30,10 @@ class AdofaiGame extends Game {
   @override
   bool isLoaderInstalled(String gamePath) {
     if (gamePath.isEmpty) return false;
-    
+
     final melonFolder = Directory(p.join(gamePath, 'MelonLoader'));
     if (!melonFolder.existsSync()) return false;
-    
+
     final winhttpDll = File(p.join(gamePath, 'winhttp.dll'));
     final winhttpDllAlt = File(p.join(gamePath, 'WinHttp.dll'));
     final versionDll = File(p.join(gamePath, 'version.dll'));
@@ -41,27 +41,30 @@ class AdofaiGame extends Game {
     final libMelonLoaderSo = File(p.join(gamePath, 'libMelonLoader.so'));
     final libMelonLoaderDylib = File(p.join(gamePath, 'libMelonLoader.dylib'));
     final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
-    
+
     final hasWinHttp = winhttpDll.existsSync() || winhttpDllAlt.existsSync();
     final hasVersionDll = versionDll.existsSync() || versionDllAlt.existsSync();
-    final hasLibMelonLoader = libMelonLoaderSo.existsSync() || libMelonLoaderDylib.existsSync();
+    final hasLibMelonLoader =
+        libMelonLoaderSo.existsSync() || libMelonLoaderDylib.existsSync();
     final hasSetupHelper = setupHelper.existsSync();
-    
+
     return hasWinHttp || hasVersionDll || hasLibMelonLoader || hasSetupHelper;
   }
 
   @override
   String getLoaderVersion(String gamePath) {
     if (gamePath.isEmpty) return 'None';
-    
+
     // 우리가 기록해 둔 버전 파일 확인
-    final versionFile = File(p.join(gamePath, 'MelonLoader', 'MelonLoader.version'));
+    final versionFile = File(
+      p.join(gamePath, 'MelonLoader', 'MelonLoader.version'),
+    );
     if (versionFile.existsSync()) {
       try {
         return versionFile.readAsStringSync().trim();
       } catch (_) {}
     }
-    
+
     // 버전 파일이 없다면 MelonLoader가 설치는 되어 있지만 구버전이거나 알 수 없는 버전임
     if (isLoaderInstalled(gamePath)) {
       // 최신 로그 파일에서 버전을 파싱해보기 시도
@@ -81,12 +84,15 @@ class AdofaiGame extends Game {
       }
       return 'Unknown (Outdated)';
     }
-    
+
     return 'None';
   }
 
   @override
-  Future<void> installLoader(String gamePath, {void Function(double)? onProgress}) async {
+  Future<void> installLoader(
+    String gamePath, {
+    void Function(double)? onProgress,
+  }) async {
     if (!isValidGamePath(gamePath)) {
       throw Exception('Invalid ADOFAI game path. Cannot install MelonLoader.');
     }
@@ -104,31 +110,57 @@ class AdofaiGame extends Game {
       String? managedPath;
       String? assemblyPath;
       if (Platform.isMacOS) {
-        final macManaged = Directory(p.join(gamePath, 'A Dance of Fire and Ice.app', 'Contents', 'Resources', 'Data', 'Managed'));
+        final macManaged = Directory(
+          p.join(
+            gamePath,
+            'A Dance of Fire and Ice.app',
+            'Contents',
+            'Resources',
+            'Data',
+            'Managed',
+          ),
+        );
         if (macManaged.existsSync()) {
           managedPath = macManaged.path;
         } else {
-          final macManagedAlt = Directory(p.join(gamePath, 'Contents', 'Resources', 'Data', 'Managed'));
+          final macManagedAlt = Directory(
+            p.join(gamePath, 'Contents', 'Resources', 'Data', 'Managed'),
+          );
           if (macManagedAlt.existsSync()) {
             managedPath = macManagedAlt.path;
           }
         }
 
-        final macAssembly = Directory(p.join(gamePath, 'A Dance of Fire and Ice.app', 'Contents', 'Resources', 'Data', 'Assembly'));
+        final macAssembly = Directory(
+          p.join(
+            gamePath,
+            'A Dance of Fire and Ice.app',
+            'Contents',
+            'Resources',
+            'Data',
+            'Assembly',
+          ),
+        );
         if (macAssembly.existsSync()) {
           assemblyPath = macAssembly.path;
         } else {
-          final macAssemblyAlt = Directory(p.join(gamePath, 'Contents', 'Resources', 'Data', 'Assembly'));
+          final macAssemblyAlt = Directory(
+            p.join(gamePath, 'Contents', 'Resources', 'Data', 'Assembly'),
+          );
           if (macAssemblyAlt.existsSync()) {
             assemblyPath = macAssemblyAlt.path;
           }
         }
       } else {
-        final winLinuxManaged = Directory(p.join(gamePath, 'A Dance of Fire and Ice_Data', 'Managed'));
+        final winLinuxManaged = Directory(
+          p.join(gamePath, 'A Dance of Fire and Ice_Data', 'Managed'),
+        );
         if (winLinuxManaged.existsSync()) {
           managedPath = winLinuxManaged.path;
         }
-        final winLinuxAssembly = Directory(p.join(gamePath, 'A Dance of Fire and Ice_Data', 'Assembly'));
+        final winLinuxAssembly = Directory(
+          p.join(gamePath, 'A Dance of Fire and Ice_Data', 'Assembly'),
+        );
         if (winLinuxAssembly.existsSync()) {
           assemblyPath = winLinuxAssembly.path;
         }
@@ -152,7 +184,9 @@ class AdofaiGame extends Game {
         }
 
         // Managed/UnityModManager 폴더 삭제
-        final ummManagedFolder = Directory(p.join(managedPath, 'UnityModManager'));
+        final ummManagedFolder = Directory(
+          p.join(managedPath, 'UnityModManager'),
+        );
         if (ummManagedFolder.existsSync()) {
           await ummManagedFolder.delete(recursive: true);
         }
@@ -160,26 +194,34 @@ class AdofaiGame extends Game {
 
       if (assemblyPath != null) {
         // Assembly/UnityModManager 폴더 삭제
-        final ummAssemblyFolder = Directory(p.join(assemblyPath, 'UnityModManager'));
+        final ummAssemblyFolder = Directory(
+          p.join(assemblyPath, 'UnityModManager'),
+        );
         if (ummAssemblyFolder.existsSync()) {
           await ummAssemblyFolder.delete(recursive: true);
         }
       }
     } catch (_) {}
 
-    final hasWindowsExe = File(p.join(gamePath, 'A Dance of Fire and Ice.exe')).existsSync();
+    final hasWindowsExe = File(
+      p.join(gamePath, 'A Dance of Fire and Ice.exe'),
+    ).existsSync();
     final isProtonOrWine = !Platform.isWindows && hasWindowsExe;
 
     // 0.7.3 버전 다운로드 주소 정의
     String downloadUrl;
     if (isProtonOrWine) {
-      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
+      downloadUrl =
+          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
     } else if (Platform.isWindows) {
-      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
+      downloadUrl =
+          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
     } else if (Platform.isLinux) {
-      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.Linux.x64.zip';
+      downloadUrl =
+          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.Linux.x64.zip';
     } else if (Platform.isMacOS) {
-      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.macOS.x64.zip';
+      downloadUrl =
+          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.macOS.x64.zip';
     } else {
       throw Exception('Unsupported platform for MelonLoader installation');
     }
@@ -190,7 +232,9 @@ class AdofaiGame extends Game {
 
     // 1. MelonLoader 다운로드
     final client = http.Client();
-    final response = await client.send(http.Request('GET', Uri.parse(downloadUrl)));
+    final response = await client.send(
+      http.Request('GET', Uri.parse(downloadUrl)),
+    );
     final totalBytes = response.contentLength ?? 0;
     var downloadedBytes = 0;
 
@@ -233,14 +277,16 @@ class AdofaiGame extends Game {
     if (!Platform.isWindows && !isProtonOrWine) {
       final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
       final isMac = Platform.isMacOS;
-      final scriptContent = isMac ? '''
+      final scriptContent = isMac
+          ? '''
 #!/bin/bash
 DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 printf 'export DYLD_LIBRARY_PATH="%s:\$DYLD_LIBRARY_PATH"\\n' "\$DIR"
 printf 'export DYLD_INSERT_LIBRARIES="%s/libMelonLoader.dylib:\$DYLD_INSERT_LIBRARIES"\\n' "\$DIR"
 printf '%q ' "\$@"
 echo
-''' : '''
+'''
+          : '''
 #!/bin/bash
 DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 printf 'export LD_LIBRARY_PATH="%s:\$LD_LIBRARY_PATH"\\n' "\$DIR"
@@ -248,7 +294,7 @@ printf 'export LD_PRELOAD="%s/libMelonLoader.so:\$LD_PRELOAD"\\n' "\$DIR"
 printf '%q ' "\$@"
 echo
 ''';
-      await setupHelper.writeAsString(scriptContent.trim() + '\n', flush: true);
+      await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
     }
 
     // Linux/macOS의 경우 setup_helper.sh 및 네이티브 라이브러리에 실행 권한 부여, macOS 격리 제거
@@ -259,7 +305,7 @@ echo
           await Process.run('chmod', ['+x', setupHelperPath]);
         } catch (_) {}
       }
-      
+
       if (!isProtonOrWine) {
         if (Platform.isLinux) {
           final libSoPath = p.join(gamePath, 'libMelonLoader.so');
@@ -273,13 +319,21 @@ echo
           if (File(libDylibPath).existsSync()) {
             try {
               await Process.run('chmod', ['+x', libDylibPath]);
-              await Process.run('xattr', ['-d', 'com.apple.quarantine', libDylibPath]);
+              await Process.run('xattr', [
+                '-d',
+                'com.apple.quarantine',
+                libDylibPath,
+              ]);
             } catch (_) {}
           }
           final melonDir = Directory(p.join(gamePath, 'MelonLoader'));
           if (melonDir.existsSync()) {
             try {
-              await Process.run('xattr', ['-d', 'com.apple.quarantine', melonDir.path]);
+              await Process.run('xattr', [
+                '-d',
+                'com.apple.quarantine',
+                melonDir.path,
+              ]);
             } catch (_) {}
           }
         }
@@ -287,7 +341,9 @@ echo
     }
 
     // MelonLoader 버전 정보 파일 기록
-    final versionFile = File(p.join(gamePath, 'MelonLoader', 'MelonLoader.version'));
+    final versionFile = File(
+      p.join(gamePath, 'MelonLoader', 'MelonLoader.version'),
+    );
     try {
       if (!versionFile.parent.existsSync()) {
         await versionFile.parent.create(recursive: true);
@@ -337,7 +393,9 @@ echo
     // 0. 기존 모드가 설치되어 있는 경우 안전하게 먼저 언인스톨을 수행합니다.
     try {
       final installed = await getInstalledMods(gamePath);
-      final matchingMods = installed.where((m) => isModMatched(m.slug, mod.slug)).toList();
+      final matchingMods = installed
+          .where((m) => isModMatched(m.slug, mod.slug))
+          .toList();
       for (final matching in matchingMods) {
         await uninstallMod(gamePath, matching.slug);
       }
@@ -351,7 +409,9 @@ echo
 
     // 1. 모드 파일 다운로드
     final client = http.Client();
-    final response = await client.send(http.Request('GET', Uri.parse(downloadUrl)));
+    final response = await client.send(
+      http.Request('GET', Uri.parse(downloadUrl)),
+    );
     final totalBytes = response.contentLength ?? 0;
     var downloadedBytes = 0;
 
@@ -393,7 +453,7 @@ echo
     if (isZip && archive != null) {
       // 2. 모드 포맷(UMM vs MelonLoader) 감지
       final List<String> infoJsonPaths = [];
-      
+
       for (final archiveFile in archive) {
         final filename = archiveFile.name;
         final baseName = p.basename(filename).toLowerCase();
@@ -411,10 +471,14 @@ echo
         }
 
         // info.json들의 부모 폴더 경로 추출
-        final parentFolders = infoJsonPaths.map((path) => p.dirname(path)).toList();
-        
+        final parentFolders = infoJsonPaths
+            .map((path) => p.dirname(path))
+            .toList();
+
         // 만약 부모 폴더가 루트("")밖에 없다면, zip 내용물을 UMMMods/<slug> 폴더 아래에 생성
-        final bool isRootOnly = parentFolders.every((parent) => parent == '.' || parent == '');
+        final bool isRootOnly = parentFolders.every(
+          (parent) => parent == '.' || parent == '',
+        );
 
         for (final archiveFile in archive) {
           final filename = archiveFile.name;
@@ -444,7 +508,8 @@ echo
         // UMM 인 경우 info.json 파일을 찾아서 Id를 획득해 slug 및 name 동기화
         ArchiveFile? firstInfoFile;
         for (final archiveFile in archive) {
-          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' && archiveFile.isFile) {
+          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' &&
+              archiveFile.isFile) {
             firstInfoFile = archiveFile;
             break;
           }
@@ -468,21 +533,32 @@ echo
         // MelonLoader 모드 설치 로직
         bool hasStructuredDirs = false;
         for (final archiveFile in archive) {
-          final normalizedPath = archiveFile.name.replaceAll('\\', '/').toLowerCase();
+          final normalizedPath = archiveFile.name
+              .replaceAll('\\', '/')
+              .toLowerCase();
           final parts = normalizedPath.split('/');
-          final firstDir = parts.firstWhere((p) => p.isNotEmpty && p != '.', orElse: () => '');
-          if (firstDir == 'mods' || firstDir == 'plugins' || firstDir == 'userlibs') {
+          final firstDir = parts.firstWhere(
+            (p) => p.isNotEmpty && p != '.',
+            orElse: () => '',
+          );
+          if (firstDir == 'mods' ||
+              firstDir == 'plugins' ||
+              firstDir == 'userlibs') {
             hasStructuredDirs = true;
             break;
           }
         }
 
-        final String targetBaseDir = hasStructuredDirs ? gamePath : p.join(gamePath, 'Mods');
+        final String targetBaseDir = hasStructuredDirs
+            ? gamePath
+            : p.join(gamePath, 'Mods');
 
         for (final archiveFile in archive) {
           final filename = archiveFile.name;
           final outPath = p.join(targetBaseDir, filename);
-          final relativePath = hasStructuredDirs ? filename : p.join('Mods', filename);
+          final relativePath = hasStructuredDirs
+              ? filename
+              : p.join('Mods', filename);
 
           if (archiveFile.isFile) {
             final data = archiveFile.content as List<int>;
@@ -512,29 +588,29 @@ echo
     await file.delete();
 
     // 기존에 이미 동일한 모드가 설치되어 있었으면 제거 후 갱신
-    installedMods.removeWhere((m) =>
-      isModMatched(m.slug, mod.slug) ||
-      m.id.toLowerCase() == finalSlug.toLowerCase()
+    installedMods.removeWhere(
+      (m) =>
+          isModMatched(m.slug, mod.slug) ||
+          m.id.toLowerCase() == finalSlug.toLowerCase(),
     );
 
-    installedMods.add(InstalledMod(
-      id: finalSlug, // 'umm-Tweaks'
-      slug: mod.slug, // 'adofai-tweaks' (본래 서버 슬러그를 보존하여 매칭에 사용)
-      name: finalName,
-      version: version,
-      isBeta: isBeta,
-      installedAt: DateTime.now().toIso8601String(),
-      installedFiles: installedFiles,
-    ));
+    installedMods.add(
+      InstalledMod(
+        id: finalSlug, // 'umm-Tweaks'
+        slug: mod.slug, // 'adofai-tweaks' (본래 서버 슬러그를 보존하여 매칭에 사용)
+        name: finalName,
+        version: version,
+        isBeta: isBeta,
+        installedAt: DateTime.now().toIso8601String(),
+        installedFiles: installedFiles,
+      ),
+    );
 
     await saveInstalledMods(gamePath, installedMods);
   }
 
   @override
-  Future<void> installModFromFile(
-    String gamePath,
-    String filePath,
-  ) async {
+  Future<void> installModFromFile(String gamePath, String filePath) async {
     final file = File(filePath);
     if (!file.existsSync()) {
       throw Exception('File does not exist: $filePath');
@@ -585,8 +661,12 @@ echo
           await ummBaseDir.create(recursive: true);
         }
 
-        final parentFolders = infoJsonPaths.map((path) => p.dirname(path)).toList();
-        final bool isRootOnly = parentFolders.every((parent) => parent == '.' || parent == '');
+        final parentFolders = infoJsonPaths
+            .map((path) => p.dirname(path))
+            .toList();
+        final bool isRootOnly = parentFolders.every(
+          (parent) => parent == '.' || parent == '',
+        );
 
         for (final archiveFile in archive) {
           final filename = archiveFile.name;
@@ -616,7 +696,8 @@ echo
         // info.json 내용 읽어서 metadata 획득
         ArchiveFile? firstInfoFile;
         for (final archiveFile in archive) {
-          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' && archiveFile.isFile) {
+          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' &&
+              archiveFile.isFile) {
             firstInfoFile = archiveFile;
             break;
           }
@@ -641,21 +722,32 @@ echo
         // MelonLoader 모드 설치 (zip)
         bool hasStructuredDirs = false;
         for (final archiveFile in archive) {
-          final normalizedPath = archiveFile.name.replaceAll('\\', '/').toLowerCase();
+          final normalizedPath = archiveFile.name
+              .replaceAll('\\', '/')
+              .toLowerCase();
           final parts = normalizedPath.split('/');
-          final firstDir = parts.firstWhere((p) => p.isNotEmpty && p != '.', orElse: () => '');
-          if (firstDir == 'mods' || firstDir == 'plugins' || firstDir == 'userlibs') {
+          final firstDir = parts.firstWhere(
+            (p) => p.isNotEmpty && p != '.',
+            orElse: () => '',
+          );
+          if (firstDir == 'mods' ||
+              firstDir == 'plugins' ||
+              firstDir == 'userlibs') {
             hasStructuredDirs = true;
             break;
           }
         }
 
-        final String targetBaseDir = hasStructuredDirs ? gamePath : p.join(gamePath, 'Mods');
+        final String targetBaseDir = hasStructuredDirs
+            ? gamePath
+            : p.join(gamePath, 'Mods');
 
         for (final archiveFile in archive) {
           final filename = archiveFile.name;
           final outPath = p.join(targetBaseDir, filename);
-          final relativePath = hasStructuredDirs ? filename : p.join('Mods', filename);
+          final relativePath = hasStructuredDirs
+              ? filename
+              : p.join('Mods', filename);
 
           if (archiveFile.isFile) {
             final data = archiveFile.content as List<int>;
@@ -681,20 +773,23 @@ echo
       installedFiles.add(p.join('Mods', filenameWithExt));
     }
 
-    installedMods.removeWhere((m) =>
-      isModMatched(m.slug, finalSlug) ||
-      m.id.toLowerCase() == finalSlug.toLowerCase()
+    installedMods.removeWhere(
+      (m) =>
+          isModMatched(m.slug, finalSlug) ||
+          m.id.toLowerCase() == finalSlug.toLowerCase(),
     );
 
-    installedMods.add(InstalledMod(
-      id: finalSlug,
-      slug: finalSlug, // 수동 설치이므로 id와 동일하게 처리
-      name: finalName,
-      version: finalVersion,
-      isBeta: false,
-      installedAt: DateTime.now().toIso8601String(),
-      installedFiles: installedFiles,
-    ));
+    installedMods.add(
+      InstalledMod(
+        id: finalSlug,
+        slug: finalSlug, // 수동 설치이므로 id와 동일하게 처리
+        name: finalName,
+        version: finalVersion,
+        isBeta: false,
+        installedAt: DateTime.now().toIso8601String(),
+        installedFiles: installedFiles,
+      ),
+    );
 
     await saveInstalledMods(gamePath, installedMods);
   }
@@ -702,15 +797,21 @@ echo
   @override
   Future<void> uninstallMod(String gamePath, String modSlug) async {
     final installedMods = await getInstalledMods(gamePath);
-    
-    final modIndex = installedMods.indexWhere((m) => isModMatched(m.slug, modSlug));
+
+    final modIndex = installedMods.indexWhere(
+      (m) => isModMatched(m.slug, modSlug),
+    );
     if (modIndex == -1) return;
 
     final targetMod = installedMods[modIndex];
-    final cleanTargetSlug = modSlug.startsWith('umm-') ? modSlug.substring(4) : modSlug;
+    final cleanTargetSlug = modSlug.startsWith('umm-')
+        ? modSlug.substring(4)
+        : modSlug;
 
     // 타겟 모드가 설치한 파일 목록 중, 다른 모드에서도 공유하는 파일이 있는지 체크
-    final otherMods = installedMods.where((m) => !isModMatched(m.slug, modSlug)).toList();
+    final otherMods = installedMods
+        .where((m) => !isModMatched(m.slug, modSlug))
+        .toList();
     final Set<String> sharedFiles = {};
     for (final other in otherMods) {
       for (final file in other.installedFiles) {
@@ -723,11 +824,14 @@ echo
       if (!dir.existsSync()) return;
       try {
         final entities = dir.listSync(recursive: true);
-        
+
         // 1. 배포 바이너리 및 메타데이터 파일만 삭제
         for (final entity in entities) {
           if (entity is File) {
-            final relativeEntityPath = p.relative(entity.path, from: gamePath).toLowerCase().replaceAll('\\', '/');
+            final relativeEntityPath = p
+                .relative(entity.path, from: gamePath)
+                .toLowerCase()
+                .replaceAll('\\', '/');
             if (sharedFiles.contains(relativeEntityPath)) {
               // 다른 모드에서 의존하거나 공유하는 파일이므로 삭제하지 않고 건너뜁니다.
               continue;
@@ -735,17 +839,23 @@ echo
 
             final filename = p.basename(entity.path).toLowerCase();
             final ext = p.extension(entity.path).toLowerCase();
-            
+
             // 삭제 대상 핵심 배포 파일 규칙:
             // - info.json / Info.json
             // - *.dll / *.pdb / *.mdb / *.so / *.dylib (바이너리 라이브러리)
             // - readme / changelog / license 관련 텍스트/마크다운 파일
             final isInfoJson = filename == 'info.json';
-            final isBinary = ext == '.dll' || ext == '.pdb' || ext == '.mdb' || ext == '.so' || ext == '.dylib';
-            final isDoc = filename.startsWith('readme') || 
-                          filename.startsWith('changelog') || 
-                          filename.startsWith('license');
-            
+            final isBinary =
+                ext == '.dll' ||
+                ext == '.pdb' ||
+                ext == '.mdb' ||
+                ext == '.so' ||
+                ext == '.dylib';
+            final isDoc =
+                filename.startsWith('readme') ||
+                filename.startsWith('changelog') ||
+                filename.startsWith('license');
+
             final shouldDelete = isInfoJson || isBinary || isDoc;
             if (shouldDelete) {
               try {
@@ -788,13 +898,17 @@ echo
         } catch (_) {}
       } else if (FileSystemEntity.isDirectorySync(fullPath)) {
         // 공용 폴더(Mods, Plugins, UserLibs, UMMMods 등) 자체는 삭제하거나 내부를 전체 스캔하여 지우지 않도록 보호합니다.
-        final relativeToGame = p.relative(fullPath, from: gamePath).toLowerCase().replaceAll('\\', '/');
-        final isSharedDir = relativeToGame == '.' ||
-                            relativeToGame == 'mods' ||
-                            relativeToGame == 'plugins' ||
-                            relativeToGame == 'userlibs' ||
-                            relativeToGame == 'ummmods';
-        
+        final relativeToGame = p
+            .relative(fullPath, from: gamePath)
+            .toLowerCase()
+            .replaceAll('\\', '/');
+        final isSharedDir =
+            relativeToGame == '.' ||
+            relativeToGame == 'mods' ||
+            relativeToGame == 'plugins' ||
+            relativeToGame == 'userlibs' ||
+            relativeToGame == 'ummmods';
+
         if (!isSharedDir) {
           final dir = Directory(fullPath);
           await safeDeleteDirectory(dir);
@@ -804,11 +918,15 @@ echo
 
     // 혹시라도 지워지지 않았을 경우를 대비해 slug.dll 이 존재하면 삭제
     final fallbackDll = File(p.join(gamePath, 'Mods', '$cleanTargetSlug.dll'));
-    if (fallbackDll.existsSync() && !sharedFiles.contains('mods/${cleanTargetSlug.toLowerCase()}.dll')) {
+    if (fallbackDll.existsSync() &&
+        !sharedFiles.contains('mods/${cleanTargetSlug.toLowerCase()}.dll')) {
       await fallbackDll.delete();
     }
-    final fallbackDllLower = File(p.join(gamePath, 'Mods', '${cleanTargetSlug.toLowerCase()}.dll'));
-    if (fallbackDllLower.existsSync() && !sharedFiles.contains('mods/${cleanTargetSlug.toLowerCase()}.dll')) {
+    final fallbackDllLower = File(
+      p.join(gamePath, 'Mods', '${cleanTargetSlug.toLowerCase()}.dll'),
+    );
+    if (fallbackDllLower.existsSync() &&
+        !sharedFiles.contains('mods/${cleanTargetSlug.toLowerCase()}.dll')) {
       await fallbackDllLower.delete();
     }
 
@@ -835,7 +953,9 @@ echo
 
     // 파일 개수가 많은(상세 정보가 있는) 메타데이터 모드를 우선 처리하여
     // 나중에 단순 스캔 모드가 클레임되거나 중복 검사로 스킵되도록 내림차순 정렬합니다.
-    metaMods.sort((a, b) => b.installedFiles.length.compareTo(a.installedFiles.length));
+    metaMods.sort(
+      (a, b) => b.installedFiles.length.compareTo(a.installedFiles.length),
+    );
 
     // 2. 메타데이터에 등록된 모드 중 실제로 파일이 존재하는 모드를 결과 리스트에 추가
     for (final metaMod in metaMods) {
@@ -843,7 +963,8 @@ echo
       // 설치 기록된 파일 중 하나라도 실제 존재하면 설치된 것으로 간주
       for (final relPath in metaMod.installedFiles) {
         final fullPath = p.join(gamePath, relPath);
-        if (FileSystemEntity.isFileSync(fullPath) || FileSystemEntity.isDirectorySync(fullPath)) {
+        if (FileSystemEntity.isFileSync(fullPath) ||
+            FileSystemEntity.isDirectorySync(fullPath)) {
           exists = true;
           break;
         }
@@ -851,11 +972,15 @@ echo
 
       // 만약 설치 기록 파일 목록 자체가 비어있다면, UMM 폴더나 DLL이 있는지 fallback으로 체크
       if (metaMod.installedFiles.isEmpty) {
-        final cleanSlug = metaMod.slug.startsWith('umm-') ? metaMod.slug.substring(4) : metaMod.slug;
+        final cleanSlug = metaMod.slug.startsWith('umm-')
+            ? metaMod.slug.substring(4)
+            : metaMod.slug;
         final ummDir = Directory(p.join(gamePath, 'UMMMods', cleanSlug));
         final modDll = File(p.join(gamePath, 'Mods', '$cleanSlug.dll'));
         final pluginDll = File(p.join(gamePath, 'Plugins', '$cleanSlug.dll'));
-        if (ummDir.existsSync() || modDll.existsSync() || pluginDll.existsSync()) {
+        if (ummDir.existsSync() ||
+            modDll.existsSync() ||
+            pluginDll.existsSync()) {
           exists = true;
         }
       }
@@ -891,7 +1016,10 @@ echo
           if (entity is Directory) {
             final folderName = p.basename(entity.path);
             final relPath = p.join('UMMMods', folderName);
-            final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
+            final normalizedRelPath = relPath.toLowerCase().replaceAll(
+              '\\',
+              '/',
+            );
 
             // 이미 메타데이터에 의해 클레임된 폴더인 경우 건너뜁니다.
             if (claimedFiles.contains(normalizedRelPath) ||
@@ -901,7 +1029,7 @@ echo
 
             final infoFile = File(p.join(entity.path, 'info.json'));
             final infoFileAlt = File(p.join(entity.path, 'Info.json'));
-            
+
             File? actualInfoFile;
             if (infoFile.existsSync()) {
               actualInfoFile = infoFile;
@@ -913,21 +1041,23 @@ echo
               try {
                 final content = actualInfoFile.readAsStringSync();
                 final Map<String, dynamic> infoJson = jsonDecode(content);
-                
+
                 final String id = infoJson['Id'] ?? folderName;
                 final String displayName = infoJson['DisplayName'] ?? id;
                 final String version = infoJson['Version'] ?? '1.0.0';
                 final String slug = 'umm-$id';
 
-                result.add(InstalledMod(
-                  id: slug,
-                  slug: slug,
-                  name: '$displayName (UMM)',
-                  version: version,
-                  isBeta: false,
-                  installedAt: entity.statSync().modified.toIso8601String(),
-                  installedFiles: [relPath],
-                ));
+                result.add(
+                  InstalledMod(
+                    id: slug,
+                    slug: slug,
+                    name: '$displayName (UMM)',
+                    version: version,
+                    isBeta: false,
+                    installedAt: entity.statSync().modified.toIso8601String(),
+                    installedFiles: [relPath],
+                  ),
+                );
               } catch (_) {}
             }
           }
@@ -941,24 +1071,30 @@ echo
       try {
         final entities = modsDir.listSync();
         for (final entity in entities) {
-          if (entity is File && p.extension(entity.path).toLowerCase() == '.dll') {
+          if (entity is File &&
+              p.extension(entity.path).toLowerCase() == '.dll') {
             final fileName = p.basenameWithoutExtension(entity.path);
             final relPath = p.join('Mods', p.basename(entity.path));
-            final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
+            final normalizedRelPath = relPath.toLowerCase().replaceAll(
+              '\\',
+              '/',
+            );
 
             // 이미 메타데이터에 의해 클레임된 파일인 경우 건너뜁니다.
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
             final slug = fileName.toLowerCase();
-            result.add(InstalledMod(
-              id: slug,
-              slug: slug,
-              name: fileName,
-              version: 'Local',
-              isBeta: false,
-              installedAt: entity.statSync().modified.toIso8601String(),
-              installedFiles: [relPath],
-            ));
+            result.add(
+              InstalledMod(
+                id: slug,
+                slug: slug,
+                name: fileName,
+                version: 'Local',
+                isBeta: false,
+                installedAt: entity.statSync().modified.toIso8601String(),
+                installedFiles: [relPath],
+              ),
+            );
           }
         }
       } catch (_) {}
@@ -970,24 +1106,30 @@ echo
       try {
         final entities = pluginsDir.listSync();
         for (final entity in entities) {
-          if (entity is File && p.extension(entity.path).toLowerCase() == '.dll') {
+          if (entity is File &&
+              p.extension(entity.path).toLowerCase() == '.dll') {
             final fileName = p.basenameWithoutExtension(entity.path);
             final relPath = p.join('Plugins', p.basename(entity.path));
-            final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
+            final normalizedRelPath = relPath.toLowerCase().replaceAll(
+              '\\',
+              '/',
+            );
 
             // 이미 메타데이터에 의해 클레임된 파일인 경우 건너뜁니다.
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
             final slug = fileName.toLowerCase();
-            result.add(InstalledMod(
-              id: slug,
-              slug: slug,
-              name: '$fileName (Plugin)',
-              version: 'Local',
-              isBeta: false,
-              installedAt: entity.statSync().modified.toIso8601String(),
-              installedFiles: [relPath],
-            ));
+            result.add(
+              InstalledMod(
+                id: slug,
+                slug: slug,
+                name: '$fileName (Plugin)',
+                version: 'Local',
+                isBeta: false,
+                installedAt: entity.statSync().modified.toIso8601String(),
+                installedFiles: [relPath],
+              ),
+            );
           }
         }
       } catch (_) {}
@@ -1002,14 +1144,14 @@ echo
       return null;
     } else if (Platform.isLinux) {
       return '1) 리눅스 네이티브 실행 시 스팀 실행 옵션에 아래 스크립트를 입력하세요:\n'
-             'eval "\$(./setup_helper.sh)" %command%\n\n'
-             '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
-             'WINEDLLOVERRIDES="winhttp=n,b" %command%';
+          'eval "\$(./setup_helper.sh)" %command%\n\n'
+          '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
+          'WINEDLLOVERRIDES="winhttp=n,b" %command%';
     } else if (Platform.isMacOS) {
       return 'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-             'eval "\$(./setup_helper.sh)" %command%\n\n'
-             '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
-             'xattr -d com.apple.quarantine winhttp.dll MelonLoader/';
+          'eval "\$(./setup_helper.sh)" %command%\n\n'
+          '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
+          'xattr -d com.apple.quarantine winhttp.dll MelonLoader/';
     }
     return null;
   }

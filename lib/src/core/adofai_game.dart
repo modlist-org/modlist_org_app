@@ -833,7 +833,10 @@ class AdofaiGame extends Game {
             final normalizedRelPath = relPath.toLowerCase().replaceAll('\\', '/');
 
             // 이미 메타데이터에 의해 클레임된 폴더인 경우 건너뜁니다.
-            if (claimedFiles.contains(normalizedRelPath)) continue;
+            if (claimedFiles.contains(normalizedRelPath) ||
+                claimedFiles.any((f) => f.startsWith('$normalizedRelPath/'))) {
+              continue;
+            }
 
             final infoFile = File(p.join(entity.path, 'info.json'));
             final infoFileAlt = File(p.join(entity.path, 'Info.json'));

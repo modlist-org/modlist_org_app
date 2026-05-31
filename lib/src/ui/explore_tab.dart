@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../core/installer_state.dart';
 import '../models/mod_model.dart';
+import 'dialogs.dart';
 
 const String _githubSvg = '''
 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
@@ -1506,6 +1507,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             mod,
                             version: _latestVersion!.version,
                           );
+                          if (context.mounted) {
+                            checkAndPromptUmmCompat(context, widget.state);
+                          }
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1546,6 +1550,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             version: mod.latestBetaVersion!.version,
                             isBeta: true,
                           );
+                          if (context.mounted) {
+                            checkAndPromptUmmCompat(context, widget.state);
+                          }
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1676,7 +1683,10 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         width: 1.0,
                       ),
                       onTap: () async {
-                        await widget.state.uninstallMod(mod.slug, mod.name);
+                        final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
+                        if (confirm) {
+                          await widget.state.uninstallMod(mod.slug, mod.name);
+                        }
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,

@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/installer_state.dart';
 import '../models/mod_model.dart';
+import 'dialogs.dart';
 
 class InstalledTab extends StatefulWidget {
   final InstallerState state;
@@ -125,6 +126,9 @@ class _InstalledTabState extends State<InstalledTab> {
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
         await widget.state.installModFromFile(filePath);
+        if (mounted) {
+          checkAndPromptUmmCompat(context, widget.state);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -456,6 +460,9 @@ class _InstalledTabState extends State<InstalledTab> {
                                           onlineMod,
                                           version: onlineMod.latestVersion?.version,
                                         );
+                                        if (context.mounted) {
+                                          checkAndPromptUmmCompat(context, widget.state);
+                                        }
                                       },
                                     ),
                                   ),
@@ -469,7 +476,10 @@ class _InstalledTabState extends State<InstalledTab> {
                                       label: widget.state.t('installed_btn_delete_mod'),
                                       fontSize: 13.0,
                                       onClick: () async {
-                                        await widget.state.uninstallMod(mod.slug, mod.name);
+                                        final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
+                                        if (confirm) {
+                                          await widget.state.uninstallMod(mod.slug, mod.name);
+                                        }
                                       },
                                     ),
                                   ),

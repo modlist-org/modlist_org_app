@@ -162,6 +162,28 @@ class InstallerState extends ChangeNotifier {
     }
   }
 
+  // UMM 호환 모드(ummcompat) 설치
+  Future<void> installUmmCompat() async {
+    if (_isProcessing || !_isValidPath) return;
+
+    _isProcessing = true;
+    _progress = 0.0;
+    _statusMessage = 'UMM 호환 모드(ummcompat) 정보 확인 중...';
+    notifyListeners();
+
+    try {
+      final result = await apiService.fetchModDetails('ummcompat');
+      final mod = result['mod'] as ModItem;
+      await _installModInternal(mod);
+      _statusMessage = 'UMM 호환 모드 설치 성공!';
+    } catch (e) {
+      _statusMessage = 'UMM 호환 모드 설치 실패: $e';
+    } finally {
+      _isProcessing = false;
+      await refreshStatus();
+    }
+  }
+
   // UMM Mods 폴더를 UMMMods 폴더로 이동
   Future<void> _moveUmmModsToUmmModsFolder() async {
     final modsDir = Directory(p.join(_gamePath, 'Mods'));

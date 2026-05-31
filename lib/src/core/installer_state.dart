@@ -123,39 +123,39 @@ class InstallerState extends ChangeNotifier {
     
     _isProcessing = true;
     _progress = 0.0;
-    _statusMessage = 'MelonLoader 다운로드 중...';
+    _statusMessage = t('status_loader_downloading');
     notifyListeners();
 
     try {
       if (_isUmmDetected) {
-        _statusMessage = '기존 UMM 모드를 UMMMods 폴더로 이동 중...';
+        _statusMessage = t('status_loader_migrating_umm');
         notifyListeners();
         await _moveUmmModsToUmmModsFolder();
       }
 
       await game.installLoader(_gamePath, onProgress: (val) {
         _progress = val;
-        _statusMessage = 'MelonLoader 다운로드 및 설치 중: ${(val * 100).toStringAsFixed(1)}%';
+        _statusMessage = t('status_loader_installing', args: {'progress': (val * 100).toStringAsFixed(1)});
         notifyListeners();
       });
 
       if (_isUmmDetected && installUmmCompat) {
-        _statusMessage = 'UMM 호환 모드(ummcompat) 정보 확인 중...';
+        _statusMessage = t('status_loader_checking_ummcompat');
         notifyListeners();
         try {
           final result = await apiService.fetchModDetails('ummcompat');
           final mod = result['mod'] as ModItem;
           
           await _installModInternal(mod);
-          _statusMessage = 'MelonLoader 및 UMM 호환 모드 설치 성공!';
+          _statusMessage = t('status_loader_install_success_with_ummcompat');
         } catch (e) {
-          _statusMessage = 'MelonLoader 설치 성공 (호환 모드 설치 실패: $e)';
+          _statusMessage = t('status_loader_install_success_fail_ummcompat', args: {'error': e.toString()});
         }
       } else {
-        _statusMessage = 'MelonLoader 설치 성공!';
+        _statusMessage = t('status_loader_install_success');
       }
     } catch (e) {
-      _statusMessage = 'MelonLoader 설치 실패: $e';
+      _statusMessage = t('status_loader_install_failed', args: {'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -168,16 +168,16 @@ class InstallerState extends ChangeNotifier {
 
     _isProcessing = true;
     _progress = 0.0;
-    _statusMessage = 'UMM 호환 모드(ummcompat) 정보 확인 중...';
+    _statusMessage = t('status_ummcompat_checking');
     notifyListeners();
 
     try {
       final result = await apiService.fetchModDetails('ummcompat');
       final mod = result['mod'] as ModItem;
       await _installModInternal(mod);
-      _statusMessage = 'UMM 호환 모드 설치 성공!';
+      _statusMessage = t('status_ummcompat_success');
     } catch (e) {
-      _statusMessage = 'UMM 호환 모드 설치 실패: $e';
+      _statusMessage = t('status_ummcompat_failed', args: {'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -245,14 +245,14 @@ class InstallerState extends ChangeNotifier {
     if (_isProcessing || !_isValidPath) return;
     
     _isProcessing = true;
-    _statusMessage = 'MelonLoader 제거 중...';
+    _statusMessage = t('status_loader_uninstalling');
     notifyListeners();
 
     try {
       await game.uninstallLoader(_gamePath);
-      _statusMessage = 'MelonLoader가 성공적으로 제거되었습니다.';
+      _statusMessage = t('status_loader_uninstall_success');
     } catch (e) {
-      _statusMessage = 'MelonLoader 제거 실패: $e';
+      _statusMessage = t('status_loader_uninstall_failed', args: {'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -268,7 +268,7 @@ class InstallerState extends ChangeNotifier {
       isBeta: isBeta,
     );
 
-    _statusMessage = '${mod.name} 다운로드 중...';
+    _statusMessage = t('status_mod_downloading', args: {'name': mod.name});
     notifyListeners();
 
     await game.installMod(
@@ -279,7 +279,7 @@ class InstallerState extends ChangeNotifier {
       isBeta: isBeta,
       onProgress: (val) {
         _progress = val;
-        _statusMessage = '${mod.name} 다운로드 중: ${(val * 100).toStringAsFixed(1)}%';
+        _statusMessage = t('status_mod_downloading_progress', args: {'name': mod.name, 'progress': (val * 100).toStringAsFixed(1)});
         notifyListeners();
       },
     );
@@ -291,14 +291,14 @@ class InstallerState extends ChangeNotifier {
 
     _isProcessing = true;
     _progress = 0.0;
-    _statusMessage = '${mod.name} 다운로드 준비 중...';
+    _statusMessage = t('status_mod_preparing', args: {'name': mod.name});
     notifyListeners();
 
     try {
       await _installModInternal(mod, version: version, isBeta: isBeta);
-      _statusMessage = '${mod.name} 설치 성공!';
+      _statusMessage = t('status_mod_install_success', args: {'name': mod.name});
     } catch (e) {
-      _statusMessage = '${mod.name} 설치 실패: $e';
+      _statusMessage = t('status_mod_install_failed', args: {'name': mod.name, 'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -311,14 +311,14 @@ class InstallerState extends ChangeNotifier {
 
     _isProcessing = true;
     _progress = 0.0;
-    _statusMessage = '로컬 모드 설치 중...';
+    _statusMessage = t('status_mod_local_installing');
     notifyListeners();
 
     try {
       await game.installModFromFile(_gamePath, filePath);
-      _statusMessage = '모드가 성공적으로 수동 설치되었습니다!';
+      _statusMessage = t('status_mod_local_install_success');
     } catch (e) {
-      _statusMessage = '모드 수동 설치 실패: $e';
+      _statusMessage = t('status_mod_local_install_failed', args: {'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -330,14 +330,14 @@ class InstallerState extends ChangeNotifier {
     if (_isProcessing || !_isValidPath) return;
 
     _isProcessing = true;
-    _statusMessage = '$name 삭제 중...';
+    _statusMessage = t('status_mod_deleting', args: {'name': name});
     notifyListeners();
 
     try {
       await game.uninstallMod(_gamePath, slug);
-      _statusMessage = '$name 삭제 성공!';
+      _statusMessage = t('status_mod_delete_success', args: {'name': name});
     } catch (e) {
-      _statusMessage = '$name 삭제 실패: $e';
+      _statusMessage = t('status_mod_delete_failed', args: {'name': name, 'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -357,7 +357,7 @@ class InstallerState extends ChangeNotifier {
 
   // locale 변경 및 저장
   Future<void> setLocale(String lang) async {
-    if (lang != 'ko-KR' && lang != 'en-US') return;
+    if (lang != 'ko-KR' && lang != 'en-US' && lang != 'zh-CN') return;
     _locale = lang;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('modlist_app_locale', lang);

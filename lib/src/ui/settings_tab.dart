@@ -220,8 +220,13 @@ class _SettingsTabState extends State<SettingsTab> {
               child: UIDropdown<String>(
                 modelValue: widget.state.locale,
                 defaultValue: 'en-US',
-                values: const ['en-US', 'ko-KR'],
-                display: (val) => val == 'en-US' ?  'English (en-US)' : '한국어 (ko-KR)',
+                values: const ['en-US', 'ko-KR', 'zh-CN'],
+                display: (val) {
+                  if (val == 'en-US') return 'English (en-US)';
+                  if (val == 'ko-KR') return '한국어 (ko-KR)';
+                  if (val == 'zh-CN') return '简体中文 (zh-CN)';
+                  return val;
+                },
                 fontSize: 14.0,
                 disableReset: true,
                 onChanged: (val) async {
@@ -254,7 +259,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                   ),
-                  child: const Text('업데이트 확인 (Check for Updates)'),
+                  child: Text(widget.state.t('settings_btn_check_updates')),
                 ),
               ],
             ),

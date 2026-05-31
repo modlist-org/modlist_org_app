@@ -133,7 +133,7 @@ class _InstalledTabState extends State<InstalledTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('파일 선택 중 오류가 발생했습니다: $e')),
+          SnackBar(content: Text(widget.state.t('installed_err_file_picker', args: {'error': e.toString()}))),
         );
       }
     }
@@ -310,9 +310,9 @@ class _InstalledTabState extends State<InstalledTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
-                          '💡 비윈도우 OS 추가 안내 사항',
-                          style: TextStyle(color: Color(0xFF919AFF), fontSize: 13.0, fontWeight: FontWeight.bold),
+                        Text(
+                          widget.state.t('installed_launch_guide_title'),
+                          style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8.0),
                         Text(
@@ -326,7 +326,7 @@ class _InstalledTabState extends State<InstalledTab> {
                               SizedBox(
                                 height: 36,
                                 child: UIButton(
-                                  label: '네이티브 시작 옵션 복사',
+                                  label: widget.state.t('installed_btn_copy_native_launch'),
                                   fontSize: 13.0,
                                   onClick: () => _copyToClipboard('eval "\$(./setup_helper.sh)" %command%'),
                                 ),
@@ -337,7 +337,7 @@ class _InstalledTabState extends State<InstalledTab> {
                               SizedBox(
                                 height: 36,
                                 child: UIButton(
-                                  label: 'Proton 시작 옵션 복사',
+                                  label: widget.state.t('installed_btn_copy_proton_launch'),
                                   fontSize: 13.0,
                                   onClick: () => _copyToClipboard('WINEDLLOVERRIDES="winhttp=n,b" %command%'),
                                 ),

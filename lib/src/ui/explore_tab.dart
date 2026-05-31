@@ -231,7 +231,7 @@ class _ExploreTabState extends State<ExploreTab> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('모드 데이터를 불러오는 데 실패했습니다: $e')));
+        ).showSnackBar(SnackBar(content: Text(widget.state.t('explore_err_load_failed', args: {'error': e.toString()}))));
       }
     }
   }
@@ -1721,7 +1721,10 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                     child: Text(
                       widget.state.statusMessage!,
                       style: TextStyle(
-                        color: widget.state.statusMessage!.contains('실패')
+                        color: (widget.state.statusMessage!.toLowerCase().contains('실패') ||
+                                widget.state.statusMessage!.toLowerCase().contains('fail') ||
+                                widget.state.statusMessage!.toLowerCase().contains('失败') ||
+                                widget.state.statusMessage!.toLowerCase().contains('error'))
                             ? Colors.redAccent
                             : const Color(0xFF919AFF),
                         fontSize: 12.0,

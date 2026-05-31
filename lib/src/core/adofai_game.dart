@@ -32,18 +32,22 @@ class AdofaiGame extends Game {
     if (gamePath.isEmpty) return false;
     
     final melonFolder = Directory(p.join(gamePath, 'MelonLoader'));
+    if (!melonFolder.existsSync()) return false;
+    
     final winhttpDll = File(p.join(gamePath, 'winhttp.dll'));
     final winhttpDllAlt = File(p.join(gamePath, 'WinHttp.dll'));
     final versionDll = File(p.join(gamePath, 'version.dll'));
     final versionDllAlt = File(p.join(gamePath, 'Version.dll'));
+    final libMelonLoaderSo = File(p.join(gamePath, 'libMelonLoader.so'));
+    final libMelonLoaderDylib = File(p.join(gamePath, 'libMelonLoader.dylib'));
     final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
     
-    final hasMelonFolder = melonFolder.existsSync();
     final hasWinHttp = winhttpDll.existsSync() || winhttpDllAlt.existsSync();
     final hasVersionDll = versionDll.existsSync() || versionDllAlt.existsSync();
+    final hasLibMelonLoader = libMelonLoaderSo.existsSync() || libMelonLoaderDylib.existsSync();
     final hasSetupHelper = setupHelper.existsSync();
     
-    return hasMelonFolder && (hasWinHttp || hasVersionDll || hasSetupHelper);
+    return hasWinHttp || hasVersionDll || hasLibMelonLoader || hasSetupHelper;
   }
 
   @override
@@ -163,13 +167,21 @@ class AdofaiGame extends Game {
       }
     } catch (_) {}
 
+    final hasWindowsExe = File(p.join(gamePath, 'A Dance of Fire and Ice.exe')).existsSync();
+    final isProtonOrWine = !Platform.isWindows && hasWindowsExe;
+
     // 0.7.3 버전 다운로드 주소 정의
     String downloadUrl;
-    if (Platform.isWindows) {
+    if (isProtonOrWine) {
       downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
+    } else if (Platform.isWindows) {
+      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
+    } else if (Platform.isLinux) {
+      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.Linux.x64.zip';
+    } else if (Platform.isMacOS) {
+      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.macOS.x64.zip';
     } else {
-      // Linux 및 macOS는 공식 Unix 릴리즈 사용
-      downloadUrl = 'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.Unix.zip';
+      throw Exception('Unsupported platform for MelonLoader installation');
     }
 
     // 임시 파일 다운로드 경로 설정
@@ -217,11 +229,60 @@ class AdofaiGame extends Game {
     // 임시 zip 파일 삭제
     await file.delete();
 
-    // Linux/macOS의 경우 setup_helper.sh에 실행 권한 부여
+    // Linux/macOS native의 경우 setup_helper.sh 생성
+    if (!Platform.isWindows && !isProtonOrWine) {
+      final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
+      final isMac = Platform.isMacOS;
+      final scriptContent = isMac ? '''
+#!/bin/bash
+DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+printf 'export DYLD_LIBRARY_PATH="%s:\$DYLD_LIBRARY_PATH"\\n' "\$DIR"
+printf 'export DYLD_INSERT_LIBRARIES="%s/libMelonLoader.dylib:\$DYLD_INSERT_LIBRARIES"\\n' "\$DIR"
+printf '%q ' "\$@"
+echo
+''' : '''
+#!/bin/bash
+DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+printf 'export LD_LIBRARY_PATH="%s:\$LD_LIBRARY_PATH"\\n' "\$DIR"
+printf 'export LD_PRELOAD="%s/libMelonLoader.so:\$LD_PRELOAD"\\n' "\$DIR"
+printf '%q ' "\$@"
+echo
+''';
+      await setupHelper.writeAsString(scriptContent.trim() + '\n', flush: true);
+    }
+
+    // Linux/macOS의 경우 setup_helper.sh 및 네이티브 라이브러리에 실행 권한 부여, macOS 격리 제거
     if (!Platform.isWindows) {
       final setupHelperPath = p.join(gamePath, 'setup_helper.sh');
       if (File(setupHelperPath).existsSync()) {
-        await Process.run('chmod', ['+x', setupHelperPath]);
+        try {
+          await Process.run('chmod', ['+x', setupHelperPath]);
+        } catch (_) {}
+      }
+      
+      if (!isProtonOrWine) {
+        if (Platform.isLinux) {
+          final libSoPath = p.join(gamePath, 'libMelonLoader.so');
+          if (File(libSoPath).existsSync()) {
+            try {
+              await Process.run('chmod', ['+x', libSoPath]);
+            } catch (_) {}
+          }
+        } else if (Platform.isMacOS) {
+          final libDylibPath = p.join(gamePath, 'libMelonLoader.dylib');
+          if (File(libDylibPath).existsSync()) {
+            try {
+              await Process.run('chmod', ['+x', libDylibPath]);
+              await Process.run('xattr', ['-d', 'com.apple.quarantine', libDylibPath]);
+            } catch (_) {}
+          }
+          final melonDir = Directory(p.join(gamePath, 'MelonLoader'));
+          if (melonDir.existsSync()) {
+            try {
+              await Process.run('xattr', ['-d', 'com.apple.quarantine', melonDir.path]);
+            } catch (_) {}
+          }
+        }
       }
     }
 

@@ -251,7 +251,10 @@ abstract class Game {
                   name.contains('adofai'))) {
             return true;
           }
-          if (entity is File && !name.contains('.')) {
+          if (entity is File &&
+              (name.endsWith('.x86_64') ||
+                  name.endsWith('.x86') ||
+                  !name.contains('.'))) {
             if (name.contains('dance') ||
                 name.contains('fire') ||
                 name.contains('ice') ||

@@ -15,12 +15,14 @@ class Localization {
       'settings_title': '설정 (SETTINGS)',
       'settings_game_path_title': '얼불춤 게임 설치 경로 설정',
       'settings_path_empty': '게임 경로가 지정되지 않았습니다. 폴더를 선택해 주세요.',
-      'settings_path_invalid': '⚠️ 해당 경로에 게임 실행 파일(A Dance of Fire and Ice)이 존재하지 않습니다.',
+      'settings_path_invalid':
+          '⚠️ 해당 경로에 게임 실행 파일(A Dance of Fire and Ice)이 존재하지 않습니다.',
       'settings_btn_select_manually': '폴더 수동 선택',
       'settings_btn_auto_detect': '스팀 경로 자동 감지',
       'settings_api_title': 'modlist.org API 서버 연동',
       'settings_btn_save': '저장',
-      'settings_api_guide': '기본값은 https://modlist.org 이며 로컬 테스트 시 http://localhost:3000 으로 변경 가능합니다.',
+      'settings_api_guide':
+          '기본값은 https://modlist.org 이며 로컬 테스트 시 http://localhost:3000 으로 변경 가능합니다.',
       'settings_sys_title': '시스템 정보',
       'settings_sys_os': '운영체제(OS)',
       'settings_sys_ver': '프로그램 버전',
@@ -28,7 +30,8 @@ class Localization {
       'settings_lang_title': '언어 설정 (Language)',
       'settings_api_saved': 'API URL 설정이 저장되었습니다.',
       'settings_path_detected': '얼불춤 스팀 기본 경로를 자동으로 설정했습니다.',
-      'settings_path_not_found': '스팀 기본 경로에서 얼불춤 설치 폴더를 찾을 수 없습니다. 수동으로 선택해 주세요.',
+      'settings_path_not_found':
+          '스팀 기본 경로에서 얼불춤 설치 폴더를 찾을 수 없습니다. 수동으로 선택해 주세요.',
 
       // Installed Tab
       'installed_title': '설치 관리 (INSTALLED)',
@@ -41,10 +44,13 @@ class Localization {
       'installed_btn_uninstall': '제거 (Uninstall)',
       'installed_btn_replace_loader': 'MelonLoader로 교체 설치',
       'installed_btn_install': '설치 (Install)',
-      'installed_loader_outdated_banner': '현재 감지된 MelonLoader 버전은 {version} 입니다.\n구버전 또는 외부에서 설치된 모드로더는 오류를 유발할 수 있으므로 최신 v{targetVersion}로 업데이트해 주세요.',
-      'installed_umm_banner': '현재 게임 폴더 내에 Unity Mod Manager(UMM)가 설치되어 있는 것이 확인되었습니다.\nmodlist.org 앱의 모드들을 완벽히 연동(설치/삭제/업데이트)하려면 MelonLoader가 필수적입니다.\n위의 [MelonLoader로 교체 설치] 버튼을 누르면 기존 UMM을 지우고 MelonLoader 설치를 자동으로 진행합니다.',
+      'installed_loader_outdated_banner':
+          '현재 감지된 MelonLoader 버전은 {version} 입니다.\n구버전 또는 외부에서 설치된 모드로더는 오류를 유발할 수 있으므로 최신 v{targetVersion}로 업데이트해 주세요.',
+      'installed_umm_banner':
+          '현재 게임 폴더 내에 Unity Mod Manager(UMM)가 설치되어 있는 것이 확인되었습니다.\nmodlist.org 앱의 모드들을 완벽히 연동(설치/삭제/업데이트)하려면 MelonLoader가 필수적입니다.\n위의 [MelonLoader로 교체 설치] 버튼을 누르면 기존 UMM을 지우고 MelonLoader 설치를 자동으로 진행합니다.',
       'replace_umm_dialog_title': 'Unity Mod Manager 교체 및 모드 이관',
-      'replace_umm_dialog_body': '기존 Mods 폴더에 있는 UMM 모드들을 UMMMods 폴더로 안전하게 이관합니다.\n\n또한, 이관된 UMM 모드들이 MelonLoader에서 정상적으로 작동하도록 UMM 호환 모드(ummcompat)를 추가로 설치하시겠습니까?',
+      'replace_umm_dialog_body':
+          '기존 Mods 폴더에 있는 UMM 모드들을 UMMMods 폴더로 안전하게 이관합니다.\n\n또한, 이관된 UMM 모드들이 MelonLoader에서 정상적으로 작동하도록 UMM 호환 모드(ummcompat)를 추가로 설치하시겠습니까?',
       'replace_umm_dialog_btn_yes': '예 (호환 모드 설치)',
       'replace_umm_dialog_btn_no': '아니오 (호환 모드 미설치)',
       'replace_umm_dialog_btn_cancel': '취소',
@@ -99,11 +105,12 @@ class Localization {
       'game_adofai': '얼불춤 (ADOFAI)',
       'explore_modal_beta': '베타',
       'update_dialog_title': '새로운 버전 업데이트 안내',
-      'update_dialog_body': '새로운 버전 v{version}이 출시되었습니다!\n\n현재 버전: v{currentVersion}\n\n최신 버전을 다운로드하고 설치하시겠습니까?',
+      'update_dialog_body':
+          '새로운 버전 {version}이 출시되었습니다!\n\n현재 버전: v{currentVersion}\n\n최신 버전을 다운로드하고 설치하시겠습니까?',
       'update_dialog_btn_yes': '업데이트 받기',
       'update_dialog_btn_no': '나중에 하기',
       'update_status_latest': '최신 버전을 사용 중입니다.',
-      'update_status_error': '업데이트 정보를 가져오는 동안 오류가 발생했습니다.'
+      'update_status_error': '업데이트 정보를 가져오는 동안 오류가 발생했습니다.',
     },
     'en-US': {
       // Sidebar
@@ -112,28 +119,34 @@ class Localization {
       'tab_settings': 'Settings',
       'sidebar_games_title': 'TARGET GAMES',
       'sidebar_adofai_sub': 'ADOFAI (Active)',
-      'sidebar_adofai_tooltip': 'A Dance of Fire and Ice mod manager is active.',
+      'sidebar_adofai_tooltip':
+          'A Dance of Fire and Ice mod manager is active.',
       'sidebar_rd_sub': 'Rhythm Doctor (Coming Soon)',
       'sidebar_rd_tooltip': 'Rhythm Doctor mod manager is coming soon.',
 
       // Settings Tab
       'settings_title': 'Settings',
       'settings_game_path_title': 'ADOFAI Game Directory Settings',
-      'settings_path_empty': 'Game directory is not specified. Please select a folder.',
-      'settings_path_invalid': '⚠️ Game executable (A Dance of Fire and Ice) does not exist in this directory.',
+      'settings_path_empty':
+          'Game directory is not specified. Please select a folder.',
+      'settings_path_invalid':
+          '⚠️ Game executable (A Dance of Fire and Ice) does not exist in this directory.',
       'settings_btn_select_manually': 'Select Folder Manually',
       'settings_btn_auto_detect': 'Auto-Detect Steam Path',
       'settings_api_title': 'modlist.org API Connection',
       'settings_btn_save': 'Save',
-      'settings_api_guide': 'Default is https://modlist.org. Can be changed to http://localhost:3000 for local testing.',
+      'settings_api_guide':
+          'Default is https://modlist.org. Can be changed to http://localhost:3000 for local testing.',
       'settings_sys_title': 'System Info',
       'settings_sys_os': 'Operating System (OS)',
       'settings_sys_ver': 'Program Version',
       'settings_sys_loader': 'Loader Type',
       'settings_lang_title': 'Language Setting',
       'settings_api_saved': 'API URL setting saved successfully.',
-      'settings_path_detected': 'ADOFAI default Steam directory set automatically.',
-      'settings_path_not_found': 'Cannot find ADOFAI installation directory in default Steam path. Please select manually.',
+      'settings_path_detected':
+          'ADOFAI default Steam directory set automatically.',
+      'settings_path_not_found':
+          'Cannot find ADOFAI installation directory in default Steam path. Please select manually.',
 
       // Installed Tab
       'installed_title': 'Installed Mods',
@@ -146,10 +159,13 @@ class Localization {
       'installed_btn_uninstall': 'Uninstall',
       'installed_btn_replace_loader': 'Replace with MelonLoader',
       'installed_btn_install': 'Install',
-      'installed_loader_outdated_banner': 'Currently detected MelonLoader version is {version}.\nUsing outdated or external mod loaders may cause errors. Please update to the latest v{targetVersion}.',
-      'installed_umm_banner': 'Unity Mod Manager (UMM) has been detected in the game folder.\nMelonLoader is required to seamlessly manage (install/delete/update) mods via modlist.org.\nClicking [Replace with MelonLoader] will wipe UMM and automatically set up MelonLoader.',
+      'installed_loader_outdated_banner':
+          'Currently detected MelonLoader version is {version}.\nUsing outdated or external mod loaders may cause errors. Please update to the latest v{targetVersion}.',
+      'installed_umm_banner':
+          'Unity Mod Manager (UMM) has been detected in the game folder.\nMelonLoader is required to seamlessly manage (install/delete/update) mods via modlist.org.\nClicking [Replace with MelonLoader] will wipe UMM and automatically set up MelonLoader.',
       'replace_umm_dialog_title': 'Replace Unity Mod Manager & Migrate Mods',
-      'replace_umm_dialog_body': 'We will safely migrate the UMM mods in the existing Mods folder to the UMMMods folder.\n\nIn addition, would you like to install the UMM compatibility mod (ummcompat) so that the migrated UMM mods work properly under MelonLoader?',
+      'replace_umm_dialog_body':
+          'We will safely migrate the UMM mods in the existing Mods folder to the UMMMods folder.\n\nIn addition, would you like to install the UMM compatibility mod (ummcompat) so that the migrated UMM mods work properly under MelonLoader?',
       'replace_umm_dialog_btn_yes': 'Yes (Install Compatibility Mod)',
       'replace_umm_dialog_btn_no': 'No (Do Not Install)',
       'replace_umm_dialog_btn_cancel': 'Cancel',
@@ -195,8 +211,10 @@ class Localization {
       'explore_modal_btn_close': 'Close',
       'explore_modal_btn_delete': 'Delete Mod',
       'explore_modal_btn_install': 'Install Mod',
-      'explore_modal_warn_path': '⚠️ Please set a valid game path in the settings tab first.',
-      'explore_modal_warn_loader': 'MelonLoader installation is required first to install mods.',
+      'explore_modal_warn_path':
+          '⚠️ Please set a valid game path in the settings tab first.',
+      'explore_modal_warn_loader':
+          'MelonLoader installation is required first to install mods.',
       'explore_modal_btn_auto_loader': 'Auto-Install MelonLoader',
       'explore_modal_loading': 'Processing...',
       "explore_modal_expand": "Expend",
@@ -204,24 +222,26 @@ class Localization {
       'game_adofai': 'ADOFAI',
       'explore_modal_beta': 'Beta',
       'update_dialog_title': 'New Update Available',
-      'update_dialog_body': 'A new version v{version} is available!\n\nCurrent version: v{currentVersion}\n\nWould you like to download and install the update now?',
+      'update_dialog_body':
+          'A new version v{version} is available!\n\nCurrent version: v{currentVersion}\n\nWould you like to download and install the update now?',
       'update_dialog_btn_yes': 'Update Now',
       'update_dialog_btn_no': 'Later',
       'update_status_latest': 'You are already running the latest version.',
-      'update_status_error': 'An error occurred while fetching update information.'
-    }
+      'update_status_error':
+          'An error occurred while fetching update information.',
+    },
   };
 
   static String get(String locale, String key, {Map<String, String>? args}) {
     final language = _strings[locale] ?? _strings['en-US']!;
     var text = language[key] ?? _strings['en-US']![key] ?? key;
-    
+
     if (args != null) {
       args.forEach((k, v) {
         text = text.replaceAll('{$k}', v);
       });
     }
-    
+
     return text;
   }
 }

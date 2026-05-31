@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'installer_state.dart';
 
 class UpdateChecker {
-  static const String currentVersion = '0.1.0';
+  static const String currentVersion = '0.1.2';
   static const String repoOwner = 'modlist-org';
   static const String repoName = 'modlist_org_app';
 
@@ -35,15 +35,15 @@ class UpdateChecker {
         );
       } else if (showNoUpdate) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.t('update_status_latest'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(state.t('update_status_latest'))),
+        );
       }
     } catch (_) {
       if (showNoUpdate && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(state.t('update_status_error'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(state.t('update_status_error'))));
       }
     }
   }

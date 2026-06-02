@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 import 'game.dart';
 import '../models/mod_model.dart';
-import '../core/installer_state.dart';
 
 class AdofaiGame extends Game {
   @override

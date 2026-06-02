@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -11,29 +11,42 @@ import 'src/ui/main_layout.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // await clearFontCache(); for debug
+
   await Future.wait([
     _loadSuitFont(),
-    _loadSourceHanSansCN(),
+    _loadNotoSansSC(),
   ]);
 
   runApp(const ModlistApp());
 }
 
+/*
+Future<void> clearFontCache() async {
+  final dir = await getApplicationSupportDirectory();
+  final cacheDir = Directory('${dir.path}/fonts');
+
+  if (await cacheDir.exists()) {
+    await cacheDir.delete(recursive: true);
+  }
+}
+*/
+
 Future<Uint8List> _getCachedFont(String url) async {
   final dir = await getApplicationSupportDirectory();
 
-  final fileName = Uri.parse(url).pathSegments.last;
-  final file = File('${dir.path}/fonts/$fileName');
+  final fileName = md5.convert(url.codeUnits).toString();
+  final file = File('${dir.path}/fonts/$fileName.ttf');
 
   if (!await file.exists()) {
     await file.parent.create(recursive: true);
 
     final response = await http
         .get(Uri.parse(url))
-        .timeout(const Duration(seconds: 4));
+        .timeout(const Duration(seconds: 12));
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to download font: $url');
+      throw Exception('Font download failed: $url (${response.statusCode})');
     }
 
     await file.writeAsBytes(response.bodyBytes);
@@ -58,30 +71,28 @@ Future<void> _loadFont(
             ByteData.view(bytes.buffer),
           ),
         );
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[FONT SKIP] $url -> $e');
+      }
     }
 
     await loader.load();
-  } catch (_) {}
+  } catch (e, stackTrace) {
+    debugPrint('[FONT LOADER FAIL] $family');
+    debugPrint(e.toString());
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }
 
 Future<void> _loadSuitFont() {
   return _loadFont('SUIT', [
-    'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/static/ttf/SUIT-ExtraLight.ttf',
-    'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/static/ttf/SUIT-Regular.ttf',
-    'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/static/ttf/SUIT-Medium.ttf',
-    'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/static/ttf/SUIT-Bold.ttf',
-    'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/static/ttf/SUIT-Heavy.ttf',
+    'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/ttf/SUIT-Variable.ttf',
   ]);
 }
 
-Future<void> _loadSourceHanSansCN() {
-  return _loadFont('SourceHanSansCN', [
-    'https://cdn.jsdelivr.net/npm/@zf-web-font/sourcehansanscn@0.2.0/SourceHanSansCN-ExtraLight.ttf',
-    'https://cdn.jsdelivr.net/npm/@zf-web-font/sourcehansanscn@0.2.0/SourceHanSansCN-Regular.ttf',
-    'https://cdn.jsdelivr.net/npm/@zf-web-font/sourcehansanscn@0.2.0/SourceHanSansCN-Medium.ttf',
-    'https://cdn.jsdelivr.net/npm/@zf-web-font/sourcehansanscn@0.2.0/SourceHanSansCN-Bold.ttf',
-    'https://cdn.jsdelivr.net/npm/@zf-web-font/sourcehansanscn@0.2.0/SourceHanSansCN-Heavy.ttf',
+Future<void> _loadNotoSansSC() {
+  return _loadFont('NotoSansSC', [
+    'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk/Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf',
   ]);
 }
 
@@ -98,7 +109,7 @@ class ModlistApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF16151D),
         fontFamily: 'SUIT',
         fontFamilyFallback: const [
-          'SourceHanSansCN',
+          'NotoSansSC',
         ],
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF919AFF),

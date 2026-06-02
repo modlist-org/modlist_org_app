@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'installer_state.dart';
 
 class UpdateChecker {
-  static const String currentVersion = '0.1.6';
+  static const String currentVersion = '0.2.0';
   static const String repoOwner = 'modlist-org';
   static const String repoName = 'modlist_org_app';
 

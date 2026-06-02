@@ -831,14 +831,13 @@ echo
   }
 
   @override
-  String? getSteamLaunchOptionsGuide() {
+  String? getSteamLaunchOptionsGuideKey() {
     if (Platform.isWindows) {
       return null;
     } else if (Platform.isLinux) {
-      return 'Steam Proton(윈도우 버전) 실행 시 시작 옵션에 아래 스크립트를 입력하세요:\n'
-          'WINEDLLOVERRIDES="winhttp=n,b" %command%';
+      return 'installed_steamlaunchoptionsguide_dl_linux';
     } else if (Platform.isMacOS) {
-      return 'macOS는 향후 지원 예정입니다.';
+      return 'installed_steamlaunchoptionsguide_dl_macos';
     }
     return null;
   }

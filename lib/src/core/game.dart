@@ -281,7 +281,7 @@ abstract class Game {
   String getLoaderVersion(String gamePath) => 'None';
 
   // 스팀 런치 옵션 가이드 스트링 (Linux/macOS 비네이티브용)
-  String? getSteamLaunchOptionsGuide();
+  String? getSteamLaunchOptionsGuideKey();
 
   // UMM ID(예: Tweaks)와 서버 슬러그(예: adofai-tweaks) 간의 유연한 매칭 지원 헬퍼
   bool isModMatched(String localSlug, String serverSlug) {

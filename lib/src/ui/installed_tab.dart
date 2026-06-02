@@ -147,7 +147,8 @@ class _InstalledTabState extends State<InstalledTab> {
 
   @override
   Widget build(BuildContext context) {
-    final launchGuide = widget.state.game.getSteamLaunchOptionsGuide();
+    final guideKey = widget.state.game.getSteamLaunchOptionsGuideKey();
+    final launchGuide = guideKey != null ? widget.state.t(guideKey) : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),

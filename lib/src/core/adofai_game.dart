@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 import 'game.dart';
 import '../models/mod_model.dart';
+import '../core/installer_state.dart';
 
 class AdofaiGame extends Game {
   @override
@@ -1139,19 +1140,13 @@ echo
   }
 
   @override
-  String? getSteamLaunchOptionsGuide() {
+  String? getSteamLaunchOptionsGuideKey() {
     if (Platform.isWindows) {
       return null;
     } else if (Platform.isLinux) {
-      return '1) 리눅스 네이티브 실행 시 스팀 실행 옵션에 아래 스크립트를 입력하세요:\n'
-          'eval "\$(./setup_helper.sh)" %command%\n\n'
-          '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
-          'WINEDLLOVERRIDES="winhttp=n,b" %command%';
+      return 'installed_steamlaunchoptionsguide_adofai_linux';
     } else if (Platform.isMacOS) {
-      return 'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-          'eval "\$(./setup_helper.sh)" %command%\n\n'
-          '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
-          'xattr -d com.apple.quarantine winhttp.dll MelonLoader/';
+      return 'installed_steamlaunchoptionsguide_adofai_macos';
     }
     return null;
   }

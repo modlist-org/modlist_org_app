@@ -6,17 +6,25 @@ class Localization {
       'tab_installed': '설치 관리',
       'tab_settings': '환경 설정',
       'sidebar_games_title': '대상 게임 (GAMES)',
-      'sidebar_adofai_sub': '얼불춤 (Active)',
+      'sidebar_adofai_active': '얼불춤 (Active)',
+      'sidebar_adofai_inactive': '얼불춤',
       'sidebar_adofai_tooltip': 'A Dance of Fire and Ice 모드 매니저가 활성화 상태입니다.',
-      'sidebar_rd_sub': '리듬닥터 (Coming Soon)',
-      'sidebar_rd_tooltip': 'Rhythm Doctor 모드 매니저는 곧 지원 예정입니다.',
+      'sidebar_dancing-line_active': '댄싱 라인 (Active)',
+      'sidebar_dancing-line_inactive': '댄싱 라인',
+      'sidebar_dancing-line_tooltip': '댄싱 라인 (Dancing Line) 모드 매니저가 활성화 상태입니다.',
+      'sidebar_rhythm-doctor_active': '리듬닥터 (Active)',
+      'sidebar_rhythm-doctor_inactive': '리듬닥터',
+      'sidebar_rhythm-doctor_tooltip': '리듬닥터 (Rhythm Doctor) 모드 매니저가 활성화 상태입니다.',
 
       // Settings Tab
       'settings_title': '설정 (SETTINGS)',
-      'settings_game_path_title': '얼불춤 게임 설치 경로 설정',
+      'settings_game_path_title_adofai': '얼불춤 게임 설치 경로 설정',
+      'settings_game_path_title_dancing-line': '댄싱 라인 게임 설치 경로 설정',
       'settings_path_empty': '게임 경로가 지정되지 않았습니다. 폴더를 선택해 주세요.',
-      'settings_path_invalid':
+      'settings_path_invalid_adofai':
           '⚠️ 해당 경로에 게임 실행 파일(A Dance of Fire and Ice)이 존재하지 않습니다.',
+      'settings_path_invalid_dancing-line':
+          '⚠️ 해당 경로에 게임 실행 파일(Dancing Line)이 존재하지 않습니다.',
       'settings_btn_select_manually': '폴더 수동 선택',
       'settings_btn_auto_detect': '스팀 경로 자동 감지',
       'settings_api_title': 'modlist.org API 서버 연동',
@@ -29,9 +37,18 @@ class Localization {
       'settings_sys_loader': '로더 타입',
       'settings_lang_title': '언어 설정 (Language)',
       'settings_api_saved': 'API URL 설정이 저장되었습니다.',
-      'settings_path_detected': '얼불춤 스팀 기본 경로를 자동으로 설정했습니다.',
-      'settings_path_not_found':
+      'settings_path_detected_adofai': '얼불춤 스팀 기본 경로를 자동으로 설정했습니다.',
+      'settings_path_detected_dancing-line': '댄싱 라인 스팀 기본 경로를 자동으로 설정했습니다.',
+      'settings_path_detected_rhythm-doctor': '리듬닥터 스팀 기본 경로를 자동으로 설정했습니다.',
+      'settings_path_not_found_adofai':
           '스팀 기본 경로에서 얼불춤 설치 폴더를 찾을 수 없습니다. 수동으로 선택해 주세요.',
+      'settings_path_not_found_dancing-line':
+          '스팀 기본 경로에서 댄싱 라인 설치 폴더를 찾을 수 없습니다. 수동으로 선택해 주세요.',
+      'settings_path_not_found_rhythm-doctor':
+          '스팀 기본 경로에서 리듬닥터 설치 폴더를 찾을 수 없습니다. 수동으로 선택해 주세요.',
+      'settings_game_path_title_rhythm-doctor': '리듬닥터 게임 설치 경로 설정',
+      'settings_path_invalid_rhythm-doctor':
+          '⚠️ 해당 경로에 게임 실행 파일(Rhythm Doctor)이 존재하지 않습니다.',
 
       // Installed Tab
       'installed_title': '설치 관리 (INSTALLED)',
@@ -115,6 +132,8 @@ class Localization {
       "explore_modal_expand": "펼치기",
       'explore_card_author_more': ' 외',
       'game_adofai': '얼불춤 (ADOFAI)',
+      'game_dancing_line': '댄싱 라인 (Dancing Line)',
+      'game_rhythm_doctor': '리듬닥터 (Rhythm Doctor)',
       'explore_modal_beta': '베타',
       'update_dialog_title': '새로운 버전 업데이트 안내',
       'update_dialog_body':
@@ -158,19 +177,27 @@ class Localization {
       'tab_installed': 'Installed',
       'tab_settings': 'Settings',
       'sidebar_games_title': 'TARGET GAMES',
-      'sidebar_adofai_sub': 'ADOFAI (Active)',
+      'sidebar_adofai_active': 'ADOFAI (Active)',
+      'sidebar_adofai_inactive': 'ADOFAI',
       'sidebar_adofai_tooltip':
           'A Dance of Fire and Ice mod manager is active.',
-      'sidebar_rd_sub': 'Rhythm Doctor (Coming Soon)',
-      'sidebar_rd_tooltip': 'Rhythm Doctor mod manager is coming soon.',
+      'sidebar_dancing-line_active': 'Dancing Line (Active)',
+      'sidebar_dancing-line_inactive': 'Dancing Line',
+      'sidebar_dancing-line_tooltip': 'Dancing Line mod manager is active.',
+      'sidebar_rhythm-doctor_active': 'Rhythm Doctor (Active)',
+      'sidebar_rhythm-doctor_inactive': 'Rhythm Doctor',
+      'sidebar_rhythm-doctor_tooltip': 'Rhythm Doctor mod manager is active.',
 
       // Settings Tab
       'settings_title': 'Settings',
-      'settings_game_path_title': 'ADOFAI Game Directory Settings',
+      'settings_game_path_title_adofai': 'ADOFAI Game Directory Settings',
+      'settings_game_path_title_dancing-line': 'Dancing Line Game Directory Settings',
       'settings_path_empty':
           'Game directory is not specified. Please select a folder.',
-      'settings_path_invalid':
+      'settings_path_invalid_adofai':
           '⚠️ Game executable (A Dance of Fire and Ice) does not exist in this directory.',
+      'settings_path_invalid_dancing-line':
+          '⚠️ Game executable (Dancing Line) does not exist in this directory.',
       'settings_btn_select_manually': 'Select Folder Manually',
       'settings_btn_auto_detect': 'Auto-Detect Steam Path',
       'settings_api_title': 'modlist.org API Connection',
@@ -183,10 +210,21 @@ class Localization {
       'settings_sys_loader': 'Loader Type',
       'settings_lang_title': 'Language Setting',
       'settings_api_saved': 'API URL setting saved successfully.',
-      'settings_path_detected':
+      'settings_path_detected_adofai':
           'ADOFAI default Steam directory set automatically.',
-      'settings_path_not_found':
+      'settings_path_detected_dancing-line':
+          'Dancing Line default Steam directory set automatically.',
+      'settings_path_detected_rhythm-doctor':
+          'Rhythm Doctor default Steam directory set automatically.',
+      'settings_path_not_found_adofai':
           'Cannot find ADOFAI installation directory in default Steam path. Please select manually.',
+      'settings_path_not_found_dancing-line':
+          'Cannot find Dancing Line installation directory in default Steam path. Please select manually.',
+      'settings_path_not_found_rhythm-doctor':
+          'Cannot find Rhythm Doctor installation directory in default Steam path. Please select manually.',
+      'settings_game_path_title_rhythm-doctor': 'Rhythm Doctor Game Directory Settings',
+      'settings_path_invalid_rhythm-doctor':
+          '⚠️ Game executable (Rhythm Doctor) does not exist in this directory.',
 
       // Installed Tab
       'installed_title': 'Installed Mods',
@@ -272,6 +310,8 @@ class Localization {
       "explore_modal_expand": "Expend",
       'explore_card_author_more': ' and more',
       'game_adofai': 'ADOFAI',
+      'game_dancing_line': 'Dancing Line',
+      'game_rhythm_doctor': 'Rhythm Doctor',
       'explore_modal_beta': 'Beta',
       'update_dialog_title': 'New Update Available',
       'update_dialog_body':
@@ -316,17 +356,25 @@ class Localization {
       'tab_installed': '安装管理',
       'tab_settings': '设置',
       'sidebar_games_title': '目标游戏 (GAMES)',
-      'sidebar_adofai_sub': '冰与火之舞 (Active)',
+      'sidebar_adofai_active': '冰与火之舞 (Active)',
+      'sidebar_adofai_inactive': '冰与火之舞',
       'sidebar_adofai_tooltip': '冰与火之舞模组管理器已激活。',
-      'sidebar_rd_sub': '节奏医生 (即将推出)',
-      'sidebar_rd_tooltip': '节奏医生模组管理器即将推出。',
+      'sidebar_dancing-line_active': '跳舞的线 (Active)',
+      'sidebar_dancing-line_inactive': '跳舞的线',
+      'sidebar_dancing-line_tooltip': '跳舞的线模组管理器已激活。',
+      'sidebar_rhythm-doctor_active': '节奏医生 (Active)',
+      'sidebar_rhythm-doctor_inactive': '节奏医生',
+      'sidebar_rhythm-doctor_tooltip': '节奏医生模组管理器已激活。',
 
       // Settings Tab
       'settings_title': '设置 (SETTINGS)',
-      'settings_game_path_title': '冰与火之舞安装路径设置',
+      'settings_game_path_title_adofai': '冰与火之舞安装路径设置',
+      'settings_game_path_title_dancing-line': '跳舞的线安装路径设置',
       'settings_path_empty': '未指定游戏路径。请选择文件夹。',
-      'settings_path_invalid':
+      'settings_path_invalid_adofai':
           '⚠️ 该路径下不存在游戏运行文件 (A Dance of Fire and Ice)。',
+      'settings_path_invalid_dancing-line':
+          '⚠️ 该路径下不存在游戏运行文件 (Dancing Line)。',
       'settings_btn_select_manually': '手动选择文件夹',
       'settings_btn_auto_detect': '自动检测 Steam 路径',
       'settings_api_title': '连接 modlist.org API 服务器',
@@ -339,9 +387,18 @@ class Localization {
       'settings_sys_loader': '加载器类型',
       'settings_lang_title': '语言设置 (Language)',
       'settings_api_saved': 'API URL 设置已保存。',
-      'settings_path_detected': '已自动设置冰与火之舞的默认 Steam 路径。',
-      'settings_path_not_found':
+      'settings_path_detected_adofai': '已自动设置冰与火之舞的默认 Steam 路径。',
+      'settings_path_detected_dancing-line': '已自动设置跳舞的线的默认 Steam 路径。',
+      'settings_path_detected_rhythm-doctor': '已自动设置节奏医生的默认 Steam 路径。',
+      'settings_path_not_found_adofai':
           '在默认 Steam 路径下找不到冰与火之舞安装文件夹。请手动选择。',
+      'settings_path_not_found_dancing-line':
+          '在默认 Steam 路径下找不到跳舞的线安装文件夹。请手动选择。',
+      'settings_path_not_found_rhythm-doctor':
+          '在默认 Steam 路径下找不到节奏医生安装文件夹。请手动选择。',
+      'settings_game_path_title_rhythm-doctor': '节奏医生安装路径设置',
+      'settings_path_invalid_rhythm-doctor':
+          '⚠️ 该路径下不存在游戏运行文件 (Rhythm Doctor)。',
 
       // Installed Tab
       'installed_title': '安装管理 (INSTALLED)',
@@ -426,6 +483,8 @@ class Localization {
       'explore_modal_expand': '展开',
       'explore_card_author_more': ' 等人',
       'game_adofai': '冰与火之舞 (ADOFAI)',
+      'game_dancing_line': '跳舞的线 (Dancing Line)',
+      'game_rhythm_doctor': '节奏医生 (Rhythm Doctor)',
       'explore_modal_beta': '测试版 (Beta)',
       'update_dialog_title': '新版本更新通知',
       'update_dialog_body':

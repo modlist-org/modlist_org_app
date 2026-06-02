@@ -215,21 +215,51 @@ class _MainLayoutState extends State<MainLayout> {
           ),
           const SizedBox(height: 12.0),
           
-          // 게임 1: 얼불춤 (활성화)
-          _buildSidebarGameItem(
+          // 게임 1: 얼불춤
+          _SidebarGameItem(
             name: 'A Dance of Fire and Ice',
-            subName: _installerState.t('sidebar_adofai_sub'),
-            isActive: true,
+            subName: _installerState.game.id == 'adofai'
+                ? _installerState.t('sidebar_adofai_active')
+                : _installerState.t('sidebar_adofai_inactive'),
+            isSelected: _installerState.game.id == 'adofai',
+            isSupported: true,
             tooltip: _installerState.t('sidebar_adofai_tooltip'),
+            onTap: _installerState.isProcessing
+                ? null
+                : () => _installerState.setSelectedGame('adofai'),
+            overlayerState: _overlayerState,
+          ),
+          const SizedBox(height: 8.0),
+
+          // 게임 2: 댄싱라인
+          _SidebarGameItem(
+            name: 'Dancing Line',
+            subName: _installerState.game.id == 'dancing-line'
+                ? _installerState.t('sidebar_dancing-line_active')
+                : _installerState.t('sidebar_dancing-line_inactive'),
+            isSelected: _installerState.game.id == 'dancing-line',
+            isSupported: true,
+            tooltip: _installerState.t('sidebar_dancing-line_tooltip'),
+            onTap: _installerState.isProcessing
+                ? null
+                : () => _installerState.setSelectedGame('dancing-line'),
+            overlayerState: _overlayerState,
           ),
           const SizedBox(height: 8.0),
           
-          // 게임 2: 리듬닥터 (지원 예정)
-          _buildSidebarGameItem(
+          // 게임 3: 리듬닥터
+          _SidebarGameItem(
             name: 'Rhythm Doctor',
-            subName: _installerState.t('sidebar_rd_sub'),
-            isActive: false,
-            tooltip: _installerState.t('sidebar_rd_tooltip'),
+            subName: _installerState.game.id == 'rhythm-doctor'
+                ? _installerState.t('sidebar_rhythm-doctor_active')
+                : _installerState.t('sidebar_rhythm-doctor_inactive'),
+            isSelected: _installerState.game.id == 'rhythm-doctor',
+            isSupported: true,
+            tooltip: _installerState.t('sidebar_rhythm-doctor_tooltip'),
+            onTap: _installerState.isProcessing
+                ? null
+                : () => _installerState.setSelectedGame('rhythm-doctor'),
+            overlayerState: _overlayerState,
           ),
           
           const Spacer(),
@@ -254,47 +284,6 @@ class _MainLayoutState extends State<MainLayout> {
           ),
           const SizedBox(height: 12.0),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarGameItem({
-    required String name,
-    required String subName,
-    required bool isActive,
-    required String tooltip,
-  }) {
-    return MouseRegion(
-      onHover: (PointerHoverEvent event) {
-        _overlayerState.showTooltip(tooltip, event.position.dx, event.position.dy);
-      },
-      onExit: (_) => _overlayerState.hideTooltip(),
-      child: Opacity(
-        opacity: isActive ? 1.0 : 0.4,
-        child: Container(
-          padding: const EdgeInsets.all(12.0),
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0x1F919AFF) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: isActive ? const Color(0x3F919AFF) : Colors.transparent,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.0),
-              ),
-              const SizedBox(height: 4.0),
-              Text(
-                subName,
-                style: TextStyle(color: isActive ? const Color(0xFF919AFF) : Colors.white24, fontSize: 11.0),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -377,6 +366,97 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SidebarGameItem extends StatefulWidget {
+  final String name;
+  final String subName;
+  final bool isSelected;
+  final bool isSupported;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final OverlayerState overlayerState;
+
+  const _SidebarGameItem({
+    required this.name,
+    required this.subName,
+    required this.isSelected,
+    required this.isSupported,
+    required this.tooltip,
+    this.onTap,
+    required this.overlayerState,
+  });
+
+  @override
+  State<_SidebarGameItem> createState() => _SidebarGameItemState();
+}
+
+class _SidebarGameItemState extends State<_SidebarGameItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final double opacity = widget.isSelected
+        ? 1.0
+        : (widget.isSupported
+            ? (_isHovered ? 0.95 : 0.75)
+            : 0.35);
+
+    final Color bgColor = widget.isSelected
+        ? const Color(0x1F919AFF)
+        : (widget.isSupported && _isHovered
+            ? Colors.white.withValues(alpha: 0.03)
+            : Colors.transparent);
+
+    final Color borderColor = widget.isSelected
+        ? const Color(0x3F919AFF)
+        : (widget.isSupported && _isHovered
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.transparent);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (event) {
+        setState(() => _isHovered = false);
+        widget.overlayerState.hideTooltip();
+      },
+      onHover: (PointerHoverEvent event) {
+        widget.overlayerState.showTooltip(widget.tooltip, event.position.dx, event.position.dy);
+      },
+      cursor: widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Opacity(
+          opacity: opacity,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(
+                color: borderColor,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.name,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.0),
+                ),
+                const SizedBox(height: 4.0),
+                Text(
+                  widget.subName,
+                  style: TextStyle(color: widget.isSelected ? const Color(0xFF919AFF) : Colors.white24, fontSize: 11.0),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

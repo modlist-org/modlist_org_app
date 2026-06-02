@@ -30,7 +30,7 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> _pickDirectory() async {
     final String? result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: widget.state.t('settings_game_path_title'),
+      dialogTitle: widget.state.t('settings_game_path_title_${widget.state.game.id}'),
     );
     if (result != null) {
       await widget.state.setGamePath(result);
@@ -45,7 +45,7 @@ class _SettingsTabState extends State<SettingsTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.state.t('settings_path_detected')),
+          content: Text(widget.state.t('settings_path_detected_${widget.state.game.id}')),
           duration: Duration(milliseconds: 2100),
         ),
       );
@@ -53,7 +53,7 @@ class _SettingsTabState extends State<SettingsTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.state.t('settings_path_not_found')),
+          content: Text(widget.state.t('settings_path_not_found_${widget.state.game.id}')),
           backgroundColor: Colors.redAccent,
           duration: Duration(milliseconds: 2100),
         ),
@@ -82,7 +82,7 @@ class _SettingsTabState extends State<SettingsTab> {
 
           // Game Path Card
           _buildCard(
-            title: widget.state.t('settings_game_path_title'),
+            title: widget.state.t('settings_game_path_title_${widget.state.game.id}'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -124,7 +124,7 @@ class _SettingsTabState extends State<SettingsTab> {
                 if (!widget.state.isValidPath && widget.state.gamePath.isNotEmpty) ...[
                   const SizedBox(height: 8.0),
                   Text(
-                    widget.state.t('settings_path_invalid'),
+                    widget.state.t('settings_path_invalid_${widget.state.game.id}'),
                     style: const TextStyle(color: Colors.redAccent, fontSize: 12.0),
                   ),
                 ],

@@ -176,6 +176,7 @@ class _ExploreTabState extends State<ExploreTab> {
   bool _isLoading = true;
   int _currentPage = 1;
   int _totalPages = 1;
+  String? _lastGameId;
 
   // 디바운스 검색용
   DateTime? _lastSearchTime;
@@ -183,6 +184,7 @@ class _ExploreTabState extends State<ExploreTab> {
   @override
   void initState() {
     super.initState();
+    _lastGameId = widget.state.game.id;
     _fetchMods();
     widget.state.addListener(_onStateChanged);
   }
@@ -196,7 +198,13 @@ class _ExploreTabState extends State<ExploreTab> {
 
   void _onStateChanged() {
     if (mounted) {
-      setState(() {});
+      if (_lastGameId != widget.state.game.id) {
+        _lastGameId = widget.state.game.id;
+        _currentPage = 1;
+        _fetchMods();
+      } else {
+        setState(() {});
+      }
     }
   }
 
@@ -560,7 +568,11 @@ class _ExploreTabState extends State<ExploreTab> {
 
     final String gameLabel = mod.game.toLowerCase() == 'adofai'
         ? widget.state.t('game_adofai')
-        : mod.game.toUpperCase();
+        : (mod.game.toLowerCase() == 'dancing-line'
+            ? widget.state.t('game_dancing_line')
+            : (mod.game.toLowerCase() == 'rhythm-doctor'
+                ? widget.state.t('game_rhythm_doctor')
+                : mod.game.toUpperCase()));
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

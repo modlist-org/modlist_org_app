@@ -18,10 +18,12 @@ class _InstalledTabState extends State<InstalledTab> {
   bool _isLoadingOnlineData = false;
   // 각 설치된 모드의 온라인 상세 정보 캐시 (최신 버전 대조용)
   final Map<String, ModItem> _onlineModsCache = {};
+  String? _lastGameId;
 
   @override
   void initState() {
     super.initState();
+    _lastGameId = widget.state.game.id;
     _loadOnlineDetails();
     widget.state.addListener(_onStateChanged);
   }
@@ -34,6 +36,10 @@ class _InstalledTabState extends State<InstalledTab> {
 
   void _onStateChanged() {
     if (mounted) {
+      if (_lastGameId != widget.state.game.id) {
+        _lastGameId = widget.state.game.id;
+        _onlineModsCache.clear();
+      }
       _loadOnlineDetails(); // 모드가 설치/삭제되면 캐시를 갱신
       setState(() {});
     }

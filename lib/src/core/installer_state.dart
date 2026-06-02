@@ -4,12 +4,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
 import 'game.dart';
 import 'adofai_game.dart';
+import 'dancing_line_game.dart';
+import 'rhythm_doctor_game.dart';
 import 'localization.dart';
 import '../models/mod_model.dart';
 import '../services/api_service.dart';
 
 class InstallerState extends ChangeNotifier {
-  final Game game = AdofaiGame();
+  Game _game = AdofaiGame();
+  Game get game => _game;
+
+  final List<Game> supportedGames = [
+    AdofaiGame(),
+    DancingLineGame(),
+    RhythmDoctorGame(),
+  ];
+
   final ApiService apiService = ApiService();
 
   String _gamePath = '';
@@ -58,13 +68,42 @@ class InstallerState extends ChangeNotifier {
     _apiUrl = prefs.getString('modlist_api_base_url') ?? 'https://modlist.org';
     await apiService.setBaseUrl(_apiUrl);
 
+    // 저장된 게임 고유 식별자 로드
+    final selectedGameId = prefs.getString('modlist_selected_game_id') ?? 'adofai';
+    _game = supportedGames.firstWhere((g) => g.id == selectedGameId, orElse: () => AdofaiGame());
+
     // 저장된 게임 경로 로드, 없으면 기본 경로 자동 감지 시도
-    _gamePath = prefs.getString('adofai_install_path') ?? '';
+    _gamePath = prefs.getString('${_game.id}_install_path') ?? '';
     if (_gamePath.isEmpty) {
-      final defaultPath = game.getPlatformDefaultPath();
-      if (game.isValidGamePath(defaultPath)) {
+      final defaultPath = _game.getPlatformDefaultPath();
+      if (_game.isValidGamePath(defaultPath)) {
         _gamePath = defaultPath;
-        await prefs.setString('adofai_install_path', _gamePath);
+        await prefs.setString('${_game.id}_install_path', _gamePath);
+      }
+    }
+
+    await refreshStatus();
+  }
+
+  // 선택된 게임 변경
+  Future<void> setSelectedGame(String gameId) async {
+    if (_game.id == gameId) return;
+
+    final target = supportedGames.firstWhere((g) => g.id == gameId, orElse: () => _game);
+    if (target == _game) return;
+
+    _game = target;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('modlist_selected_game_id', gameId);
+
+    // 경로 로드
+    _gamePath = prefs.getString('${_game.id}_install_path') ?? '';
+    if (_gamePath.isEmpty) {
+      final defaultPath = _game.getPlatformDefaultPath();
+      if (_game.isValidGamePath(defaultPath)) {
+        _gamePath = defaultPath;
+        await prefs.setString('${_game.id}_install_path', _gamePath);
       }
     }
 
@@ -75,7 +114,7 @@ class InstallerState extends ChangeNotifier {
   Future<void> setGamePath(String path) async {
     _gamePath = path;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('adofai_install_path', path);
+    await prefs.setString('${_game.id}_install_path', path);
     await refreshStatus();
   }
 

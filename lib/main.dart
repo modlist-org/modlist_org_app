@@ -25,26 +25,21 @@ Future<Uint8List> _getCachedFont(String url) async {
   final fileName = Uri.parse(url).pathSegments.last;
   final file = File('${dir.path}/fonts/$fileName');
 
-  if (await file.exists()) {
-    debugPrint('[FONT] Cache hit: $fileName');
-    return await file.readAsBytes();
+  if (!await file.exists()) {
+    await file.parent.create(recursive: true);
+
+    final response = await http
+        .get(Uri.parse(url))
+        .timeout(const Duration(seconds: 4));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to download font: $url');
+    }
+
+    await file.writeAsBytes(response.bodyBytes);
   }
 
-  debugPrint('[FONT] Download: $fileName');
-
-  await file.parent.create(recursive: true);
-
-  final response = await http
-      .get(Uri.parse(url))
-      .timeout(const Duration(seconds: 4));
-
-  if (response.statusCode != 200) {
-    throw Exception('Failed to download font');
-  }
-
-  await file.writeAsBytes(response.bodyBytes);
-
-  return response.bodyBytes;
+  return await file.readAsBytes();
 }
 
 Future<void> _loadFont(

@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 import 'game.dart';
 import '../models/mod_model.dart';
+import 'melon_dll_parser.dart';
 
 class DancingLineGame extends Game {
   @override
@@ -440,9 +441,12 @@ echo
       throw Exception('File does not exist: $filePath');
     }
 
-    final filenameWithExt = p.basename(filePath);
     final filenameNoExt = p.basenameWithoutExtension(filePath);
     final ext = p.extension(filePath).toLowerCase();
+
+    // 파일명에서 버전 정보 제거하여 일관된 slug 획득 (예: Tweaks_v1.0.0 -> Tweaks)
+    final cleanName = filenameNoExt.replaceAll(RegExp(r'[-_\s]+v?[0-9]+(?:\.[0-9]+)*.*$'), '');
+    final baseSlug = cleanName.isEmpty ? filenameNoExt : cleanName;
 
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
@@ -460,9 +464,61 @@ echo
       }
     }
 
-    String finalSlug = filenameNoExt.toLowerCase();
-    String finalName = filenameNoExt;
+    String finalSlug = baseSlug.toLowerCase();
+    String finalName = baseSlug;
     String finalVersion = 'Local';
+
+    // MelonLoader DLL 파싱 (MelonInfo 속성 추출)
+    if (isZip && archive != null) {
+      for (final archiveFile in archive) {
+        if (archiveFile.isFile && p.extension(archiveFile.name).toLowerCase() == '.dll') {
+          try {
+            final tempDir = await getTemporaryDirectory();
+            final tempDllFile = File(p.join(
+              tempDir.path,
+              'temp_parse_${DateTime.now().microsecondsSinceEpoch}.dll',
+            ));
+            await tempDllFile.writeAsBytes(archiveFile.content as List<int>);
+            final info = MelonDllParser.parse(tempDllFile.path);
+            try {
+              await tempDllFile.delete();
+            } catch (_) {}
+            if (info != null) {
+              finalName = info.name;
+              finalVersion = info.version;
+              finalSlug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+              break;
+            }
+          } catch (_) {}
+        }
+      }
+    } else if (ext == '.dll') {
+      try {
+        final info = MelonDllParser.parse(filePath);
+        if (info != null) {
+          finalName = info.name;
+          finalVersion = info.version;
+          finalSlug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+        }
+      } catch (_) {}
+    }
+
+    // 기존 모드가 설치되어 있는 경우 안전하게 먼저 언인스톨을 수행합니다.
+    try {
+      final matchingMods = installedMods
+          .where((m) =>
+              isModMatched(m.slug, finalSlug) ||
+              m.id.toLowerCase() == finalSlug.toLowerCase())
+          .toList();
+      for (final matching in matchingMods) {
+        await uninstallMod(gamePath, matching.slug);
+      }
+    } catch (_) {
+      // 기존 모드 삭제 실패 시에도 설치 계속 진행
+    }
+
+    // 언인스톨 후의 최신 로컬 메타데이터 목록 로드
+    final updatedInstalledMods = await getInstalledMods(gamePath);
 
     if (isZip && archive != null) {
       bool hasStructuredDirs = false;
@@ -510,19 +566,21 @@ echo
       if (!modsDir.existsSync()) {
         await modsDir.create(recursive: true);
       }
-      final destPath = p.join(modsDir.path, filenameWithExt);
+      final sanitizedFileName = finalName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '');
+      final destFileName = '$sanitizedFileName$ext';
+      final destPath = p.join(modsDir.path, destFileName);
       final destFile = File(destPath);
       await destFile.writeAsBytes(fileBytes);
-      installedFiles.add(p.join('Mods', filenameWithExt));
+      installedFiles.add(p.join('Mods', destFileName));
     }
 
-    installedMods.removeWhere(
+    updatedInstalledMods.removeWhere(
       (m) =>
           isModMatched(m.slug, finalSlug) ||
           m.id.toLowerCase() == finalSlug.toLowerCase(),
     );
 
-    installedMods.add(
+    updatedInstalledMods.add(
       InstalledMod(
         id: finalSlug,
         slug: finalSlug,
@@ -534,7 +592,7 @@ echo
       ),
     );
 
-    await saveInstalledMods(gamePath, installedMods);
+    await saveInstalledMods(gamePath, updatedInstalledMods);
   }
 
   @override
@@ -733,13 +791,25 @@ echo
 
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
-            final slug = fileName.toLowerCase();
+            String finalName = fileName;
+            String finalVersion = 'Local';
+            String slug = fileName.toLowerCase();
+
+            try {
+              final info = MelonDllParser.parse(entity.path);
+              if (info != null) {
+                finalName = info.name;
+                finalVersion = info.version;
+                slug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+              }
+            } catch (_) {}
+
             result.add(
               InstalledMod(
                 id: slug,
                 slug: slug,
-                name: fileName,
-                version: 'Local',
+                name: finalName,
+                version: finalVersion,
                 isBeta: false,
                 installedAt: entity.statSync().modified.toIso8601String(),
                 installedFiles: [relPath],
@@ -766,13 +836,25 @@ echo
 
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
-            final slug = fileName.toLowerCase();
+            String finalName = '$fileName (Plugin)';
+            String finalVersion = 'Local';
+            String slug = fileName.toLowerCase();
+
+            try {
+              final info = MelonDllParser.parse(entity.path);
+              if (info != null) {
+                finalName = '${info.name} (Plugin)';
+                finalVersion = info.version;
+                slug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+              }
+            } catch (_) {}
+
             result.add(
               InstalledMod(
                 id: slug,
                 slug: slug,
-                name: '$fileName (Plugin)',
-                version: 'Local',
+                name: finalName,
+                version: finalVersion,
                 isBeta: false,
                 installedAt: entity.statSync().modified.toIso8601String(),
                 installedFiles: [relPath],

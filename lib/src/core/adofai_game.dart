@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 import 'game.dart';
 import '../models/mod_model.dart';
+import 'melon_dll_parser.dart';
 
 class AdofaiGame extends Game {
   @override
@@ -390,19 +391,6 @@ echo
     bool isBeta = false,
     void Function(double)? onProgress,
   }) async {
-    // 0. 기존 모드가 설치되어 있는 경우 안전하게 먼저 언인스톨을 수행합니다.
-    try {
-      final installed = await getInstalledMods(gamePath);
-      final matchingMods = installed
-          .where((m) => isModMatched(m.slug, mod.slug))
-          .toList();
-      for (final matching in matchingMods) {
-        await uninstallMod(gamePath, matching.slug);
-      }
-    } catch (_) {
-      // 기존 모드 삭제 실패 시에도 설치 계속 진행
-    }
-
     // 임시 파일 다운로드 경로 설정
     final tempDir = await getTemporaryDirectory();
     final tempFilePath = p.join(tempDir.path, '${mod.slug}_temp');
@@ -432,10 +420,6 @@ echo
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
 
-    // 파일 추출 전에 로컬 메타데이터를 먼저 불러옵니다.
-    // 이렇게 하면 압축 해제되어 생성된 DLL이 unclaimed 파일로 감지되어 이중 등록되는 것을 방지합니다.
-    final installedMods = await getInstalledMods(gamePath);
-
     // zip 여부 확인 및 아카이브 스캔
     bool isZip = false;
     Archive? archive;
@@ -446,13 +430,14 @@ echo
       isZip = false;
     }
 
+    final List<String> infoJsonPaths = [];
     bool isUmm = false;
     String finalSlug = mod.slug;
     String finalName = mod.name;
+    String ummFolder = mod.slug;
 
     if (isZip && archive != null) {
       // 2. 모드 포맷(UMM vs MelonLoader) 감지
-      final List<String> infoJsonPaths = [];
 
       for (final archiveFile in archive) {
         final filename = archiveFile.name;
@@ -464,48 +449,7 @@ echo
       }
 
       if (isUmm) {
-        // UMM 모드 설치 로직
-        final ummBaseDir = Directory(p.join(gamePath, 'UMMMods'));
-        if (!ummBaseDir.existsSync()) {
-          await ummBaseDir.create(recursive: true);
-        }
-
-        // info.json들의 부모 폴더 경로 추출
-        final parentFolders = infoJsonPaths
-            .map((path) => p.dirname(path))
-            .toList();
-
-        // 만약 부모 폴더가 루트("")밖에 없다면, zip 내용물을 UMMMods/<slug> 폴더 아래에 생성
-        final bool isRootOnly = parentFolders.every(
-          (parent) => parent == '.' || parent == '',
-        );
-
-        for (final archiveFile in archive) {
-          final filename = archiveFile.name;
-          String outPath;
-          String relativePath;
-
-          if (isRootOnly) {
-            outPath = p.join(ummBaseDir.path, mod.slug, filename);
-            relativePath = p.join('UMMMods', mod.slug, filename);
-          } else {
-            outPath = p.join(ummBaseDir.path, filename);
-            relativePath = p.join('UMMMods', filename);
-          }
-
-          if (archiveFile.isFile) {
-            final data = archiveFile.content as List<int>;
-            final outFile = File(outPath);
-            await outFile.create(recursive: true);
-            await outFile.writeAsBytes(data);
-            installedFiles.add(relativePath);
-          } else {
-            await Directory(outPath).create(recursive: true);
-            installedFiles.add(relativePath);
-          }
-        }
-
-        // UMM 인 경우 info.json 파일을 찾아서 Id를 획득해 slug 및 name 동기화
+        // UMM 인 경우 info.json 파일을 먼저 찾아서 Id를 획득해 slug 및 name 동기화
         ArchiveFile? firstInfoFile;
         for (final archiveFile in archive) {
           if (p.basename(archiveFile.name).toLowerCase() == 'info.json' &&
@@ -524,9 +468,73 @@ echo
             final String displayName = infoJson['DisplayName'] ?? mod.name;
             finalSlug = 'umm-$id';
             finalName = '$displayName (UMM)';
+            ummFolder = id;
           } catch (_) {
             finalSlug = 'umm-${mod.slug}';
             finalName = '${mod.name} (UMM)';
+          }
+        }
+      }
+    }
+
+    // 파일 추출 전에 로컬 메타데이터를 불러오고, 기존에 동일한 모드가 설치되어 있는 경우 안전하게 먼저 언인스톨을 수행합니다.
+    final installedMods = await getInstalledMods(gamePath);
+    try {
+      final matchingMods = installedMods
+          .where((m) =>
+              isModMatched(m.slug, mod.slug) ||
+              m.id.toLowerCase() == finalSlug.toLowerCase())
+          .toList();
+      for (final matching in matchingMods) {
+        await uninstallMod(gamePath, matching.slug);
+      }
+    } catch (_) {
+      // 기존 모드 삭제 실패 시에도 설치 계속 진행
+    }
+
+    // 언인스톨 수행 후의 최신 로컬 메타데이터 목록 로드
+    final updatedInstalledMods = await getInstalledMods(gamePath);
+
+    if (isZip && archive != null) {
+      if (isUmm) {
+        // UMM 모드 설치 로직
+        final ummBaseDir = Directory(p.join(gamePath, 'UMMMods'));
+        if (!ummBaseDir.existsSync()) {
+          await ummBaseDir.create(recursive: true);
+        }
+
+        // info.json들의 부모 폴더 경로 추출
+        final parentFolders = infoJsonPaths
+            .map((path) => p.dirname(path))
+            .toList();
+
+        // 만약 부모 폴더가 루트("")밖에 없다면, zip 내용물을 UMMMods/<ummFolder> 폴더 아래에 생성
+        final bool isRootOnly = parentFolders.every(
+          (parent) => parent == '.' || parent == '',
+        );
+
+        for (final archiveFile in archive) {
+          final filename = archiveFile.name;
+          String outPath;
+          String relativePath;
+
+          if (isRootOnly) {
+            outPath = p.join(ummBaseDir.path, ummFolder, filename);
+            relativePath = p.join('UMMMods', ummFolder, filename);
+          } else {
+            outPath = p.join(ummBaseDir.path, filename);
+            relativePath = p.join('UMMMods', filename);
+          }
+
+          if (archiveFile.isFile) {
+            final data = archiveFile.content as List<int>;
+            final outFile = File(outPath);
+            await outFile.create(recursive: true);
+            await outFile.writeAsBytes(data);
+            installedFiles.add(relativePath);
+          } else {
+            await Directory(outPath).create(recursive: true);
+            installedFiles.add(relativePath);
           }
         }
       } else {
@@ -588,13 +596,13 @@ echo
     await file.delete();
 
     // 기존에 이미 동일한 모드가 설치되어 있었으면 제거 후 갱신
-    installedMods.removeWhere(
+    updatedInstalledMods.removeWhere(
       (m) =>
           isModMatched(m.slug, mod.slug) ||
           m.id.toLowerCase() == finalSlug.toLowerCase(),
     );
 
-    installedMods.add(
+    updatedInstalledMods.add(
       InstalledMod(
         id: finalSlug, // 'umm-Tweaks'
         slug: mod.slug, // 'adofai-tweaks' (본래 서버 슬러그를 보존하여 매칭에 사용)
@@ -606,7 +614,7 @@ echo
       ),
     );
 
-    await saveInstalledMods(gamePath, installedMods);
+    await saveInstalledMods(gamePath, updatedInstalledMods);
   }
 
   @override
@@ -616,9 +624,12 @@ echo
       throw Exception('File does not exist: $filePath');
     }
 
-    final filenameWithExt = p.basename(filePath);
     final filenameNoExt = p.basenameWithoutExtension(filePath);
     final ext = p.extension(filePath).toLowerCase();
+
+    // 파일명에서 버전 정보 제거하여 일관된 slug 획득 (예: Tweaks_v1.0.0 -> Tweaks)
+    final cleanName = filenameNoExt.replaceAll(RegExp(r'[-_\s]+v?[0-9]+(?:\.[0-9]+)*.*$'), '');
+    final baseSlug = cleanName.isEmpty ? filenameNoExt : cleanName;
 
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
@@ -637,14 +648,15 @@ echo
       }
     }
 
+    final List<String> infoJsonPaths = [];
     bool isUmm = false;
-    String finalSlug = filenameNoExt.toLowerCase();
-    String finalName = filenameNoExt;
+    String finalSlug = baseSlug.toLowerCase();
+    String finalName = baseSlug;
     String finalVersion = 'Local';
+    String ummFolder = baseSlug;
 
     if (isZip && archive != null) {
       // UMM vs MelonLoader 감지
-      final List<String> infoJsonPaths = [];
       for (final archiveFile in archive) {
         final filename = archiveFile.name;
         final baseName = p.basename(filename).toLowerCase();
@@ -654,6 +666,91 @@ echo
         }
       }
 
+      if (isUmm) {
+        // UMM 인 경우 info.json 내용을 먼저 읽어서 metadata 획득
+        ArchiveFile? firstInfoFile;
+        for (final archiveFile in archive) {
+          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' &&
+              archiveFile.isFile) {
+            firstInfoFile = archiveFile;
+            break;
+          }
+        }
+
+        if (firstInfoFile != null) {
+          try {
+            final data = firstInfoFile.content as List<int>;
+            final content = utf8.decode(data);
+            final Map<String, dynamic> infoJson = jsonDecode(content);
+            final String id = infoJson['Id'] ?? finalSlug;
+            final String displayName = infoJson['DisplayName'] ?? finalName;
+            finalVersion = infoJson['Version'] ?? 'Local';
+            finalSlug = 'umm-$id';
+            finalName = '$displayName (UMM)';
+            ummFolder = id;
+          } catch (_) {
+            finalSlug = 'umm-$finalSlug';
+            finalName = '$finalName (UMM)';
+          }
+        }
+      }
+    }
+
+    // MelonLoader DLL 파싱 (MelonInfo 속성 추출)
+    if (!isUmm) {
+      if (isZip && archive != null) {
+        for (final archiveFile in archive) {
+          if (archiveFile.isFile && p.extension(archiveFile.name).toLowerCase() == '.dll') {
+            try {
+              final tempDir = await getTemporaryDirectory();
+              final tempDllFile = File(p.join(
+                tempDir.path,
+                'temp_parse_${DateTime.now().microsecondsSinceEpoch}.dll',
+              ));
+              await tempDllFile.writeAsBytes(archiveFile.content as List<int>);
+              final info = MelonDllParser.parse(tempDllFile.path);
+              try {
+                await tempDllFile.delete();
+              } catch (_) {}
+              if (info != null) {
+                finalName = info.name;
+                finalVersion = info.version;
+                finalSlug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      } else if (ext == '.dll') {
+        try {
+          final info = MelonDllParser.parse(filePath);
+          if (info != null) {
+            finalName = info.name;
+            finalVersion = info.version;
+            finalSlug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 기존 모드가 설치되어 있는 경우 안전하게 먼저 언인스톨을 수행합니다.
+    try {
+      final matchingMods = installedMods
+          .where((m) =>
+              isModMatched(m.slug, finalSlug) ||
+              m.id.toLowerCase() == finalSlug.toLowerCase())
+          .toList();
+      for (final matching in matchingMods) {
+        await uninstallMod(gamePath, matching.slug);
+      }
+    } catch (_) {
+      // 기존 모드 삭제 실패 시에도 설치 계속 진행
+    }
+
+    // 언인스톨 후의 최신 로컬 메타데이터 목록 로드
+    final updatedInstalledMods = await getInstalledMods(gamePath);
+
+    if (isZip && archive != null) {
       if (isUmm) {
         // UMM 모드 설치
         final ummBaseDir = Directory(p.join(gamePath, 'UMMMods'));
@@ -674,8 +771,8 @@ echo
           String relativePath;
 
           if (isRootOnly) {
-            outPath = p.join(ummBaseDir.path, finalSlug, filename);
-            relativePath = p.join('UMMMods', finalSlug, filename);
+            outPath = p.join(ummBaseDir.path, ummFolder, filename);
+            relativePath = p.join('UMMMods', ummFolder, filename);
           } else {
             outPath = p.join(ummBaseDir.path, filename);
             relativePath = p.join('UMMMods', filename);
@@ -690,32 +787,6 @@ echo
           } else {
             await Directory(outPath).create(recursive: true);
             installedFiles.add(relativePath);
-          }
-        }
-
-        // info.json 내용 읽어서 metadata 획득
-        ArchiveFile? firstInfoFile;
-        for (final archiveFile in archive) {
-          if (p.basename(archiveFile.name).toLowerCase() == 'info.json' &&
-              archiveFile.isFile) {
-            firstInfoFile = archiveFile;
-            break;
-          }
-        }
-
-        if (firstInfoFile != null) {
-          try {
-            final data = firstInfoFile.content as List<int>;
-            final content = utf8.decode(data);
-            final Map<String, dynamic> infoJson = jsonDecode(content);
-            final String id = infoJson['Id'] ?? finalSlug;
-            final String displayName = infoJson['DisplayName'] ?? finalName;
-            finalVersion = infoJson['Version'] ?? 'Local';
-            finalSlug = 'umm-$id';
-            finalName = '$displayName (UMM)';
-          } catch (_) {
-            finalSlug = 'umm-$finalSlug';
-            finalName = '$finalName (UMM)';
           }
         }
       } else {
@@ -767,19 +838,21 @@ echo
       if (!modsDir.existsSync()) {
         await modsDir.create(recursive: true);
       }
-      final destPath = p.join(modsDir.path, filenameWithExt);
+      final sanitizedFileName = finalName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '');
+      final destFileName = '$sanitizedFileName$ext';
+      final destPath = p.join(modsDir.path, destFileName);
       final destFile = File(destPath);
       await destFile.writeAsBytes(fileBytes);
-      installedFiles.add(p.join('Mods', filenameWithExt));
+      installedFiles.add(p.join('Mods', destFileName));
     }
 
-    installedMods.removeWhere(
+    updatedInstalledMods.removeWhere(
       (m) =>
           isModMatched(m.slug, finalSlug) ||
           m.id.toLowerCase() == finalSlug.toLowerCase(),
     );
 
-    installedMods.add(
+    updatedInstalledMods.add(
       InstalledMod(
         id: finalSlug,
         slug: finalSlug, // 수동 설치이므로 id와 동일하게 처리
@@ -791,7 +864,7 @@ echo
       ),
     );
 
-    await saveInstalledMods(gamePath, installedMods);
+    await saveInstalledMods(gamePath, updatedInstalledMods);
   }
 
   @override
@@ -1047,6 +1120,14 @@ echo
                 final String version = infoJson['Version'] ?? '1.0.0';
                 final String slug = 'umm-$id';
 
+                // 이미 동일한 UMM ID를 가진 모드가 결과 목록(메타데이터 모드 등)에 존재하는 경우 건너뜁니다.
+                final hasDuplicate = result.any((m) =>
+                    m.id.toLowerCase() == slug.toLowerCase() ||
+                    isModMatched(m.slug, slug));
+                if (hasDuplicate) {
+                  continue;
+                }
+
                 result.add(
                   InstalledMod(
                     id: slug,
@@ -1083,13 +1164,25 @@ echo
             // 이미 메타데이터에 의해 클레임된 파일인 경우 건너뜁니다.
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
-            final slug = fileName.toLowerCase();
+            String finalName = fileName;
+            String finalVersion = 'Local';
+            String slug = fileName.toLowerCase();
+
+            try {
+              final info = MelonDllParser.parse(entity.path);
+              if (info != null) {
+                finalName = info.name;
+                finalVersion = info.version;
+                slug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+              }
+            } catch (_) {}
+
             result.add(
               InstalledMod(
                 id: slug,
                 slug: slug,
-                name: fileName,
-                version: 'Local',
+                name: finalName,
+                version: finalVersion,
                 isBeta: false,
                 installedAt: entity.statSync().modified.toIso8601String(),
                 installedFiles: [relPath],
@@ -1118,13 +1211,25 @@ echo
             // 이미 메타데이터에 의해 클레임된 파일인 경우 건너뜁니다.
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
-            final slug = fileName.toLowerCase();
+            String finalName = '$fileName (Plugin)';
+            String finalVersion = 'Local';
+            String slug = fileName.toLowerCase();
+
+            try {
+              final info = MelonDllParser.parse(entity.path);
+              if (info != null) {
+                finalName = '${info.name} (Plugin)';
+                finalVersion = info.version;
+                slug = info.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]'), '-');
+              }
+            } catch (_) {}
+
             result.add(
               InstalledMod(
                 id: slug,
                 slug: slug,
-                name: '$fileName (Plugin)',
-                version: 'Local',
+                name: finalName,
+                version: finalVersion,
                 isBeta: false,
                 installedAt: entity.statSync().modified.toIso8601String(),
                 installedFiles: [relPath],

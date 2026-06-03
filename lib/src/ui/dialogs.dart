@@ -171,3 +171,85 @@ Future<bool> showDeleteConfirmDialog(BuildContext context, InstallerState state,
   );
   return result ?? false;
 }
+
+/// Shows a dialog to confirm MelonLoader uninstallation.
+/// Returns true if the user chooses to uninstall, false otherwise.
+Future<bool> showLoaderUninstallConfirmDialog(BuildContext context, InstallerState state) async {
+  final result = await showDialog<bool>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (dialogContext) {
+      return Dialog(
+        backgroundColor: const Color(0xFF1E1C28),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Container(
+          width: 450.0,
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                state.t('loader_uninstall_confirm_title'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              Text(
+                state.t('loader_uninstall_confirm_body'),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13.5,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24.0),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 42.0,
+                      child: UIButton(
+                        label: state.t('delete_confirm_dialog_btn_yes'),
+                        fontSize: 13.0,
+                        color: const Color(0xFFC56363),
+                        hoverColor: const Color(0xFFD67474),
+                        pressedColor: const Color(0xFFE28A8A),
+                        onClick: () {
+                          Navigator.pop(dialogContext, true);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12.0),
+                  Expanded(
+                    child: SizedBox(
+                      height: 42.0,
+                      child: UIButton(
+                        label: state.t('delete_confirm_dialog_btn_no'),
+                        fontSize: 13.0,
+                        color: const Color(0xFF383946),
+                        hoverColor: const Color(0xFF494A5B),
+                        pressedColor: const Color(0xFF5D5E72),
+                        onClick: () {
+                          Navigator.pop(dialogContext, false);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+  return result ?? false;
+}

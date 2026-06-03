@@ -236,7 +236,10 @@ class _InstalledTabState extends State<InstalledTab> {
                               fontSize: widget.state.isUmmDetected ? 13.0 : 14.0,
                               onClick: () async {
                                 if (widget.state.isLoaderInstalled) {
-                                  await widget.state.uninstallMelonLoader();
+                                  final confirm = await showLoaderUninstallConfirmDialog(context, widget.state);
+                                  if (confirm) {
+                                    await widget.state.uninstallMelonLoader();
+                                  }
                                 } else {
                                   if (widget.state.isUmmDetected) {
                                     _showReplaceUmmDialog(context);

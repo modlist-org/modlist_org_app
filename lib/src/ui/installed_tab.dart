@@ -332,13 +332,13 @@ class _InstalledTabState extends State<InstalledTab> {
                         const SizedBox(height: 12.0),
                         Row(
                           children: [
-                            if (launchGuide.contains('eval')) ...[
+                            if (launchGuide.contains('setup_helper.sh')) ...[
                               SizedBox(
                                 height: 36,
                                 child: UIButton(
                                   label: widget.state.t('installed_btn_copy_native_launch'),
                                   fontSize: 13.0,
-                                  onClick: () => _copyToClipboard('eval "\$(./setup_helper.sh)" %command%'),
+                                  onClick: () => _copyToClipboard('./setup_helper.sh %command%'),
                                 ),
                               ),
                               const SizedBox(width: 8.0),

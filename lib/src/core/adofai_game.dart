@@ -279,21 +279,19 @@ class AdofaiGame extends Game {
       final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
       final isMac = Platform.isMacOS;
       final scriptContent = isMac
-          ? '''
+          ? r'''
 #!/bin/bash
-DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-printf 'export DYLD_LIBRARY_PATH="%s:\$DYLD_LIBRARY_PATH"\\n' "\$DIR"
-printf 'export DYLD_INSERT_LIBRARIES="%s/libMelonLoader.dylib:\$DYLD_INSERT_LIBRARIES"\\n' "\$DIR"
-printf '%q ' "\$@"
-echo
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
+export DYLD_INSERT_LIBRARIES="$DIR/libMelonLoader.dylib:$DYLD_INSERT_LIBRARIES"
+exec "$@"
 '''
-          : '''
+          : r'''
 #!/bin/bash
-DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-printf 'export LD_LIBRARY_PATH="%s:\$LD_LIBRARY_PATH"\\n' "\$DIR"
-printf 'export LD_PRELOAD="%s/libMelonLoader.so:\$LD_PRELOAD"\\n' "\$DIR"
-printf '%q ' "\$@"
-echo
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
+export LD_PRELOAD="$DIR/libMelonLoader.so:$LD_PRELOAD"
+exec "$@"
 ''';
       await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
     }

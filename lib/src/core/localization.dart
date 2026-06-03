@@ -96,22 +96,22 @@ class Localization {
       'settings_btn_check_updates': '업데이트 확인',
       'installed_steamlaunchoptionsguide_adofai_linux':
         '1) 리눅스 네이티브 실행 시 스팀 실행 옵션에 아래 스크립트를 입력하세요:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_adofai_macos':
         'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
         'xattr -d com.apple.quarantine winhttp.dll MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
         '1) 리눅스 네이티브 실행 시 스팀 실행 옵션에 아래 스크립트를 입력하세요:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_rd_macos':
         'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
         'xattr -d com.apple.quarantine winhttp.dll MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
@@ -353,22 +353,22 @@ class Localization {
       'explore_err_load_failed': 'Failed to load mod data: {error}',
       'installed_steamlaunchoptionsguide_adofai_linux':
         '1) For native Linux, enter the following launch option in Steam:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '2) For Steam Proton (Windows version), enter the following launch option:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_adofai_macos':
         'For native macOS, enter the following launch option in Steam:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
         'xattr -d com.apple.quarantine winhttp.dll MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
         '1) For native Linux, enter the following launch option in Steam:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '2) For Steam Proton (Windows version), enter the following launch option:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_rd_macos':
         'For native macOS, enter the following launch option in Steam:\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
         'xattr -d com.apple.quarantine winhttp.dll MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
@@ -552,22 +552,22 @@ class Localization {
       'explore_err_load_failed': '加载模组数据失败: {error}',
       'installed_steamlaunchoptionsguide_adofai_linux':
         '1）使用 Linux 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '2）使用 Steam Proton（Windows 版本）时，请输入以下脚本：\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_adofai_macos':
         '使用 macOS 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
         'xattr -d com.apple.quarantine winhttp.dll MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
         '1）使用 Linux 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '2）使用 Steam Proton（Windows 版本）时，请输入以下脚本：\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_rd_macos':
         '使用 macOS 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        'eval "\$(./setup_helper.sh)" %command%\n\n'
+        './setup_helper.sh %command%\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
         'xattr -d com.apple.quarantine winhttp.dll MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':

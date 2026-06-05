@@ -1482,22 +1482,33 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            widget.state.t('explore_modal_warn_loader'),
+                            widget.state.isUmmDetected
+                                ? widget.state.t('installed_umm_banner')
+                                : widget.state.t('explore_modal_warn_loader'),
                             style: const TextStyle(
-                              color: Colors.white30,
+                              color: Colors.white70,
                               fontSize: 12.0,
+                              height: 1.4,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8.0),
+                          const SizedBox(height: 12.0),
                           _DownloadButton(
                             height: 44.0,
-                            backgroundColor: const Color(0xFF6C78FF),
+                            backgroundColor: widget.state.isUmmDetected
+                                ? const Color(0xFFC8945A)
+                                : const Color(0xFF6C78FF),
                             onTap: () async {
-                              await widget.state.installMelonLoader();
+                              if (widget.state.isUmmDetected) {
+                                showReplaceUmmDialog(context, widget.state);
+                              } else {
+                                await widget.state.installMelonLoader();
+                              }
                             },
                             child: Text(
-                              widget.state.t('explore_modal_btn_auto_loader'),
+                              widget.state.isUmmDetected
+                                  ? widget.state.t('installed_btn_replace_loader')
+                                  : widget.state.t('explore_modal_btn_auto_loader'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14.0,

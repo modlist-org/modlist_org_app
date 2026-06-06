@@ -335,7 +335,7 @@ class _InstalledTabState extends State<InstalledTab> {
                                 height: 36.0,
                                 child: Switch(
                                   value: mod.isEnabled,
-                                  activeColor: const Color(0xFF919AFF),
+                                  activeThumbColor: const Color(0xFF919AFF),
                                   activeTrackColor: const Color(0xFF919AFF).withValues(alpha: 0.3),
                                   inactiveThumbColor: Colors.white60,
                                   inactiveTrackColor: Colors.white10,

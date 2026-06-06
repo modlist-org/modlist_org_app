@@ -8,6 +8,7 @@ import 'game.dart';
 import '../models/mod_model.dart';
 import 'melon_dll_parser.dart';
 import 'melon_loader_platform.dart';
+import 'debug_log.dart';
 
 class AdofaiGame extends Game {
   @override
@@ -107,8 +108,13 @@ class AdofaiGame extends Game {
     void Function(LoaderInstallPhase)? onPhase,
   }) async {
     if (!isValidGamePath(gamePath)) {
+      await DebugLog.info(
+        'ADOFAI installLoader rejected invalid path: $gamePath',
+      );
       throw Exception('Invalid ADOFAI game path. Cannot install MelonLoader.');
     }
+
+    await DebugLog.info('ADOFAI installLoader start: gamePath=$gamePath');
 
     // 0. UMM(Unity Mod Manager) 잔재 청소
     final ummFolder = Directory(p.join(gamePath, 'UnityModManager'));
@@ -214,12 +220,26 @@ class AdofaiGame extends Game {
           await ummAssemblyFolder.delete(recursive: true);
         }
       }
-    } catch (_) {}
+      await DebugLog.info(
+        'ADOFAI UMM cleanup finished: managedPath=$managedPath '
+        'assemblyPath=$assemblyPath',
+      );
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'ADOFAI UMM cleanup failed; continuing',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
 
     final hasWindowsExe = File(
       p.join(gamePath, 'A Dance of Fire and Ice.exe'),
     ).existsSync();
     final isProtonOrWine = !Platform.isWindows && hasWindowsExe;
+    await DebugLog.info(
+      'ADOFAI platform detection: os=${Platform.operatingSystem} '
+      'hasWindowsExe=$hasWindowsExe protonOrWine=$isProtonOrWine',
+    );
 
     // 0.7.3 버전 다운로드 주소 정의
     final downloadUrl =
@@ -228,6 +248,10 @@ class AdofaiGame extends Game {
     // 임시 파일 다운로드 경로 설정
     final tempDir = await getTemporaryDirectory();
     final tempZipPath = p.join(tempDir.path, 'MelonLoader_temp.zip');
+    await DebugLog.info(
+      'ADOFAI MelonLoader download prepared: url=$downloadUrl '
+      'tempZipPath=$tempZipPath',
+    );
 
     // 1. MelonLoader 다운로드
     await MelonLoaderPlatform.downloadArchive(
@@ -235,13 +259,20 @@ class AdofaiGame extends Game {
       tempZipPath,
       onProgress: onProgress,
     );
+    await DebugLog.info('ADOFAI MelonLoader download returned');
 
     // 2. 압축 해제
     onPhase?.call(LoaderInstallPhase.extracting);
+    await DebugLog.info('ADOFAI extraction start');
     final file = File(tempZipPath);
     final bytes = await file.readAsBytes();
+    await DebugLog.info('ADOFAI temp zip read: bytes=${bytes.length}');
     final archive = ZipDecoder().decodeBytes(bytes);
+    await DebugLog.info('ADOFAI zip decoded: entries=${archive.length}');
 
+    var extractedFiles = 0;
+    var extractedDirs = 0;
+    var extractedBytes = 0;
     for (final archiveFile in archive) {
       final filename = archiveFile.name;
       final outPath = p.join(gamePath, filename);
@@ -251,19 +282,29 @@ class AdofaiGame extends Game {
         final outFile = File(outPath);
         await outFile.create(recursive: true);
         await outFile.writeAsBytes(data);
+        extractedFiles += 1;
+        extractedBytes += data.length;
       } else {
         await Directory(outPath).create(recursive: true);
+        extractedDirs += 1;
       }
     }
+    await DebugLog.info(
+      'ADOFAI extraction finished: files=$extractedFiles dirs=$extractedDirs '
+      'bytes=$extractedBytes',
+    );
 
     // 임시 zip 파일 삭제
     await file.delete();
+    await DebugLog.info('ADOFAI temp zip deleted');
 
     onPhase?.call(LoaderInstallPhase.configuring);
+    await DebugLog.info('ADOFAI configuring native install');
     await MelonLoaderPlatform.configureNativeInstall(
       gamePath,
       isProtonOrWine: isProtonOrWine,
     );
+    await DebugLog.info('ADOFAI native configure returned');
 
     // MelonLoader 버전 정보 파일 기록
     onPhase?.call(LoaderInstallPhase.finalizing);
@@ -275,13 +316,21 @@ class AdofaiGame extends Game {
         await versionFile.parent.create(recursive: true);
       }
       await versionFile.writeAsString('0.7.3', flush: true);
-    } catch (_) {}
+      await DebugLog.info('ADOFAI version file written: ${versionFile.path}');
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'ADOFAI version file write failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
 
     // 모드 폴더 미리 생성
     final modsDir = Directory(p.join(gamePath, 'Mods'));
     if (!modsDir.existsSync()) {
       await modsDir.create();
     }
+    await DebugLog.info('ADOFAI installLoader finished');
   }
 
   @override

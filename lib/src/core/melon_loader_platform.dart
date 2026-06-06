@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'debug_log.dart';
+
 class MelonLoaderPlatform {
   static const version = '0.7.3';
   static const _releaseBase =
@@ -57,20 +59,34 @@ exec "$@"
     String gamePath, {
     required bool isProtonOrWine,
   }) async {
+    await DebugLog.info(
+      'MelonLoader configure start: gamePath=$gamePath '
+      'platform=${Platform.operatingSystem} protonOrWine=$isProtonOrWine',
+    );
+
     if (!Platform.isWindows && !isProtonOrWine) {
       final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
       final scriptContent = setupHelperScript();
+      await DebugLog.info('Writing setup helper: ${setupHelper.path}');
       await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
     }
 
-    if (Platform.isWindows) return;
+    if (Platform.isWindows) {
+      await DebugLog.info('MelonLoader configure skipped on Windows');
+      return;
+    }
 
     final setupHelperPath = p.join(gamePath, 'setup_helper.sh');
     if (File(setupHelperPath).existsSync()) {
       await _runIgnored('chmod', ['+x', setupHelperPath]);
     }
 
-    if (isProtonOrWine) return;
+    if (isProtonOrWine) {
+      await DebugLog.info(
+        'MelonLoader native configure skipped for Proton/Wine',
+      );
+      return;
+    }
 
     if (Platform.isLinux) {
       final libSoPath = p.join(gamePath, 'libMelonLoader.so');
@@ -105,6 +121,8 @@ exec "$@"
         ]);
       }
     }
+
+    await DebugLog.info('MelonLoader configure finished');
   }
 
   static Future<void> _runIgnored(
@@ -113,23 +131,40 @@ exec "$@"
     Duration timeout = const Duration(seconds: 8),
   }) async {
     try {
+      await DebugLog.info(
+        'Running command: $executable ${arguments.join(' ')}',
+      );
       final process = await Process.start(executable, arguments);
       final stdoutDone = process.stdout.drain<void>();
       final stderrDone = process.stderr.drain<void>();
 
-      await process.exitCode.timeout(
+      final exitCode = await process.exitCode.timeout(
         timeout,
-        onTimeout: () {
+        onTimeout: () async {
+          await DebugLog.info(
+            'Command timed out after ${timeout.inSeconds}s: '
+            '$executable ${arguments.join(' ')}',
+          );
           process.kill(ProcessSignal.sigkill);
           return -1;
         },
       );
-
-      await Future.wait([stdoutDone, stderrDone]).timeout(
-        const Duration(seconds: 1),
-        onTimeout: () => <void>[],
+      await DebugLog.info(
+        'Command finished exitCode=$exitCode: '
+        '$executable ${arguments.join(' ')}',
       );
-    } catch (_) {}
+
+      await Future.wait([
+        stdoutDone,
+        stderrDone,
+      ]).timeout(const Duration(seconds: 1), onTimeout: () => <void>[]);
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'Command failed: $executable ${arguments.join(' ')}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   static Future<void> downloadArchive(
@@ -139,16 +174,31 @@ exec "$@"
   }) async {
     final client = http.Client();
     final file = File(tempZipPath);
-    IOSink? sink;
+    RandomAccessFile? raf;
+    final stopwatch = Stopwatch()..start();
 
     try {
+      await DebugLog.info(
+        'MelonLoader download start: url=$downloadUrl tempZipPath=$tempZipPath',
+      );
+
       if (await file.exists()) {
+        await DebugLog.info('Deleting old temp zip: $tempZipPath');
         await file.delete();
       }
+      // The OS can purge the temp/cache directory between runs; make sure the
+      // parent exists before opening the file for writing.
+      await file.parent.create(recursive: true);
 
       final request = http.Request('GET', Uri.parse(downloadUrl));
-      final response =
-          await client.send(request).timeout(const Duration(seconds: 20));
+      await DebugLog.info('MelonLoader request sending');
+      final response = await client
+          .send(request)
+          .timeout(const Duration(seconds: 20));
+      await DebugLog.info(
+        'MelonLoader response received: status=${response.statusCode} '
+        'contentLength=${response.contentLength ?? 'unknown'}',
+      );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception(
@@ -158,23 +208,58 @@ exec "$@"
 
       final totalBytes = response.contentLength ?? 0;
       var downloadedBytes = 0;
-      sink = file.openWrite();
+      var nextLogAtBytes = 5 * 1024 * 1024;
 
-      await for (final chunk
-          in response.stream.timeout(const Duration(seconds: 30))) {
-        sink.add(chunk);
+      // Write through a RandomAccessFile and await every write. The previous
+      // implementation used IOSink (file.openWrite() + sink.add()) and finished
+      // with sink.flush()/sink.close(). Those completion calls are not guarded
+      // by any timeout, and were observed to hang forever right after the
+      // stream had delivered every byte (the UI reached "100.0%" but the
+      // download never returned). Awaiting each write applies real backpressure
+      // and removes the dependency on the IOSink completion future.
+      raf = await file.open(mode: FileMode.writeOnly);
+
+      await for (final chunk in response.stream.timeout(
+        const Duration(seconds: 30),
+      )) {
+        await raf.writeFrom(chunk);
         downloadedBytes += chunk.length;
+        if (downloadedBytes >= nextLogAtBytes) {
+          await DebugLog.info(
+            'MelonLoader downloaded bytes=$downloadedBytes '
+            'totalBytes=${totalBytes > 0 ? totalBytes : 'unknown'}',
+          );
+          nextLogAtBytes += 5 * 1024 * 1024;
+        }
         if (totalBytes > 0 && onProgress != null) {
           onProgress(downloadedBytes / totalBytes);
         }
+        // Once the full Content-Length has been written we have the complete
+        // file. Stop here instead of waiting for the stream's "done" event,
+        // which an HTTP keep-alive socket can delay indefinitely.
+        if (totalBytes > 0 && downloadedBytes >= totalBytes) {
+          break;
+        }
       }
 
-      await sink.flush();
-      await sink.close();
-      sink = null;
-    } catch (_) {
+      await raf.flush();
+      await raf.close();
+      raf = null;
+      stopwatch.stop();
+      await DebugLog.info(
+        'MelonLoader download complete: bytes=$downloadedBytes '
+        'elapsedMs=${stopwatch.elapsedMilliseconds}',
+      );
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      await DebugLog.error(
+        'MelonLoader download failed after '
+        '${stopwatch.elapsedMilliseconds}ms',
+        error: e,
+        stackTrace: stackTrace,
+      );
       try {
-        await sink?.close();
+        await raf?.close();
       } catch (_) {}
       try {
         if (await file.exists()) {

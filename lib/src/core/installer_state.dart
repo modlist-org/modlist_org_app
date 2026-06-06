@@ -8,6 +8,7 @@ import 'dancing_line_game.dart';
 import 'rhythm_doctor_game.dart';
 import 'localization.dart';
 import 'version_utils.dart';
+import 'app_errors.dart';
 import '../models/mod_model.dart';
 import '../services/api_service.dart';
 
@@ -85,9 +86,9 @@ class InstallerState extends ChangeNotifier {
     // 저장된 게임 경로 로드, 없으면 기본 경로 자동 감지 시도
     _gamePath = prefs.getString('${_game.id}_install_path') ?? '';
     if (_gamePath.isEmpty) {
-      final defaultPath = _game.getPlatformDefaultPath();
-      if (_game.isValidGamePath(defaultPath)) {
-        _gamePath = defaultPath;
+      final detectedPath = _game.findSteamInstallPath();
+      if (detectedPath != null) {
+        _gamePath = detectedPath;
         await prefs.setString('${_game.id}_install_path', _gamePath);
       }
     }
@@ -110,9 +111,9 @@ class InstallerState extends ChangeNotifier {
     // 경로 로드
     _gamePath = prefs.getString('${_game.id}_install_path') ?? '';
     if (_gamePath.isEmpty) {
-      final defaultPath = _game.getPlatformDefaultPath();
-      if (_game.isValidGamePath(defaultPath)) {
-        _gamePath = defaultPath;
+      final detectedPath = _game.findSteamInstallPath();
+      if (detectedPath != null) {
+        _gamePath = detectedPath;
         await prefs.setString('${_game.id}_install_path', _gamePath);
       }
     }
@@ -294,13 +295,13 @@ class InstallerState extends ChangeNotifier {
           await _installModInternal(mod);
           _statusMessage = t('status_loader_install_success_with_ummcompat');
         } catch (e) {
-          _statusMessage = t('status_loader_install_success_fail_ummcompat', args: {'error': e.toString()});
+          _statusMessage = t('status_loader_install_success_fail_ummcompat', args: {'error': describeAppError(e)});
         }
       } else {
         _statusMessage = t('status_loader_install_success');
       }
     } catch (e) {
-      _statusMessage = t('status_loader_install_failed', args: {'error': e.toString()});
+      _statusMessage = t('status_loader_install_failed', args: {'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -322,7 +323,7 @@ class InstallerState extends ChangeNotifier {
       await _installModInternal(mod);
       _statusMessage = t('status_ummcompat_success');
     } catch (e) {
-      _statusMessage = t('status_ummcompat_failed', args: {'error': e.toString()});
+      _statusMessage = t('status_ummcompat_failed', args: {'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -397,7 +398,7 @@ class InstallerState extends ChangeNotifier {
       await game.uninstallLoader(_gamePath);
       _statusMessage = t('status_loader_uninstall_success');
     } catch (e) {
-      _statusMessage = t('status_loader_uninstall_failed', args: {'error': e.toString()});
+      _statusMessage = t('status_loader_uninstall_failed', args: {'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -443,7 +444,7 @@ class InstallerState extends ChangeNotifier {
       await _installModInternal(mod, version: version, isBeta: isBeta);
       _statusMessage = t('status_mod_install_success', args: {'name': mod.name});
     } catch (e) {
-      _statusMessage = t('status_mod_install_failed', args: {'name': mod.name, 'error': e.toString()});
+      _statusMessage = t('status_mod_install_failed', args: {'name': mod.name, 'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -463,7 +464,7 @@ class InstallerState extends ChangeNotifier {
       await game.installModFromFile(_gamePath, filePath);
       _statusMessage = t('status_mod_local_install_success');
     } catch (e) {
-      _statusMessage = t('status_mod_local_install_failed', args: {'error': e.toString()});
+      _statusMessage = t('status_mod_local_install_failed', args: {'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -482,7 +483,7 @@ class InstallerState extends ChangeNotifier {
       await game.uninstallMod(_gamePath, slug);
       _statusMessage = t('status_mod_delete_success', args: {'name': name});
     } catch (e) {
-      _statusMessage = t('status_mod_delete_failed', args: {'name': name, 'error': e.toString()});
+      _statusMessage = t('status_mod_delete_failed', args: {'name': name, 'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();
@@ -525,7 +526,7 @@ class InstallerState extends ChangeNotifier {
           ? t('status_mod_enable_success', args: {'name': mod.name}) 
           : t('status_mod_disable_success', args: {'name': mod.name});
     } catch (e) {
-      _statusMessage = t('status_mod_toggle_failed', args: {'name': mod.name, 'error': e.toString()});
+      _statusMessage = t('status_mod_toggle_failed', args: {'name': mod.name, 'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
       await refreshStatus();

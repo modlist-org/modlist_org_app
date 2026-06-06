@@ -30,7 +30,9 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> _pickDirectory() async {
     final String? result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: widget.state.t('settings_game_path_title_${widget.state.game.id}'),
+      dialogTitle: widget.state.t(
+        'settings_game_path_title_${widget.state.game.id}',
+      ),
     );
     if (result != null) {
       await widget.state.setGamePath(result);
@@ -39,13 +41,15 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> _detectPath() async {
     ScaffoldMessenger.of(context).clearSnackBars();
-    final defaultPath = widget.state.game.getPlatformDefaultPath();
-    if (widget.state.game.isValidGamePath(defaultPath)) {
-      await widget.state.setGamePath(defaultPath);
+    final detectedPath = widget.state.game.findSteamInstallPath();
+    if (detectedPath != null) {
+      await widget.state.setGamePath(detectedPath);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.state.t('settings_path_detected_${widget.state.game.id}')),
+          content: Text(
+            widget.state.t('settings_path_detected_${widget.state.game.id}'),
+          ),
           duration: Duration(milliseconds: 2100),
         ),
       );
@@ -53,7 +57,9 @@ class _SettingsTabState extends State<SettingsTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.state.t('settings_path_not_found_${widget.state.game.id}')),
+          content: Text(
+            widget.state.t('settings_path_not_found_${widget.state.game.id}'),
+          ),
           backgroundColor: Colors.redAccent,
           duration: Duration(milliseconds: 2100),
         ),

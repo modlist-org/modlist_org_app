@@ -68,6 +68,212 @@ abstract class Game {
     }
   }
 
+  // Steam app manifest id, when known.
+  String? get steamAppId => null;
+
+  // Folder names Steam may use under steamapps/common.
+  List<String> getSteamInstallFolderNames() => [name];
+
+  String? findSteamInstallPath() {
+    for (final candidate in getSteamInstallCandidatePaths()) {
+      if (isValidGamePath(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  List<String> getSteamInstallCandidatePaths() {
+    final candidates = <String>[
+      getPlatformDefaultPath(),
+    ];
+
+    for (final steamLibrary in _steamLibraryPaths()) {
+      final steamApps = _steamAppsPathForLibrary(steamLibrary);
+      final common = p.join(steamApps, 'common');
+
+      final appId = steamAppId;
+      if (appId != null) {
+        final manifest = File(p.join(steamApps, 'appmanifest_$appId.acf'));
+        final installDir = _readVdfValue(manifest, 'installdir');
+        if (installDir != null && installDir.isNotEmpty) {
+          candidates.add(p.join(common, installDir));
+        }
+      }
+
+      for (final folderName in getSteamInstallFolderNames()) {
+        candidates.add(p.join(common, folderName));
+      }
+
+      final commonDir = Directory(common);
+      if (commonDir.existsSync()) {
+        try {
+          for (final entity in commonDir.listSync(followLinks: false)) {
+            if (entity is Directory) {
+              final folderName = p.basename(entity.path);
+              if (_couldBeSteamInstallFolder(folderName)) {
+                candidates.add(entity.path);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    return _dedupePaths(candidates);
+  }
+
+  bool _couldBeSteamInstallFolder(String folderName) {
+    final normalized = _normalizeSteamFolderName(folderName);
+    if (normalized.isEmpty) return false;
+
+    for (final expected in getSteamInstallFolderNames()) {
+      final expectedNormalized = _normalizeSteamFolderName(expected);
+      if (normalized == expectedNormalized ||
+          normalized.contains(expectedNormalized) ||
+          expectedNormalized.contains(normalized)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String _normalizeSteamFolderName(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '');
+  }
+
+  List<String> _steamLibraryPaths() {
+    final roots = _steamRootCandidates();
+    final libraries = <String>[...roots];
+
+    for (final root in roots) {
+      final vdfFiles = [
+        File(p.join(root, 'steamapps', 'libraryfolders.vdf')),
+        File(p.join(root, 'config', 'libraryfolders.vdf')),
+      ];
+      for (final vdfFile in vdfFiles) {
+        libraries.addAll(_parseLibraryFolders(vdfFile));
+      }
+    }
+
+    return _dedupePaths(libraries);
+  }
+
+  List<String> _steamRootCandidates() {
+    final env = Platform.environment;
+    final home = env['HOME'] ?? env['USERPROFILE'] ?? '';
+    final candidates = <String>[];
+
+    if (Platform.isWindows) {
+      candidates.addAll([
+        env['ProgramFiles(x86)'] == null
+            ? ''
+            : p.join(env['ProgramFiles(x86)']!, 'Steam'),
+        env['PROGRAMFILES(X86)'] == null
+            ? ''
+            : p.join(env['PROGRAMFILES(X86)']!, 'Steam'),
+        env['ProgramFiles'] == null
+            ? ''
+            : p.join(env['ProgramFiles']!, 'Steam'),
+        r'C:\Program Files (x86)\Steam',
+        r'C:\Program Files\Steam',
+      ]);
+    } else if (Platform.isMacOS) {
+      candidates.add(
+        p.join(home, 'Library', 'Application Support', 'Steam'),
+      );
+    } else {
+      candidates.addAll([
+        p.join(home, '.steam', 'steam'),
+        p.join(home, '.local', 'share', 'Steam'),
+        p.join(
+          home,
+          '.var',
+          'app',
+          'com.valvesoftware.Steam',
+          '.local',
+          'share',
+          'Steam',
+        ),
+      ]);
+    }
+
+    return _dedupePaths(candidates.where((path) => path.isNotEmpty));
+  }
+
+  String _steamAppsPathForLibrary(String libraryPath) {
+    if (p.basename(libraryPath).toLowerCase() == 'steamapps') {
+      return libraryPath;
+    }
+    return p.join(libraryPath, 'steamapps');
+  }
+
+  List<String> _parseLibraryFolders(File vdfFile) {
+    if (!vdfFile.existsSync()) return [];
+
+    try {
+      final content = vdfFile.readAsStringSync();
+      final matches = <String>[];
+
+      final pathMatches = RegExp(
+        r'"path"\s+"((?:\\.|[^"\\])*)"',
+        caseSensitive: false,
+      ).allMatches(content);
+      for (final match in pathMatches) {
+        matches.add(_unescapeVdfString(match.group(1)!));
+      }
+
+      final legacyMatches = RegExp(
+        r'"\d+"\s+"((?:\\.|[^"\\])*)"',
+      ).allMatches(content);
+      for (final match in legacyMatches) {
+        final value = _unescapeVdfString(match.group(1)!);
+        if (value.contains('/') || value.contains(r'\')) {
+          matches.add(value);
+        }
+      }
+
+      return matches;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  String? _readVdfValue(File vdfFile, String key) {
+    if (!vdfFile.existsSync()) return null;
+
+    try {
+      final content = vdfFile.readAsStringSync();
+      final match = RegExp(
+        '"$key"\\s+"((?:\\\\.|[^"\\\\])*)"',
+        caseSensitive: false,
+      ).firstMatch(content);
+      if (match == null) return null;
+      return _unescapeVdfString(match.group(1)!);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _unescapeVdfString(String value) {
+    return value.replaceAll(r'\"', '"').replaceAll(r'\\', '\\');
+  }
+
+  List<String> _dedupePaths(Iterable<String> paths) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final path in paths) {
+      if (path.trim().isEmpty) continue;
+      final normalized = p.normalize(path);
+      if (seen.add(normalized)) {
+        result.add(path);
+      }
+    }
+    return result;
+  }
+
   // 모드 로더가 설치되었는지 여부 확인
   bool isLoaderInstalled(String gamePath);
 

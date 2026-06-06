@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:convert';
 import 'dart:io';
 import '../core/installer_state.dart';
+import '../core/app_errors.dart';
 import '../models/mod_model.dart';
 import 'dialogs.dart';
 
@@ -239,7 +240,16 @@ class _ExploreTabState extends State<ExploreTab> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(widget.state.t('explore_err_load_failed', args: {'error': e.toString()}))));
+        ).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.state.t(
+                'explore_err_load_failed',
+                args: {'error': describeAppError(e)},
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -1064,7 +1074,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = describeAppError(e);
           _loading = false;
         });
       }

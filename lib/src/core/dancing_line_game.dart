@@ -7,6 +7,7 @@ import 'package:archive/archive.dart';
 import 'game.dart';
 import '../models/mod_model.dart';
 import 'melon_dll_parser.dart';
+import 'melon_loader_platform.dart';
 
 class DancingLineGame extends Game {
   @override
@@ -14,6 +15,15 @@ class DancingLineGame extends Game {
 
   @override
   String get name => 'Dancing Line';
+
+  @override
+  String? get steamAppId => '4395300';
+
+  @override
+  List<String> getSteamInstallFolderNames() => const [
+        'Dancing Line',
+        'DancingLine',
+      ];
 
   @override
   String getPlatformExeName() {
@@ -135,51 +145,29 @@ class DancingLineGame extends Game {
     void Function(double)? onProgress,
   }) async {
     if (!isValidGamePath(gamePath)) {
-      throw Exception('Invalid Dancing Line game path. Cannot install MelonLoader.');
+      throw Exception(
+        'Invalid Dancing Line game path. Cannot install MelonLoader.',
+      );
     }
 
-    final hasWindowsExe = File(p.join(gamePath, 'Dancing Line.exe')).existsSync() ||
-                          File(p.join(gamePath, 'DancingLine.exe')).existsSync();
+    final hasWindowsExe =
+        File(p.join(gamePath, 'Dancing Line.exe')).existsSync() ||
+        File(p.join(gamePath, 'DancingLine.exe')).existsSync();
     final isProtonOrWine = !Platform.isWindows && hasWindowsExe;
 
-    String downloadUrl;
-    if (isProtonOrWine || Platform.isWindows) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
-    } else if (Platform.isLinux) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.Linux.x64.zip';
-    } else if (Platform.isMacOS) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.macOS.x64.zip';
-    } else {
-      throw Exception('Unsupported platform for MelonLoader installation');
-    }
+    final downloadUrl =
+        MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
 
     final tempDir = await getTemporaryDirectory();
     final tempZipPath = p.join(tempDir.path, 'MelonLoader_dl_temp.zip');
 
-    final client = http.Client();
-    final response = await client.send(
-      http.Request('GET', Uri.parse(downloadUrl)),
+    await MelonLoaderPlatform.downloadArchive(
+      downloadUrl,
+      tempZipPath,
+      onProgress: onProgress,
     );
-    final totalBytes = response.contentLength ?? 0;
-    var downloadedBytes = 0;
 
     final file = File(tempZipPath);
-    final sink = file.openWrite();
-
-    await for (final chunk in response.stream) {
-      sink.add(chunk);
-      downloadedBytes += chunk.length;
-      if (totalBytes > 0 && onProgress != null) {
-        onProgress(downloadedBytes / totalBytes);
-      }
-    }
-    await sink.flush();
-    await sink.close();
-    client.close();
-
     final bytes = await file.readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
 
@@ -201,22 +189,7 @@ class DancingLineGame extends Game {
 
     if (!Platform.isWindows && !isProtonOrWine) {
       final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
-      final isMac = Platform.isMacOS;
-      final scriptContent = isMac
-          ? r'''
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
-export DYLD_INSERT_LIBRARIES="$DIR/libMelonLoader.dylib:$DYLD_INSERT_LIBRARIES"
-exec "$@"
-'''
-          : r'''
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
-export LD_PRELOAD="$DIR/libMelonLoader.so:$LD_PRELOAD"
-exec "$@"
-''';
+      final scriptContent = MelonLoaderPlatform.setupHelperScript();
       await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
     }
 

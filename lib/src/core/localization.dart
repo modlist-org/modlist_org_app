@@ -169,6 +169,8 @@ class Localization {
       'update_dialog_btn_no': '나중에 하기',
       'update_status_latest': '최신 버전을 사용 중입니다.',
       'update_status_error': '업데이트 정보를 가져오는 동안 오류가 발생했습니다.',
+      'mod_update_toast_title': '{count}개의 모드에 새로운 업데이트가 있습니다.',
+      'mod_update_toast_action': '이동',
       'explore_err_load_failed': '모드 데이터를 불러오는 데 실패했습니다: {error}',
 
       // Status messages
@@ -197,6 +199,11 @@ class Localization {
       'status_ummcompat_checking': 'UMM 호환 모드(ummcompat) 정보 확인 중...',
       'status_ummcompat_success': 'UMM 호환 모드 설치 성공!',
       'status_ummcompat_failed': 'UMM 호환 모드 설치 실패: {error}',
+      'status_mod_enabling': '{name} 활성화 중...',
+      'status_mod_disabling': '{name} 비활성화 중...',
+      'status_mod_enable_success': '{name} 활성화 성공!',
+      'status_mod_disable_success': '{name} 비활성화 성공!',
+      'status_mod_toggle_failed': '{name} 상태 변경 실패: {error}',
     },
     'en-US': {
       // Sidebar
@@ -350,6 +357,8 @@ class Localization {
       'update_status_latest': 'You are already running the latest version.',
       'update_status_error':
           'An error occurred while fetching update information.',
+      'mod_update_toast_title': 'New updates are available for {count} mods.',
+      'mod_update_toast_action': 'View',
       'explore_err_load_failed': 'Failed to load mod data: {error}',
       'installed_steamlaunchoptionsguide_adofai_linux':
         '1) For native Linux, enter the following launch option in Steam:\n'
@@ -403,6 +412,11 @@ class Localization {
       'status_ummcompat_checking': 'Checking UMM compatibility mod (ummcompat) info...',
       'status_ummcompat_success': 'UMM compatibility mod installed successfully!',
       'status_ummcompat_failed': 'Failed to install UMM compatibility mod: {error}',
+      'status_mod_enabling': 'Enabling {name}...',
+      'status_mod_disabling': 'Disabling {name}...',
+      'status_mod_enable_success': 'Enabled {name} successfully!',
+      'status_mod_disable_success': 'Disabled {name} successfully!',
+      'status_mod_toggle_failed': 'Failed to toggle status of {name}: {error}',
     },
     'zh-CN': {
       // Sidebar
@@ -549,6 +563,8 @@ class Localization {
       'update_dialog_btn_no': '以后再说',
       'update_status_latest': '已是最新版本。',
       'update_status_error': '获取更新信息时出错。',
+      'mod_update_toast_title': '有 {count} 个模组有新更新。',
+      'mod_update_toast_action': '查看',
       'explore_err_load_failed': '加载模组数据失败: {error}',
       'installed_steamlaunchoptionsguide_adofai_linux':
         '1）使用 Linux 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
@@ -602,6 +618,11 @@ class Localization {
       'status_ummcompat_checking': '正在检查 UMM 兼容模组 (ummcompat) 信息...',
       'status_ummcompat_success': 'UMM 兼容模组安装成功！',
       'status_ummcompat_failed': '安装 UMM 兼容模组失败: {error}',
+      'status_mod_enabling': '正在启用 {name}...',
+      'status_mod_disabling': '正在禁用 {name}...',
+      'status_mod_enable_success': '启用 {name} 成功！',
+      'status_mod_disable_success': '禁用 {name} 成功！',
+      'status_mod_toggle_failed': '更改 {name} 状态失败: {error}',
     },
   };
 

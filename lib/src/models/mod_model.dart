@@ -177,6 +177,7 @@ class InstalledMod {
   final bool isBeta;
   final String installedAt;
   final List<String> installedFiles;
+  final bool isEnabled;
 
   InstalledMod({
     required this.id,
@@ -186,6 +187,7 @@ class InstalledMod {
     required this.isBeta,
     required this.installedAt,
     required this.installedFiles,
+    this.isEnabled = true,
   });
 
   Map<String, dynamic> toJson() {
@@ -197,6 +199,7 @@ class InstalledMod {
       'isBeta': isBeta,
       'installedAt': installedAt,
       'installedFiles': installedFiles,
+      'isEnabled': isEnabled,
     };
   }
 
@@ -209,6 +212,7 @@ class InstalledMod {
       isBeta: json['isBeta'] ?? false,
       installedAt: json['installedAt'] ?? '',
       installedFiles: List<String>.from(json['installedFiles'] ?? []),
+      isEnabled: json['isEnabled'] ?? true,
     );
   }
 }

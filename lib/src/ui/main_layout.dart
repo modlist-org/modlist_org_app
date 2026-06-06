@@ -27,6 +27,8 @@ class _MainLayoutState extends State<MainLayout> {
   final OverlayerState _overlayerState = OverlayerState();
   final InstallerState _installerState = InstallerState();
   int _activeTabIndex = 0; // 0: Explore, 1: Installed, 2: Settings
+  String? _lastCheckedGameId;
+  final Set<String> _notifiedModUpdates = {};
 
   @override
   void initState() {
@@ -46,6 +48,46 @@ class _MainLayoutState extends State<MainLayout> {
 
   void _onStateChanged() {
     if (mounted) {
+      if (_lastCheckedGameId != _installerState.game.id) {
+        _lastCheckedGameId = _installerState.game.id;
+        _notifiedModUpdates.clear();
+      }
+
+      final currentUpdates = _installerState.modsWithUpdates;
+      final newUpdates = currentUpdates.where((slug) => !_notifiedModUpdates.contains(slug)).toList();
+
+      if (newUpdates.isNotEmpty) {
+        _notifiedModUpdates.addAll(currentUpdates);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF1E1C28),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                side: BorderSide(color: const Color(0xFF919AFF).withValues(alpha: 0.2)),
+              ),
+              content: Text(
+                _installerState.t('mod_update_toast_title', args: {'count': currentUpdates.length.toString()}),
+                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+              ),
+              action: SnackBarAction(
+                label: _installerState.t('mod_update_toast_action'),
+                textColor: const Color(0xFF919AFF),
+                onPressed: () {
+                  setState(() {
+                    _activeTabIndex = 1; // Switch to Installed Tab
+                  });
+                },
+              ),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        });
+      }
+
       setState(() {});
     }
   }
@@ -327,6 +369,24 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                 ),
               ),
+              if (index == 1 && _installerState.modsWithUpdates.isNotEmpty) ...[
+                const SizedBox(width: 8.0),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.black : const Color(0xFF919AFF),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  child: Text(
+                    _installerState.modsWithUpdates.length.toString(),
+                    style: TextStyle(
+                      color: isSelected ? const Color(0xFF919AFF) : Colors.black,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

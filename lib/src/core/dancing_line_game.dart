@@ -675,9 +675,14 @@ exec "$@"
       }
 
       final fullPath = p.join(gamePath, relPath);
+      final disabledPath = '$fullPath.disabled';
       if (FileSystemEntity.isFileSync(fullPath)) {
         try {
           await File(fullPath).delete();
+        } catch (_) {}
+      } else if (FileSystemEntity.isFileSync(disabledPath)) {
+        try {
+          await File(disabledPath).delete();
         } catch (_) {}
       } else if (FileSystemEntity.isDirectorySync(fullPath)) {
         final relativeToGame = p
@@ -698,16 +703,28 @@ exec "$@"
     }
 
     final fallbackDll = File(p.join(gamePath, 'Mods', '$modSlug.dll'));
+    final fallbackDllD = File(p.join(gamePath, 'Mods', '$modSlug.dll.disabled'));
     if (fallbackDll.existsSync() &&
         !sharedFiles.contains('mods/${modSlug.toLowerCase()}.dll')) {
       await fallbackDll.delete();
     }
+    if (fallbackDllD.existsSync() &&
+        !sharedFiles.contains('mods/${modSlug.toLowerCase()}.dll')) {
+      await fallbackDllD.delete();
+    }
     final fallbackDllLower = File(
       p.join(gamePath, 'Mods', '${modSlug.toLowerCase()}.dll'),
+    );
+    final fallbackDllLowerD = File(
+      p.join(gamePath, 'Mods', '${modSlug.toLowerCase()}.dll.disabled'),
     );
     if (fallbackDllLower.existsSync() &&
         !sharedFiles.contains('mods/${modSlug.toLowerCase()}.dll')) {
       await fallbackDllLower.delete();
+    }
+    if (fallbackDllLowerD.existsSync() &&
+        !sharedFiles.contains('mods/${modSlug.toLowerCase()}.dll')) {
+      await fallbackDllLowerD.delete();
     }
 
     installedMods.removeWhere((m) => isModMatched(m.slug, modSlug));
@@ -737,8 +754,10 @@ exec "$@"
       bool exists = false;
       for (final relPath in metaMod.installedFiles) {
         final fullPath = p.join(gamePath, relPath);
+        final disabledPath = '$fullPath.disabled';
         if (FileSystemEntity.isFileSync(fullPath) ||
-            FileSystemEntity.isDirectorySync(fullPath)) {
+            FileSystemEntity.isDirectorySync(fullPath) ||
+            (relPath.toLowerCase().endsWith('.dll') && FileSystemEntity.isFileSync(disabledPath))) {
           exists = true;
           break;
         }
@@ -747,7 +766,12 @@ exec "$@"
       if (metaMod.installedFiles.isEmpty) {
         final modDll = File(p.join(gamePath, 'Mods', '${metaMod.slug}.dll'));
         final pluginDll = File(p.join(gamePath, 'Plugins', '${metaMod.slug}.dll'));
-        if (modDll.existsSync() || pluginDll.existsSync()) {
+        final modDllD = File(p.join(gamePath, 'Mods', '${metaMod.slug}.dll.disabled'));
+        final pluginDllD = File(p.join(gamePath, 'Plugins', '${metaMod.slug}.dll.disabled'));
+        if (modDll.existsSync() ||
+            pluginDll.existsSync() ||
+            modDllD.existsSync() ||
+            pluginDllD.existsSync()) {
           exists = true;
         }
       }
@@ -766,7 +790,7 @@ exec "$@"
           continue;
         }
 
-        result.add(metaMod);
+        result.add(getActualModInfoFromDisk(gamePath, metaMod));
         for (final relPath in metaMod.installedFiles) {
           claimedFiles.add(relPath.toLowerCase().replaceAll('\\', '/'));
         }
@@ -778,10 +802,15 @@ exec "$@"
       try {
         final entities = modsDir.listSync();
         for (final entity in entities) {
-          if (entity is File &&
-              p.extension(entity.path).toLowerCase() == '.dll') {
-            final fileName = p.basenameWithoutExtension(entity.path);
-            final relPath = p.join('Mods', p.basename(entity.path));
+          final isDll = p.extension(entity.path).toLowerCase() == '.dll';
+          final isDllDisabled = entity.path.toLowerCase().endsWith('.dll.disabled');
+          if (entity is File && (isDll || isDllDisabled)) {
+            final fileName = isDllDisabled
+                ? p.basename(entity.path).substring(0, p.basename(entity.path).length - '.disabled'.length)
+                : p.basenameWithoutExtension(entity.path);
+            final relPath = isDllDisabled
+                ? p.join('Mods', p.basename(entity.path).substring(0, p.basename(entity.path).length - '.disabled'.length))
+                : p.join('Mods', p.basename(entity.path));
             final normalizedRelPath = relPath.toLowerCase().replaceAll(
               '\\',
               '/',
@@ -789,9 +818,13 @@ exec "$@"
 
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
-            String finalName = fileName;
+            String finalName = isDllDisabled
+                ? p.basenameWithoutExtension(fileName)
+                : fileName;
             String finalVersion = 'Local';
-            String slug = fileName.toLowerCase();
+            String slug = isDllDisabled
+                ? p.basenameWithoutExtension(fileName).toLowerCase()
+                : fileName.toLowerCase();
 
             try {
               final info = MelonDllParser.parse(entity.path);
@@ -811,6 +844,7 @@ exec "$@"
                 isBeta: false,
                 installedAt: entity.statSync().modified.toIso8601String(),
                 installedFiles: [relPath],
+                isEnabled: !isDllDisabled,
               ),
             );
           }
@@ -823,10 +857,15 @@ exec "$@"
       try {
         final entities = pluginsDir.listSync();
         for (final entity in entities) {
-          if (entity is File &&
-              p.extension(entity.path).toLowerCase() == '.dll') {
-            final fileName = p.basenameWithoutExtension(entity.path);
-            final relPath = p.join('Plugins', p.basename(entity.path));
+          final isDll = p.extension(entity.path).toLowerCase() == '.dll';
+          final isDllDisabled = entity.path.toLowerCase().endsWith('.dll.disabled');
+          if (entity is File && (isDll || isDllDisabled)) {
+            final fileName = isDllDisabled
+                ? p.basename(entity.path).substring(0, p.basename(entity.path).length - '.disabled'.length)
+                : p.basenameWithoutExtension(entity.path);
+            final relPath = isDllDisabled
+                ? p.join('Plugins', p.basename(entity.path).substring(0, p.basename(entity.path).length - '.disabled'.length))
+                : p.join('Plugins', p.basename(entity.path));
             final normalizedRelPath = relPath.toLowerCase().replaceAll(
               '\\',
               '/',
@@ -834,9 +873,13 @@ exec "$@"
 
             if (claimedFiles.contains(normalizedRelPath)) continue;
 
-            String finalName = '$fileName (Plugin)';
+            String finalName = isDllDisabled
+                ? '${p.basenameWithoutExtension(fileName)} (Plugin)'
+                : '$fileName (Plugin)';
             String finalVersion = 'Local';
-            String slug = fileName.toLowerCase();
+            String slug = isDllDisabled
+                ? p.basenameWithoutExtension(fileName).toLowerCase()
+                : fileName.toLowerCase();
 
             try {
               final info = MelonDllParser.parse(entity.path);
@@ -856,6 +899,7 @@ exec "$@"
                 isBeta: false,
                 installedAt: entity.statSync().modified.toIso8601String(),
                 installedFiles: [relPath],
+                isEnabled: !isDllDisabled,
               ),
             );
           }

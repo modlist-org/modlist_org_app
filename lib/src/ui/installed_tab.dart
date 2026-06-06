@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/installer_state.dart';
-import '../models/mod_model.dart';
+import '../core/version_utils.dart';
 import 'dialogs.dart';
 
 class InstalledTab extends StatefulWidget {
@@ -15,16 +15,9 @@ class InstalledTab extends StatefulWidget {
 }
 
 class _InstalledTabState extends State<InstalledTab> {
-  bool _isLoadingOnlineData = false;
-  // 각 설치된 모드의 온라인 상세 정보 캐시 (최신 버전 대조용)
-  final Map<String, ModItem> _onlineModsCache = {};
-  String? _lastGameId;
-
   @override
   void initState() {
     super.initState();
-    _lastGameId = widget.state.game.id;
-    _loadOnlineDetails();
     widget.state.addListener(_onStateChanged);
   }
 
@@ -36,81 +29,7 @@ class _InstalledTabState extends State<InstalledTab> {
 
   void _onStateChanged() {
     if (mounted) {
-      if (_lastGameId != widget.state.game.id) {
-        _lastGameId = widget.state.game.id;
-        _onlineModsCache.clear();
-      }
-      _loadOnlineDetails(); // 모드가 설치/삭제되면 캐시를 갱신
       setState(() {});
-    }
-  }
-
-  // 로컬 설치된 모드들의 온라인 데이터를 가져와 캐싱
-  Future<void> _loadOnlineDetails() async {
-    if (_isLoadingOnlineData) return;
-    
-    final localMods = widget.state.installedMods;
-    if (localMods.isEmpty) return;
-
-    // 캐시에 없는 모드들만 조회
-    final slugsToFetch = localMods
-        .map((m) => m.slug)
-        .where((slug) => !_onlineModsCache.containsKey(slug))
-        .toList();
-
-    if (slugsToFetch.isEmpty) return;
-
-    setState(() {
-      _isLoadingOnlineData = true;
-    });
-
-    try {
-      final futures = slugsToFetch.map((slug) async {
-        try {
-          // UMM 모드 접두사 'umm-'가 있으면 제거하여 온라인 API 조회 시 호환성 확보
-          final cleanSlug = slug.startsWith('umm-') ? slug.substring(4) : slug;
-          try {
-            final result = await widget.state.apiService.fetchModDetails(cleanSlug);
-            return {'localSlug': slug, 'data': result};
-          } catch (e) {
-            // 상세 조회 실패 시, 검색 API를 통해 매칭 시도 (예: UMM ID 'Tweaks' -> 'adofai-tweaks')
-            final searchResult = await widget.state.apiService.fetchMods(
-              game: widget.state.game.id,
-              search: cleanSlug,
-            );
-            final List<ModItem> searchMods = searchResult['mods'] as List<ModItem>;
-            for (final searchMod in searchMods) {
-              if (widget.state.game.isModMatched(slug, searchMod.slug)) {
-                final detailResult = await widget.state.apiService.fetchModDetails(searchMod.slug);
-                return {'localSlug': slug, 'data': detailResult};
-              }
-            }
-            rethrow;
-          }
-        } catch (_) {
-          return null;
-        }
-      });
-      
-      final results = await Future.wait(futures);
-
-      for (var result in results) {
-        if (result != null) {
-          final localSlug = result['localSlug'] as String;
-          final data = result['data'] as Map<String, dynamic>;
-          final mod = data['mod'] as ModItem;
-          // 캐시 저장 시 로컬에서 조회한 슬러그로 저장하여 뷰에서 매치되도록 함
-          _onlineModsCache[localSlug] = mod;
-        }
-      }
-    } catch (_) {
-      // 온라인 조회 실패 시 단순 넘어감 (오프라인 동작 지원)
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingOnlineData = false;
-        });
-      }
     }
   }
 
@@ -399,60 +318,83 @@ class _InstalledTabState extends State<InstalledTab> {
                     separatorBuilder: (context, index) => const Divider(color: Colors.white10),
                     itemBuilder: (context, index) {
                       final mod = widget.state.installedMods[index];
-                      final onlineMod = _onlineModsCache[mod.slug];
+                      final onlineMod = widget.state.onlineModsCache[mod.slug];
                       final hasUpdate = onlineMod != null &&
                           onlineMod.latestVersion != null &&
-                          mod.version != onlineMod.latestVersion!.version;
+                          VersionUtils.isNewerVersion(mod.version, onlineMod.latestVersion!.version);
+                      final showSwitch = !mod.id.startsWith('umm-');
+                      final opacity = mod.isEnabled ? 1.0 : 0.38;
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            if (showSwitch) ...[
+                              SizedBox(
+                                height: 36.0,
+                                child: Switch(
+                                  value: mod.isEnabled,
+                                  activeColor: const Color(0xFF919AFF),
+                                  activeTrackColor: const Color(0xFF919AFF).withValues(alpha: 0.3),
+                                  inactiveThumbColor: Colors.white60,
+                                  inactiveTrackColor: Colors.white10,
+                                  onChanged: widget.state.isProcessing
+                                      ? null
+                                      : (value) async {
+                                          await widget.state.toggleModActive(mod, value);
+                                        },
+                                ),
+                              ),
+                              const SizedBox(width: 12.0),
+                            ],
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    mod.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4.0),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        widget.state.t('installed_ver_prefix', args: {'version': mod.version}),
-                                        style: const TextStyle(color: Colors.white38, fontSize: 12.0),
+                              child: Opacity(
+                                opacity: opacity,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      mod.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15.0,
                                       ),
-                                      if (onlineMod != null) ...[
-                                        const SizedBox(width: 12.0),
+                                    ),
+                                    const SizedBox(height: 4.0),
+                                    Row(
+                                      children: [
                                         Text(
-                                          widget.state.t('installed_latest_ver_prefix', args: {
-                                            'version': onlineMod.latestVersion?.version ?? "0.0.0"
-                                          }),
-                                          style: TextStyle(
-                                            color: hasUpdate ? Colors.orangeAccent : Colors.white38,
-                                            fontSize: 12.0,
-                                            fontWeight: hasUpdate ? FontWeight.bold : FontWeight.normal,
-                                          ),
+                                          widget.state.t('installed_ver_prefix', args: {'version': mod.version}),
+                                          style: const TextStyle(color: Colors.white38, fontSize: 12.0),
                                         ),
-                                        if (onlineMod.latestVersion?.gameVersion != null) ...[
+                                        if (onlineMod != null) ...[
                                           const SizedBox(width: 12.0),
                                           Text(
-                                            widget.state.t('installed_game_ver_prefix', args: {
-                                              'version': onlineMod.latestVersion!.gameVersion!
+                                            widget.state.t('installed_latest_ver_prefix', args: {
+                                              'version': onlineMod.latestVersion?.version ?? "0.0.0"
                                             }),
-                                            style: const TextStyle(color: Colors.white38, fontSize: 12.0),
+                                            style: TextStyle(
+                                              color: hasUpdate ? Colors.orangeAccent : Colors.white38,
+                                              fontSize: 12.0,
+                                              fontWeight: hasUpdate ? FontWeight.bold : FontWeight.normal,
+                                            ),
                                           ),
+                                          if (onlineMod.latestVersion?.gameVersion != null) ...[
+                                            const SizedBox(width: 12.0),
+                                            Text(
+                                              widget.state.t('installed_game_ver_prefix', args: {
+                                                'version': onlineMod.latestVersion!.gameVersion!
+                                              }),
+                                              style: const TextStyle(color: Colors.white38, fontSize: 12.0),
+                                            ),
+                                          ],
                                         ],
                                       ],
-                                    ],
-                                  ),
-                                ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12.0),

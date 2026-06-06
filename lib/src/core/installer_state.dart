@@ -7,6 +7,7 @@ import 'adofai_game.dart';
 import 'dancing_line_game.dart';
 import 'rhythm_doctor_game.dart';
 import 'localization.dart';
+import 'version_utils.dart';
 import '../models/mod_model.dart';
 import '../services/api_service.dart';
 
@@ -38,6 +39,11 @@ class InstallerState extends ChangeNotifier {
   bool _isProcessing = false;
   String? _statusMessage;
 
+  // Mod Update Cache & Status
+  final Map<String, ModItem> _onlineModsCache = {};
+  List<String> _modsWithUpdates = [];
+  bool _isCheckingModUpdates = false;
+
   String get gamePath => _gamePath;
   String get apiUrl => _apiUrl;
   bool get isLoaderInstalled => _isLoaderInstalled;
@@ -53,6 +59,10 @@ class InstallerState extends ChangeNotifier {
   double get progress => _progress;
   bool get isProcessing => _isProcessing;
   String? get statusMessage => _statusMessage;
+
+  Map<String, ModItem> get onlineModsCache => _onlineModsCache;
+  List<String> get modsWithUpdates => _modsWithUpdates;
+  bool get isCheckingModUpdates => _isCheckingModUpdates;
 
   InstallerState() {
     _init();
@@ -107,6 +117,9 @@ class InstallerState extends ChangeNotifier {
       }
     }
 
+    _onlineModsCache.clear();
+    _modsWithUpdates = [];
+
     await refreshStatus();
   }
 
@@ -146,6 +159,11 @@ class InstallerState extends ChangeNotifier {
         _loaderVersion = 'None';
         _isLoaderOutdated = false;
       }
+
+      // 디스크 파일 정보와 동기화된 메타데이터를 로컬 파일에 백업
+      if (_installedMods.isNotEmpty) {
+        await game.saveInstalledMods(_gamePath, _installedMods);
+      }
     } else {
       _isLoaderInstalled = false;
       _installedMods = [];
@@ -154,6 +172,94 @@ class InstallerState extends ChangeNotifier {
       _isLoaderOutdated = false;
     }
     notifyListeners();
+
+    if (_isValidPath && _installedMods.isNotEmpty) {
+      checkModUpdates();
+    } else {
+      _modsWithUpdates = [];
+      notifyListeners();
+    }
+  }
+
+  // 백그라운드 모드 업데이트 확인
+  Future<void> checkModUpdates() async {
+    if (_isCheckingModUpdates) return;
+    _isCheckingModUpdates = true;
+    notifyListeners();
+
+    try {
+      final localMods = _installedMods;
+      if (localMods.isEmpty) {
+        _modsWithUpdates = [];
+        _isCheckingModUpdates = false;
+        notifyListeners();
+        return;
+      }
+
+      // 캐시에 없는 모드들만 조회
+      final slugsToFetch = localMods
+          .map((m) => m.slug)
+          .where((slug) => !_onlineModsCache.containsKey(slug))
+          .toList();
+
+      if (slugsToFetch.isNotEmpty) {
+        final futures = slugsToFetch.map((slug) async {
+          try {
+            // UMM 모드 접두사 'umm-'가 있으면 제거하여 온라인 API 조회 시 호환성 확보
+            final cleanSlug = slug.startsWith('umm-') ? slug.substring(4) : slug;
+            try {
+              final result = await apiService.fetchModDetails(cleanSlug);
+              return {'localSlug': slug, 'data': result};
+            } catch (e) {
+              // 상세 조회 실패 시, 검색 API를 통해 매칭 시도 (예: UMM ID 'Tweaks' -> 'adofai-tweaks')
+              final searchResult = await apiService.fetchMods(
+                game: _game.id,
+                search: cleanSlug,
+              );
+              final List<ModItem> searchMods = searchResult['mods'] as List<ModItem>;
+              for (final searchMod in searchMods) {
+                if (_game.isModMatched(slug, searchMod.slug)) {
+                  final detailResult = await apiService.fetchModDetails(searchMod.slug);
+                  return {'localSlug': slug, 'data': detailResult};
+                }
+              }
+              rethrow;
+            }
+          } catch (_) {
+            return null;
+          }
+        });
+
+        final results = await Future.wait(futures);
+
+        for (var result in results) {
+          if (result != null) {
+            final localSlug = result['localSlug'] as String;
+            final data = result['data'] as Map<String, dynamic>;
+            final mod = data['mod'] as ModItem;
+            _onlineModsCache[localSlug] = mod;
+          }
+        }
+      }
+
+      // 업데이트 가능한 모드 체크 (설치 버전이 최신 버전보다 낮은 경우)
+      final List<String> updatedSlugs = [];
+      for (final localMod in localMods) {
+        final onlineMod = _onlineModsCache[localMod.slug];
+        if (onlineMod != null && onlineMod.latestVersion != null) {
+          if (VersionUtils.isNewerVersion(localMod.version, onlineMod.latestVersion!.version)) {
+            updatedSlugs.add(localMod.slug);
+          }
+        }
+      }
+
+      _modsWithUpdates = updatedSlugs;
+    } catch (_) {
+      // 온라인 조회 실패 시 무시
+    } finally {
+      _isCheckingModUpdates = false;
+      notifyListeners();
+    }
   }
 
   // MelonLoader 설치
@@ -377,6 +483,49 @@ class InstallerState extends ChangeNotifier {
       _statusMessage = t('status_mod_delete_success', args: {'name': name});
     } catch (e) {
       _statusMessage = t('status_mod_delete_failed', args: {'name': name, 'error': e.toString()});
+    } finally {
+      _isProcessing = false;
+      await refreshStatus();
+    }
+  }
+
+  // 모드 활성화 / 비활성화 토글
+  Future<void> toggleModActive(InstalledMod mod, bool enable) async {
+    if (_isProcessing || !_isValidPath) return;
+
+    _isProcessing = true;
+    _progress = 0.0;
+    _statusMessage = enable 
+        ? t('status_mod_enabling', args: {'name': mod.name}) 
+        : t('status_mod_disabling', args: {'name': mod.name});
+    notifyListeners();
+
+    try {
+      await game.toggleModActive(_gamePath, mod, enable);
+
+      final updatedMod = InstalledMod(
+        id: mod.id,
+        slug: mod.slug,
+        name: mod.name,
+        version: mod.version,
+        isBeta: mod.isBeta,
+        installedAt: mod.installedAt,
+        installedFiles: mod.installedFiles,
+        isEnabled: enable,
+      );
+
+      final index = _installedMods.indexWhere((m) => m.id == mod.id);
+      if (index != -1) {
+        _installedMods[index] = updatedMod;
+      }
+
+      await game.saveInstalledMods(_gamePath, _installedMods);
+
+      _statusMessage = enable 
+          ? t('status_mod_enable_success', args: {'name': mod.name}) 
+          : t('status_mod_disable_success', args: {'name': mod.name});
+    } catch (e) {
+      _statusMessage = t('status_mod_toggle_failed', args: {'name': mod.name, 'error': e.toString()});
     } finally {
       _isProcessing = false;
       await refreshStatus();

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -265,7 +266,13 @@ class _InstalledTabState extends State<InstalledTab> {
                                 child: UIButton(
                                   label: widget.state.t('installed_btn_copy_native_launch'),
                                   fontSize: 13.0,
-                                  onClick: () => _copyToClipboard('./setup_helper.sh %command%'),
+                                  onClick: () => _copyToClipboard(
+                                    // Steam on macOS does not resolve relative
+                                    // paths, so emit the absolute script path.
+                                    Platform.isMacOS
+                                        ? '"${widget.state.gamePath}/setup_helper.sh" %command%'
+                                        : './setup_helper.sh %command%',
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8.0),

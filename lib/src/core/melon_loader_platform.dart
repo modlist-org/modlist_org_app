@@ -32,12 +32,31 @@ class MelonLoaderPlatform {
 
   static String setupHelperScript() {
     if (Platform.isMacOS) {
+      // Steam Launch Options must reference this script by ABSOLUTE path:
+      //   "/full/path/setup_helper.sh" %command%
+      // Steam on macOS does not resolve "./setup_helper.sh".
       return r'''
 #!/bin/bash
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
-export DYLD_INSERT_LIBRARIES="$DIR/libMelonLoader.dylib${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+BOOTSTRAP="$DIR/MelonLoader.Bootstrap.dylib"
 
+export DYLD_LIBRARY_PATH="$DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+if [ -n "$STEAM_DYLD_INSERT_LIBRARIES" ]; then
+  export DYLD_INSERT_LIBRARIES="$BOOTSTRAP:$STEAM_DYLD_INSERT_LIBRARIES"
+else
+  export DYLD_INSERT_LIBRARIES="$BOOTSTRAP${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+fi
+
+# Steam passes the .app bundle as %command%. DYLD_INSERT_LIBRARIES is dropped
+# when LaunchServices opens a .app, so exec the inner Mach-O binary directly.
+if [ -d "${1:-}" ] && [ "${1%.app}" != "$1" ]; then
+  APP="$1"; shift
+  BIN_NAME="$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP/Contents/Info.plist" 2>/dev/null)"
+  set -- "$APP/Contents/MacOS/$BIN_NAME" "$@"
+fi
+
+# v0.7.3 ships an x86_64 bootstrap only; force the game's x64 slice through
+# Rosetta so the dylib can inject on Apple Silicon.
 if [ "$(uname -m)" = "arm64" ]; then
   exec arch -x86_64 "$@"
 fi
@@ -94,13 +113,14 @@ exec "$@"
         await _runIgnored('chmod', ['+x', libSoPath]);
       }
     } else if (Platform.isMacOS) {
-      final libDylibPath = p.join(gamePath, 'libMelonLoader.dylib');
-      if (File(libDylibPath).existsSync()) {
-        await _runIgnored('chmod', ['+x', libDylibPath]);
+      // v0.7.3 ships MelonLoader.Bootstrap.dylib (the old libMelonLoader.dylib
+      // no longer exists). Clear its quarantine so dyld can inject it.
+      final bootstrapDylibPath = p.join(gamePath, 'MelonLoader.Bootstrap.dylib');
+      if (File(bootstrapDylibPath).existsSync()) {
         await _runIgnored('xattr', [
           '-d',
           'com.apple.quarantine',
-          libDylibPath,
+          bootstrapDylibPath,
         ]);
       }
 

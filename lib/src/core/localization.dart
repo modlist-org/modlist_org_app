@@ -100,31 +100,34 @@ class Localization {
         '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_adofai_macos':
-        'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-        './setup_helper.sh %command%\n\n'
+        'macOS 네이티브 실행 시 아래 스팀 시작 옵션을 입력하세요 — 복사 버튼을 사용하세요'
+        '(Steam은 macOS에서 상대 경로를 인식하지 못하므로 반드시 절대 경로여야 합니다):\n'
+        '"<게임 폴더>/setup_helper.sh" %command%\n\n'
         'Apple Silicon에서는 MelonLoader v0.7.3 macOS 배포본이 x64 전용이므로 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
         '1) 리눅스 네이티브 실행 시 스팀 실행 옵션에 아래 스크립트를 입력하세요:\n'
         './setup_helper.sh %command%\n\n'
         '2) Steam Proton(윈도우 버전) 실행 시 아래 스크립트를 입력하세요:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_rd_macos':
-        'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-        './setup_helper.sh %command%\n\n'
+        'macOS 네이티브 실행 시 아래 스팀 시작 옵션을 입력하세요 — 복사 버튼을 사용하세요'
+        '(Steam은 macOS에서 상대 경로를 인식하지 못하므로 반드시 절대 경로여야 합니다):\n'
+        '"<게임 폴더>/setup_helper.sh" %command%\n\n'
         'Apple Silicon에서는 MelonLoader v0.7.3 macOS 배포본이 x64 전용이므로 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
         'Steam Proton(윈도우 버전) 실행 시 시작 옵션에 아래 스크립트를 입력하세요:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_dl_macos':
-        'macOS 네이티브 실행 시 스팀 시작 옵션에 아래 스크립트를 입력하세요:\n'
-        './setup_helper.sh %command%\n\n'
+        'macOS 네이티브 실행 시 아래 스팀 시작 옵션을 입력하세요 — 복사 버튼을 사용하세요'
+        '(Steam은 macOS에서 상대 경로를 인식하지 못하므로 반드시 절대 경로여야 합니다):\n'
+        '"<게임 폴더>/setup_helper.sh" %command%\n\n'
         'Apple Silicon에서는 MelonLoader v0.7.3 macOS 배포본이 x64 전용이므로 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
 
       // Explore Tab
       'explore_filter_category': '카테고리',
@@ -375,31 +378,34 @@ class Localization {
         '2) For Steam Proton (Windows version), enter the following launch option:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_adofai_macos':
-        'For native macOS, enter the following launch option in Steam:\n'
-        './setup_helper.sh %command%\n\n'
+        'For native macOS, set the Steam launch option below — use the Copy button '
+        '(the path must be absolute; Steam on macOS ignores relative paths):\n'
+        '"<game folder>/setup_helper.sh" %command%\n\n'
         'On Apple Silicon, this script launches the game through Rosetta because MelonLoader v0.7.3 ships macOS x64 only.\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
         '1) For native Linux, enter the following launch option in Steam:\n'
         './setup_helper.sh %command%\n\n'
         '2) For Steam Proton (Windows version), enter the following launch option:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_rd_macos':
-        'For native macOS, enter the following launch option in Steam:\n'
-        './setup_helper.sh %command%\n\n'
+        'For native macOS, set the Steam launch option below — use the Copy button '
+        '(the path must be absolute; Steam on macOS ignores relative paths):\n'
+        '"<game folder>/setup_helper.sh" %command%\n\n'
         'On Apple Silicon, this script launches the game through Rosetta because MelonLoader v0.7.3 ships macOS x64 only.\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
         'For Steam Proton (Windows version), enter the following launch option:\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_dl_macos':
-        'For native macOS, enter the following launch option in Steam:\n'
-        './setup_helper.sh %command%\n\n'
+        'For native macOS, set the Steam launch option below — use the Copy button '
+        '(the path must be absolute; Steam on macOS ignores relative paths):\n'
+        '"<game folder>/setup_helper.sh" %command%\n\n'
         'On Apple Silicon, this script launches the game through Rosetta because MelonLoader v0.7.3 ships macOS x64 only.\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
 
       // Status messages
       'status_loader_downloading': 'Downloading MelonLoader...',
@@ -590,31 +596,34 @@ class Localization {
         '2）使用 Steam Proton（Windows 版本）时，请输入以下脚本：\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_adofai_macos':
-        '使用 macOS 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        './setup_helper.sh %command%\n\n'
+        '使用 macOS 原生版本时，请设置以下 Steam 启动选项 —— 请使用复制按钮'
+        '（必须为绝对路径，Steam 在 macOS 上不解析相对路径）：\n'
+        '"<游戏目录>/setup_helper.sh" %command%\n\n'
         '在 Apple Silicon 上，由于 MelonLoader v0.7.3 的 macOS 包仅提供 x64，此脚本会通过 Rosetta 启动游戏。\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
         '1）使用 Linux 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
         './setup_helper.sh %command%\n\n'
         '2）使用 Steam Proton（Windows 版本）时，请输入以下脚本：\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_rd_macos':
-        '使用 macOS 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        './setup_helper.sh %command%\n\n'
+        '使用 macOS 原生版本时，请设置以下 Steam 启动选项 —— 请使用复制按钮'
+        '（必须为绝对路径，Steam 在 macOS 上不解析相对路径）：\n'
+        '"<游戏目录>/setup_helper.sh" %command%\n\n'
         '在 Apple Silicon 上，由于 MelonLoader v0.7.3 的 macOS 包仅提供 x64，此脚本会通过 Rosetta 启动游戏。\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
         '使用 Steam Proton（Windows 版本）时，请在启动选项中输入以下脚本：\n'
         'WINEDLLOVERRIDES="winhttp=n,b" %command%',
       'installed_steamlaunchoptionsguide_dl_macos':
-        '使用 macOS 原生版本时，请在 Steam 启动选项中输入以下脚本：\n'
-        './setup_helper.sh %command%\n\n'
+        '使用 macOS 原生版本时，请设置以下 Steam 启动选项 —— 请使用复制按钮'
+        '（必须为绝对路径，Steam 在 macOS 上不解析相对路径）：\n'
+        '"<游戏目录>/setup_helper.sh" %command%\n\n'
         '在 Apple Silicon 上，由于 MelonLoader v0.7.3 的 macOS 包仅提供 x64，此脚本会通过 Rosetta 启动游戏。\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
-        'xattr -dr com.apple.quarantine setup_helper.sh libMelonLoader.dylib MelonLoader/',
+        'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
 
       // Status messages
       'status_loader_downloading': '正在下载 MelonLoader...',

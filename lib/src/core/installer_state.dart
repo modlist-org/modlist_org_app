@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import 'rhythm_doctor_game.dart';
 import 'localization.dart';
 import 'version_utils.dart';
 import 'app_errors.dart';
+import 'debug_log.dart';
 import '../models/mod_model.dart';
 import '../services/api_service.dart';
 
@@ -283,23 +285,40 @@ class InstallerState extends ChangeNotifier {
 
   // MelonLoader 설치
   Future<void> installMelonLoader({bool installUmmCompat = false}) async {
-    if (_isProcessing || !_isValidPath) return;
+    if (_isProcessing || !_isValidPath) {
+      await DebugLog.info(
+        'Install MelonLoader ignored: processing=$_isProcessing '
+        'validPath=$_isValidPath path=$_gamePath',
+      );
+      return;
+    }
     
     _isProcessing = true;
     _progress = 0.0;
     _statusMessage = t('status_loader_downloading');
     notifyListeners();
 
+    var installTimedOut = false;
+
     try {
+      await DebugLog.info(
+        'Install MelonLoader start: game=${game.id} path=$_gamePath '
+        'ummDetected=$_isUmmDetected installUmmCompat=$installUmmCompat '
+        'logFile=${DebugLog.filePath ?? 'disabled'}',
+      );
+
       if (_isUmmDetected) {
+        await DebugLog.info('Moving UMM mods before MelonLoader install');
         _statusMessage = t('status_loader_migrating_umm');
         notifyListeners();
         await _moveUmmModsToUmmModsFolder();
+        await DebugLog.info('Finished moving UMM mods');
       }
 
       await game.installLoader(
         _gamePath,
         onProgress: (val) {
+          if (installTimedOut || !_isProcessing) return;
           final downloadProgress = val.clamp(0.0, 1.0).toDouble();
           _progress = downloadProgress * 0.85;
           _statusMessage = t(
@@ -310,29 +329,57 @@ class InstallerState extends ChangeNotifier {
           );
           notifyListeners();
         },
-        onPhase: _setLoaderInstallPhase,
+        onPhase: (phase) {
+          if (installTimedOut || !_isProcessing) return;
+          _setLoaderInstallPhase(phase);
+        },
+      ).timeout(
+        const Duration(minutes: 3),
+        onTimeout: () {
+          installTimedOut = true;
+          throw TimeoutException('MelonLoader install timed out after 3 minutes');
+        },
       );
+      await DebugLog.info('Core MelonLoader install completed');
 
       if (_isUmmDetected && installUmmCompat) {
         _statusMessage = t('status_loader_checking_ummcompat');
         notifyListeners();
         try {
+          await DebugLog.info('Fetching UMM compatibility mod');
           final result = await apiService.fetchModDetails('ummcompat');
           final mod = result['mod'] as ModItem;
           
           await _installModInternal(mod);
           _statusMessage = t('status_loader_install_success_with_ummcompat');
-        } catch (e) {
+          await DebugLog.info('UMM compatibility mod installed');
+        } catch (e, stackTrace) {
+          await DebugLog.error(
+            'UMM compatibility mod install failed',
+            error: e,
+            stackTrace: stackTrace,
+          );
           _statusMessage = t('status_loader_install_success_fail_ummcompat', args: {'error': describeAppError(e)});
         }
       } else {
         _statusMessage = t('status_loader_install_success');
       }
-    } catch (e) {
+      await DebugLog.info('Install MelonLoader success');
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'Install MelonLoader failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _statusMessage = t('status_loader_install_failed', args: {'error': describeAppError(e)});
     } finally {
       _isProcessing = false;
+      await DebugLog.info('Refreshing status after MelonLoader install');
       await refreshStatus();
+      await DebugLog.info(
+        'Install MelonLoader finished: installed=$_isLoaderInstalled '
+        'loaderVersion=$_loaderVersion status=$_statusMessage',
+      );
     }
   }
 

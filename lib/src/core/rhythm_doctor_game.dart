@@ -8,6 +8,7 @@ import 'game.dart';
 import '../models/mod_model.dart';
 import 'melon_dll_parser.dart';
 import 'melon_loader_platform.dart';
+import 'debug_log.dart';
 
 class RhythmDoctorGame extends Game {
   @override
@@ -146,33 +147,53 @@ class RhythmDoctorGame extends Game {
     void Function(LoaderInstallPhase)? onPhase,
   }) async {
     if (!isValidGamePath(gamePath)) {
+      await DebugLog.info(
+        'Rhythm Doctor installLoader rejected invalid path: $gamePath',
+      );
       throw Exception(
         'Invalid Rhythm Doctor game path. Cannot install MelonLoader.',
       );
     }
 
+    await DebugLog.info('Rhythm Doctor installLoader start: gamePath=$gamePath');
+
     final hasWindowsExe =
         File(p.join(gamePath, 'Rhythm Doctor.exe')).existsSync() ||
         File(p.join(gamePath, 'RhythmDoctor.exe')).existsSync();
     final isProtonOrWine = !Platform.isWindows && hasWindowsExe;
+    await DebugLog.info(
+      'Rhythm Doctor platform detection: os=${Platform.operatingSystem} '
+      'hasWindowsExe=$hasWindowsExe protonOrWine=$isProtonOrWine',
+    );
 
     final downloadUrl =
         MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
 
     final tempDir = await getTemporaryDirectory();
     final tempZipPath = p.join(tempDir.path, 'MelonLoader_rd_temp.zip');
+    await DebugLog.info(
+      'Rhythm Doctor MelonLoader download prepared: url=$downloadUrl '
+      'tempZipPath=$tempZipPath',
+    );
 
     await MelonLoaderPlatform.downloadArchive(
       downloadUrl,
       tempZipPath,
       onProgress: onProgress,
     );
+    await DebugLog.info('Rhythm Doctor MelonLoader download returned');
 
     onPhase?.call(LoaderInstallPhase.extracting);
+    await DebugLog.info('Rhythm Doctor extraction start');
     final file = File(tempZipPath);
     final bytes = await file.readAsBytes();
+    await DebugLog.info('Rhythm Doctor temp zip read: bytes=${bytes.length}');
     final archive = ZipDecoder().decodeBytes(bytes);
+    await DebugLog.info('Rhythm Doctor zip decoded: entries=${archive.length}');
 
+    var extractedFiles = 0;
+    var extractedDirs = 0;
+    var extractedBytes = 0;
     for (final archiveFile in archive) {
       final filename = archiveFile.name;
       final outPath = p.join(gamePath, filename);
@@ -182,18 +203,28 @@ class RhythmDoctorGame extends Game {
         final outFile = File(outPath);
         await outFile.create(recursive: true);
         await outFile.writeAsBytes(data);
+        extractedFiles += 1;
+        extractedBytes += data.length;
       } else {
         await Directory(outPath).create(recursive: true);
+        extractedDirs += 1;
       }
     }
+    await DebugLog.info(
+      'Rhythm Doctor extraction finished: files=$extractedFiles '
+      'dirs=$extractedDirs bytes=$extractedBytes',
+    );
 
     await file.delete();
+    await DebugLog.info('Rhythm Doctor temp zip deleted');
 
     onPhase?.call(LoaderInstallPhase.configuring);
+    await DebugLog.info('Rhythm Doctor configuring native install');
     await MelonLoaderPlatform.configureNativeInstall(
       gamePath,
       isProtonOrWine: isProtonOrWine,
     );
+    await DebugLog.info('Rhythm Doctor native configure returned');
 
     onPhase?.call(LoaderInstallPhase.finalizing);
     final versionFile = File(
@@ -204,12 +235,22 @@ class RhythmDoctorGame extends Game {
         await versionFile.parent.create(recursive: true);
       }
       await versionFile.writeAsString('0.7.3', flush: true);
-    } catch (_) {}
+      await DebugLog.info(
+        'Rhythm Doctor version file written: ${versionFile.path}',
+      );
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'Rhythm Doctor version file write failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
 
     final modsDir = Directory(p.join(gamePath, 'Mods'));
     if (!modsDir.existsSync()) {
       await modsDir.create();
     }
+    await DebugLog.info('Rhythm Doctor installLoader finished');
   }
 
   @override

@@ -263,6 +263,24 @@ class InstallerState extends ChangeNotifier {
     }
   }
 
+  void _setLoaderInstallPhase(LoaderInstallPhase phase) {
+    switch (phase) {
+      case LoaderInstallPhase.extracting:
+        _progress = 0.90;
+        _statusMessage = t('status_loader_extracting');
+        break;
+      case LoaderInstallPhase.configuring:
+        _progress = 0.95;
+        _statusMessage = t('status_loader_configuring');
+        break;
+      case LoaderInstallPhase.finalizing:
+        _progress = 0.98;
+        _statusMessage = t('status_loader_finalizing');
+        break;
+    }
+    notifyListeners();
+  }
+
   // MelonLoader 설치
   Future<void> installMelonLoader({bool installUmmCompat = false}) async {
     if (_isProcessing || !_isValidPath) return;
@@ -279,11 +297,21 @@ class InstallerState extends ChangeNotifier {
         await _moveUmmModsToUmmModsFolder();
       }
 
-      await game.installLoader(_gamePath, onProgress: (val) {
-        _progress = val;
-        _statusMessage = t('status_loader_installing', args: {'progress': (val * 100).toStringAsFixed(1)});
-        notifyListeners();
-      });
+      await game.installLoader(
+        _gamePath,
+        onProgress: (val) {
+          final downloadProgress = val.clamp(0.0, 1.0).toDouble();
+          _progress = downloadProgress * 0.85;
+          _statusMessage = t(
+            'status_loader_installing',
+            args: {
+              'progress': (downloadProgress * 100).toStringAsFixed(1),
+            },
+          );
+          notifyListeners();
+        },
+        onPhase: _setLoaderInstallPhase,
+      );
 
       if (_isUmmDetected && installUmmCompat) {
         _statusMessage = t('status_loader_checking_ummcompat');

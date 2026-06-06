@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 class MelonLoaderPlatform {
   static const version = '0.7.3';
@@ -50,6 +51,85 @@ export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
 export LD_PRELOAD="$DIR/libMelonLoader.so${LD_PRELOAD:+:$LD_PRELOAD}"
 exec "$@"
 ''';
+  }
+
+  static Future<void> configureNativeInstall(
+    String gamePath, {
+    required bool isProtonOrWine,
+  }) async {
+    if (!Platform.isWindows && !isProtonOrWine) {
+      final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
+      final scriptContent = setupHelperScript();
+      await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
+    }
+
+    if (Platform.isWindows) return;
+
+    final setupHelperPath = p.join(gamePath, 'setup_helper.sh');
+    if (File(setupHelperPath).existsSync()) {
+      await _runIgnored('chmod', ['+x', setupHelperPath]);
+    }
+
+    if (isProtonOrWine) return;
+
+    if (Platform.isLinux) {
+      final libSoPath = p.join(gamePath, 'libMelonLoader.so');
+      if (File(libSoPath).existsSync()) {
+        await _runIgnored('chmod', ['+x', libSoPath]);
+      }
+    } else if (Platform.isMacOS) {
+      final libDylibPath = p.join(gamePath, 'libMelonLoader.dylib');
+      if (File(libDylibPath).existsSync()) {
+        await _runIgnored('chmod', ['+x', libDylibPath]);
+        await _runIgnored('xattr', [
+          '-d',
+          'com.apple.quarantine',
+          libDylibPath,
+        ]);
+      }
+
+      if (File(setupHelperPath).existsSync()) {
+        await _runIgnored('xattr', [
+          '-d',
+          'com.apple.quarantine',
+          setupHelperPath,
+        ]);
+      }
+
+      final melonDir = Directory(p.join(gamePath, 'MelonLoader'));
+      if (melonDir.existsSync()) {
+        await _runIgnored('xattr', [
+          '-dr',
+          'com.apple.quarantine',
+          melonDir.path,
+        ]);
+      }
+    }
+  }
+
+  static Future<void> _runIgnored(
+    String executable,
+    List<String> arguments, {
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    try {
+      final process = await Process.start(executable, arguments);
+      final stdoutDone = process.stdout.drain<void>();
+      final stderrDone = process.stderr.drain<void>();
+
+      await process.exitCode.timeout(
+        timeout,
+        onTimeout: () {
+          process.kill(ProcessSignal.sigkill);
+          return -1;
+        },
+      );
+
+      await Future.wait([stdoutDone, stderrDone]).timeout(
+        const Duration(seconds: 1),
+        onTimeout: () => <void>[],
+      );
+    } catch (_) {}
   }
 
   static Future<void> downloadArchive(

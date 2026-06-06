@@ -4,6 +4,8 @@ import 'package:path/path.dart' as p;
 import '../models/mod_model.dart';
 import 'melon_dll_parser.dart';
 
+enum LoaderInstallPhase { extracting, configuring, finalizing }
+
 abstract class Game {
   // 게임 고유 식별자 (예: 'adofai')
   String get id;
@@ -281,6 +283,7 @@ abstract class Game {
   Future<void> installLoader(
     String gamePath, {
     void Function(double)? onProgress,
+    void Function(LoaderInstallPhase)? onPhase,
   });
 
   // 모드 로더 제거

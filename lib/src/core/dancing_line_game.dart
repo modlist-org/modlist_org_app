@@ -143,6 +143,7 @@ class DancingLineGame extends Game {
   Future<void> installLoader(
     String gamePath, {
     void Function(double)? onProgress,
+    void Function(LoaderInstallPhase)? onPhase,
   }) async {
     if (!isValidGamePath(gamePath)) {
       throw Exception(
@@ -167,6 +168,7 @@ class DancingLineGame extends Game {
       onProgress: onProgress,
     );
 
+    onPhase?.call(LoaderInstallPhase.extracting);
     final file = File(tempZipPath);
     final bytes = await file.readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
@@ -187,54 +189,13 @@ class DancingLineGame extends Game {
 
     await file.delete();
 
-    if (!Platform.isWindows && !isProtonOrWine) {
-      final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
-      final scriptContent = MelonLoaderPlatform.setupHelperScript();
-      await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
-    }
+    onPhase?.call(LoaderInstallPhase.configuring);
+    await MelonLoaderPlatform.configureNativeInstall(
+      gamePath,
+      isProtonOrWine: isProtonOrWine,
+    );
 
-    if (!Platform.isWindows) {
-      final setupHelperPath = p.join(gamePath, 'setup_helper.sh');
-      if (File(setupHelperPath).existsSync()) {
-        try {
-          await Process.run('chmod', ['+x', setupHelperPath]);
-        } catch (_) {}
-      }
-
-      if (!isProtonOrWine) {
-        if (Platform.isLinux) {
-          final libSoPath = p.join(gamePath, 'libMelonLoader.so');
-          if (File(libSoPath).existsSync()) {
-            try {
-              await Process.run('chmod', ['+x', libSoPath]);
-            } catch (_) {}
-          }
-        } else if (Platform.isMacOS) {
-          final libDylibPath = p.join(gamePath, 'libMelonLoader.dylib');
-          if (File(libDylibPath).existsSync()) {
-            try {
-              await Process.run('chmod', ['+x', libDylibPath]);
-              await Process.run('xattr', [
-                '-d',
-                'com.apple.quarantine',
-                libDylibPath,
-              ]);
-            } catch (_) {}
-          }
-          final melonDir = Directory(p.join(gamePath, 'MelonLoader'));
-          if (melonDir.existsSync()) {
-            try {
-              await Process.run('xattr', [
-                '-d',
-                'com.apple.quarantine',
-                melonDir.path,
-              ]);
-            } catch (_) {}
-          }
-        }
-      }
-    }
-
+    onPhase?.call(LoaderInstallPhase.finalizing);
     final versionFile = File(
       p.join(gamePath, 'MelonLoader', 'MelonLoader.version'),
     );

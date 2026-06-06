@@ -7,6 +7,7 @@ import 'package:archive/archive.dart';
 import 'game.dart';
 import '../models/mod_model.dart';
 import 'melon_dll_parser.dart';
+import 'melon_loader_platform.dart';
 
 class AdofaiGame extends Game {
   @override
@@ -14,6 +15,16 @@ class AdofaiGame extends Game {
 
   @override
   String get name => 'A Dance of Fire and Ice';
+
+  @override
+  String? get steamAppId => '977950';
+
+  @override
+  List<String> getSteamInstallFolderNames() => const [
+        'A Dance of Fire and Ice',
+        'ADanceOfFireAndIce',
+        'ADOFAI',
+      ];
 
   @override
   String getPlatformExeName() {
@@ -210,50 +221,22 @@ class AdofaiGame extends Game {
     final isProtonOrWine = !Platform.isWindows && hasWindowsExe;
 
     // 0.7.3 버전 다운로드 주소 정의
-    String downloadUrl;
-    if (isProtonOrWine) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
-    } else if (Platform.isWindows) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip';
-    } else if (Platform.isLinux) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.Linux.x64.zip';
-    } else if (Platform.isMacOS) {
-      downloadUrl =
-          'https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.macOS.x64.zip';
-    } else {
-      throw Exception('Unsupported platform for MelonLoader installation');
-    }
+    final downloadUrl =
+        MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
 
     // 임시 파일 다운로드 경로 설정
     final tempDir = await getTemporaryDirectory();
     final tempZipPath = p.join(tempDir.path, 'MelonLoader_temp.zip');
 
     // 1. MelonLoader 다운로드
-    final client = http.Client();
-    final response = await client.send(
-      http.Request('GET', Uri.parse(downloadUrl)),
+    await MelonLoaderPlatform.downloadArchive(
+      downloadUrl,
+      tempZipPath,
+      onProgress: onProgress,
     );
-    final totalBytes = response.contentLength ?? 0;
-    var downloadedBytes = 0;
-
-    final file = File(tempZipPath);
-    final sink = file.openWrite();
-
-    await for (final chunk in response.stream) {
-      sink.add(chunk);
-      downloadedBytes += chunk.length;
-      if (totalBytes > 0 && onProgress != null) {
-        onProgress(downloadedBytes / totalBytes);
-      }
-    }
-    await sink.flush();
-    await sink.close();
-    client.close();
 
     // 2. 압축 해제
+    final file = File(tempZipPath);
     final bytes = await file.readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
 
@@ -277,22 +260,7 @@ class AdofaiGame extends Game {
     // Linux/macOS native의 경우 setup_helper.sh 생성
     if (!Platform.isWindows && !isProtonOrWine) {
       final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
-      final isMac = Platform.isMacOS;
-      final scriptContent = isMac
-          ? r'''
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
-export DYLD_INSERT_LIBRARIES="$DIR/libMelonLoader.dylib:$DYLD_INSERT_LIBRARIES"
-exec "$@"
-'''
-          : r'''
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
-export LD_PRELOAD="$DIR/libMelonLoader.so:$LD_PRELOAD"
-exec "$@"
-''';
+      final scriptContent = MelonLoaderPlatform.setupHelperScript();
       await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
     }
 

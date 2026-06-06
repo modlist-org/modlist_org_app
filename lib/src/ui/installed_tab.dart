@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
+import '../core/app_errors.dart';
 import '../core/installer_state.dart';
 import '../core/version_utils.dart';
 import 'dialogs.dart';
@@ -58,7 +59,14 @@ class _InstalledTabState extends State<InstalledTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.state.t('installed_err_file_picker', args: {'error': e.toString()}))),
+          SnackBar(
+            content: Text(
+              widget.state.t(
+                'installed_err_file_picker',
+                args: {'error': describeAppError(e)},
+              ),
+            ),
+          ),
         );
       }
     }

@@ -398,40 +398,31 @@ class _InstalledTabState extends State<InstalledTab> {
                               ),
                             ),
                             const SizedBox(width: 12.0),
-                            Row(
+                            Wrap(
+                              spacing: 8.0,      // 버튼 간 가로 간격
+                              runSpacing: 8.0,   // 줄바꿈 발생 시 세로 간격
                               children: [
-                                if (hasUpdate && !widget.state.isProcessing) ...[
+                                if (hasUpdate && !widget.state.isProcessing)
                                   SizedBox(
-                                    width: 90.0,
                                     height: 36.0,
                                     child: UIButton(
                                       label: widget.state.t('installed_btn_update_mod'),
                                       fontSize: 13.0,
                                       onClick: () async {
-                                        await widget.state.installMod(
-                                          onlineMod,
-                                          version: onlineMod.latestVersion?.version,
-                                        );
-                                        if (context.mounted) {
-                                          checkAndPromptUmmCompat(context, widget.state);
-                                        }
+                                        await widget.state.installMod(onlineMod, version: onlineMod.latestVersion?.version);
+                                        if (context.mounted) checkAndPromptUmmCompat(context, widget.state);
                                       },
                                     ),
                                   ),
-                                  const SizedBox(width: 8.0),
-                                ],
                                 if (!widget.state.isProcessing)
                                   SizedBox(
-                                    width: 85.0,
                                     height: 36.0,
                                     child: UIButton(
                                       label: widget.state.t('installed_btn_delete_mod'),
                                       fontSize: 13.0,
                                       onClick: () async {
                                         final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
-                                        if (confirm) {
-                                          await widget.state.uninstallMod(mod.slug, mod.name);
-                                        }
+                                        if (confirm) await widget.state.uninstallMod(mod.slug, mod.name);
                                       },
                                     ),
                                   ),

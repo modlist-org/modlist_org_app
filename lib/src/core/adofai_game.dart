@@ -104,6 +104,7 @@ class AdofaiGame extends Game {
   Future<void> installLoader(
     String gamePath, {
     void Function(double)? onProgress,
+    void Function(LoaderInstallPhase)? onPhase,
   }) async {
     if (!isValidGamePath(gamePath)) {
       throw Exception('Invalid ADOFAI game path. Cannot install MelonLoader.');
@@ -236,6 +237,7 @@ class AdofaiGame extends Game {
     );
 
     // 2. 압축 해제
+    onPhase?.call(LoaderInstallPhase.extracting);
     final file = File(tempZipPath);
     final bytes = await file.readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
@@ -257,57 +259,14 @@ class AdofaiGame extends Game {
     // 임시 zip 파일 삭제
     await file.delete();
 
-    // Linux/macOS native의 경우 setup_helper.sh 생성
-    if (!Platform.isWindows && !isProtonOrWine) {
-      final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
-      final scriptContent = MelonLoaderPlatform.setupHelperScript();
-      await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
-    }
-
-    // Linux/macOS의 경우 setup_helper.sh 및 네이티브 라이브러리에 실행 권한 부여, macOS 격리 제거
-    if (!Platform.isWindows) {
-      final setupHelperPath = p.join(gamePath, 'setup_helper.sh');
-      if (File(setupHelperPath).existsSync()) {
-        try {
-          await Process.run('chmod', ['+x', setupHelperPath]);
-        } catch (_) {}
-      }
-
-      if (!isProtonOrWine) {
-        if (Platform.isLinux) {
-          final libSoPath = p.join(gamePath, 'libMelonLoader.so');
-          if (File(libSoPath).existsSync()) {
-            try {
-              await Process.run('chmod', ['+x', libSoPath]);
-            } catch (_) {}
-          }
-        } else if (Platform.isMacOS) {
-          final libDylibPath = p.join(gamePath, 'libMelonLoader.dylib');
-          if (File(libDylibPath).existsSync()) {
-            try {
-              await Process.run('chmod', ['+x', libDylibPath]);
-              await Process.run('xattr', [
-                '-d',
-                'com.apple.quarantine',
-                libDylibPath,
-              ]);
-            } catch (_) {}
-          }
-          final melonDir = Directory(p.join(gamePath, 'MelonLoader'));
-          if (melonDir.existsSync()) {
-            try {
-              await Process.run('xattr', [
-                '-d',
-                'com.apple.quarantine',
-                melonDir.path,
-              ]);
-            } catch (_) {}
-          }
-        }
-      }
-    }
+    onPhase?.call(LoaderInstallPhase.configuring);
+    await MelonLoaderPlatform.configureNativeInstall(
+      gamePath,
+      isProtonOrWine: isProtonOrWine,
+    );
 
     // MelonLoader 버전 정보 파일 기록
+    onPhase?.call(LoaderInstallPhase.finalizing);
     final versionFile = File(
       p.join(gamePath, 'MelonLoader', 'MelonLoader.version'),
     );

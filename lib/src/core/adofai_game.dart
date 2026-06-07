@@ -242,8 +242,10 @@ class AdofaiGame extends Game {
     );
 
     // 0.7.3 버전 다운로드 주소 정의
-    final downloadUrl =
-        MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
+    final downloadUrl = MelonLoaderPlatform.downloadUrl(
+      isProtonOrWine: isProtonOrWine,
+      gamePath: gamePath,
+    );
 
     // 임시 파일 다운로드 경로 설정
     final tempDir = await getTemporaryDirectory();

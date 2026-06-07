@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -18,8 +19,13 @@ class MelonLoaderPlatform {
     defaultValue: 'kkorenn/MelonLoader',
   );
 
-  static String downloadUrl({required bool isProtonOrWine}) {
-    return downloadUrlForArchive(archiveName(isProtonOrWine: isProtonOrWine));
+  static const _cpuTypeX64 = 0x01000007;
+  static const _cpuTypeArm64 = 0x0100000c;
+
+  static String downloadUrl({required bool isProtonOrWine, String? gamePath}) {
+    return downloadUrlForArchive(
+      archiveName(isProtonOrWine: isProtonOrWine, gamePath: gamePath),
+    );
   }
 
   static String downloadUrlForArchive(String archiveName) {
@@ -29,7 +35,7 @@ class MelonLoaderPlatform {
     return 'https://github.com/$repository/releases/download/v$version/$archiveName';
   }
 
-  static String archiveName({required bool isProtonOrWine}) {
+  static String archiveName({required bool isProtonOrWine, String? gamePath}) {
     if (isProtonOrWine || Platform.isWindows) {
       return 'MelonLoader.x64.zip';
     }
@@ -37,7 +43,9 @@ class MelonLoaderPlatform {
       return 'MelonLoader.Linux.x64.zip';
     }
     if (Platform.isMacOS) {
-      return macOSArchiveNameForArchitecture(macOSArchitecture());
+      return macOSArchiveNameForArchitecture(
+        macOSArchitecture(gamePath: gamePath),
+      );
     }
     throw UnsupportedError('Unsupported platform for MelonLoader installation');
   }
@@ -54,7 +62,7 @@ class MelonLoaderPlatform {
     return 'MelonLoader.macOS.$normalized.zip';
   }
 
-  static String macOSArchitecture() {
+  static String macOSArchitecture({String? gamePath}) {
     final override = _normalizeMacOSArchitecture(
       Platform.environment['MODLIST_MELONLOADER_MACOS_ARCH'],
     );
@@ -62,10 +70,194 @@ class MelonLoaderPlatform {
       return override;
     }
 
+    if (gamePath != null) {
+      final gameArchitecture = macOSArchitectureForGamePath(gamePath);
+      if (gameArchitecture != null) {
+        return gameArchitecture;
+      }
+    }
+
     if (_isAppleSiliconHost() || ffi.Abi.current() == ffi.Abi.macosArm64) {
       return 'arm64';
     }
     return 'x64';
+  }
+
+  static String? macOSArchitectureForGamePath(String gamePath) {
+    final executablePath = macOSExecutablePathForGamePath(gamePath);
+    if (executablePath == null) {
+      return null;
+    }
+
+    final architectures = machOArchitectures(executablePath);
+    if (architectures.isEmpty) {
+      return null;
+    }
+
+    final isAppleSilicon =
+        _isAppleSiliconHost() || ffi.Abi.current() == ffi.Abi.macosArm64;
+    if (isAppleSilicon && architectures.contains('arm64')) {
+      return 'arm64';
+    }
+    if (architectures.contains('x64')) {
+      return 'x64';
+    }
+    if (architectures.contains('arm64')) {
+      return 'arm64';
+    }
+    return null;
+  }
+
+  static String? macOSExecutablePathForGamePath(String gamePath) {
+    final appDirectories = <Directory>[];
+    final normalizedGamePath = p.normalize(gamePath);
+    final gameEntityType = FileSystemEntity.typeSync(normalizedGamePath);
+
+    if (gameEntityType == FileSystemEntityType.directory &&
+        p.extension(normalizedGamePath).toLowerCase() == '.app') {
+      appDirectories.add(Directory(normalizedGamePath));
+    } else if (gameEntityType == FileSystemEntityType.directory) {
+      try {
+        for (final entity in Directory(normalizedGamePath).listSync()) {
+          if (entity is Directory &&
+              p.extension(entity.path).toLowerCase() == '.app') {
+            appDirectories.add(entity);
+          }
+        }
+      } catch (_) {}
+    }
+
+    for (final appDirectory in appDirectories) {
+      final executableName = _bundleExecutableName(appDirectory.path);
+      if (executableName != null) {
+        final executablePath = p.join(
+          appDirectory.path,
+          'Contents',
+          'MacOS',
+          executableName,
+        );
+        if (File(executablePath).existsSync()) {
+          return executablePath;
+        }
+      }
+
+      final macOSDirectory = Directory(
+        p.join(appDirectory.path, 'Contents', 'MacOS'),
+      );
+      if (!macOSDirectory.existsSync()) {
+        continue;
+      }
+
+      try {
+        for (final entity in macOSDirectory.listSync()) {
+          if (entity is File && machOArchitectures(entity.path).isNotEmpty) {
+            return entity.path;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  static Set<String> machOArchitectures(String executablePath) {
+    try {
+      final bytes = File(executablePath).readAsBytesSync();
+      if (bytes.length < 8) {
+        return const {};
+      }
+
+      final data = ByteData.sublistView(bytes);
+      final magicBE = data.getUint32(0, Endian.big);
+      final magicLE = data.getUint32(0, Endian.little);
+
+      if (magicBE == 0xcafebabe ||
+          magicBE == 0xcafebabf ||
+          magicBE == 0xbebafeca ||
+          magicBE == 0xbfbafeca) {
+        final endian = magicBE == 0xcafebabe || magicBE == 0xcafebabf
+            ? Endian.big
+            : Endian.little;
+        final isFat64 = magicBE == 0xcafebabf || magicBE == 0xbfbafeca;
+        final entrySize = isFat64 ? 32 : 20;
+        final archCount = data.getUint32(4, endian);
+        final architectures = <String>{};
+
+        for (var index = 0; index < archCount; index += 1) {
+          final offset = 8 + index * entrySize;
+          if (offset + 4 > bytes.length) {
+            break;
+          }
+          final architecture = _architectureForCpuType(
+            data.getUint32(offset, endian),
+          );
+          if (architecture != null) {
+            architectures.add(architecture);
+          }
+        }
+
+        return architectures;
+      }
+
+      final endian = switch (magicLE) {
+        0xfeedface || 0xfeedfacf => Endian.little,
+        _ when magicBE == 0xfeedface || magicBE == 0xfeedfacf => Endian.big,
+        _ => null,
+      };
+      if (endian == null) {
+        return const {};
+      }
+
+      final architecture = _architectureForCpuType(data.getUint32(4, endian));
+      return architecture == null ? const {} : {architecture};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  static String? _architectureForCpuType(int cpuType) {
+    return switch (cpuType) {
+      _cpuTypeArm64 => 'arm64',
+      _cpuTypeX64 => 'x64',
+      _ => null,
+    };
+  }
+
+  static String? _bundleExecutableName(String appPath) {
+    final infoPlist = File(p.join(appPath, 'Contents', 'Info.plist'));
+    if (!infoPlist.existsSync()) {
+      return null;
+    }
+
+    try {
+      final text = infoPlist.readAsStringSync();
+      final match = RegExp(
+        r'<key>\s*CFBundleExecutable\s*</key>\s*<string>([^<]+)</string>',
+        dotAll: true,
+      ).firstMatch(text);
+      final executableName = match?.group(1)?.trim();
+      if (executableName != null && executableName.isNotEmpty) {
+        return executableName;
+      }
+    } catch (_) {}
+
+    if (Platform.isMacOS) {
+      try {
+        final result = Process.runSync('/usr/libexec/PlistBuddy', [
+          '-c',
+          'Print CFBundleExecutable',
+          infoPlist.path,
+        ]);
+        if (result.exitCode == 0) {
+          final executableName = result.stdout.toString().trim();
+          if (executableName.isNotEmpty) {
+            return executableName;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return null;
   }
 
   static String? _normalizeMacOSArchitecture(String? architecture) {
@@ -98,7 +290,7 @@ class MelonLoaderPlatform {
     }
   }
 
-  static String setupHelperScript() {
+  static String setupHelperScript({String? macOSArchitecture}) {
     if (Platform.isMacOS) {
       // Steam Launch Options must reference this script by ABSOLUTE path:
       //   "/full/path/setup_helper.sh" %command%
@@ -123,7 +315,8 @@ if [ -d "${1:-}" ] && [ "${1%.app}" != "$1" ]; then
   set -- "$APP/Contents/MacOS/$BIN_NAME" "$@"
 fi
 ''' +
-          (macOSArchitecture() == 'x64'
+          ((macOSArchitecture ?? MelonLoaderPlatform.macOSArchitecture()) ==
+                  'x64'
               ? r'''
 # The installed x64 bootstrap can only inject into the x64 game slice.
 if [ "$(uname -m)" = "arm64" ]; then
@@ -150,14 +343,20 @@ exec "$@"
     String gamePath, {
     required bool isProtonOrWine,
   }) async {
+    final selectedMacOSArchitecture = Platform.isMacOS && !isProtonOrWine
+        ? macOSArchitecture(gamePath: gamePath)
+        : null;
     await DebugLog.info(
       'MelonLoader configure start: gamePath=$gamePath '
-      'platform=${Platform.operatingSystem} protonOrWine=$isProtonOrWine',
+      'platform=${Platform.operatingSystem} protonOrWine=$isProtonOrWine '
+      'macOSArchitecture=${selectedMacOSArchitecture ?? 'n/a'}',
     );
 
     if (!Platform.isWindows && !isProtonOrWine) {
       final setupHelper = File(p.join(gamePath, 'setup_helper.sh'));
-      final scriptContent = setupHelperScript();
+      final scriptContent = setupHelperScript(
+        macOSArchitecture: selectedMacOSArchitecture,
+      );
       await DebugLog.info('Writing setup helper: ${setupHelper.path}');
       await setupHelper.writeAsString('${scriptContent.trim()}\n', flush: true);
     }

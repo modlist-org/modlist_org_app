@@ -166,8 +166,10 @@ class DancingLineGame extends Game {
       'hasWindowsExe=$hasWindowsExe protonOrWine=$isProtonOrWine',
     );
 
-    final downloadUrl =
-        MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
+    final downloadUrl = MelonLoaderPlatform.downloadUrl(
+      isProtonOrWine: isProtonOrWine,
+      gamePath: gamePath,
+    );
 
     final tempDir = await getTemporaryDirectory();
     final tempZipPath = p.join(tempDir.path, 'MelonLoader_dl_temp.zip');

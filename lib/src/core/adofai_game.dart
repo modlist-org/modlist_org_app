@@ -315,7 +315,7 @@ class AdofaiGame extends Game {
       if (!versionFile.parent.existsSync()) {
         await versionFile.parent.create(recursive: true);
       }
-      await versionFile.writeAsString('0.7.3', flush: true);
+      await versionFile.writeAsString(MelonLoaderPlatform.version, flush: true);
       await DebugLog.info('ADOFAI version file written: ${versionFile.path}');
     } catch (e, stackTrace) {
       await DebugLog.error(

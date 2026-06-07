@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ffi' as ffi;
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -8,11 +9,24 @@ import 'debug_log.dart';
 
 class MelonLoaderPlatform {
   static const version = '0.7.3';
-  static const _releaseBase =
-      'https://github.com/LavaGang/MelonLoader/releases/download/v$version';
+  static const _releaseRepository = String.fromEnvironment(
+    'MELONLOADER_RELEASE_REPOSITORY',
+    defaultValue: 'LavaGang/MelonLoader',
+  );
+  static const _macOSReleaseRepository = String.fromEnvironment(
+    'MELONLOADER_MACOS_RELEASE_REPOSITORY',
+    defaultValue: 'kkorenn/MelonLoader',
+  );
 
   static String downloadUrl({required bool isProtonOrWine}) {
-    return '$_releaseBase/${archiveName(isProtonOrWine: isProtonOrWine)}';
+    return downloadUrlForArchive(archiveName(isProtonOrWine: isProtonOrWine));
+  }
+
+  static String downloadUrlForArchive(String archiveName) {
+    final repository = archiveName.startsWith('MelonLoader.macOS.')
+        ? _macOSReleaseRepository
+        : _releaseRepository;
+    return 'https://github.com/$repository/releases/download/v$version/$archiveName';
   }
 
   static String archiveName({required bool isProtonOrWine}) {
@@ -23,11 +37,65 @@ class MelonLoaderPlatform {
       return 'MelonLoader.Linux.x64.zip';
     }
     if (Platform.isMacOS) {
-      // v0.7.3 only ships an x64 macOS archive. The generated launch script
-      // runs the game through Rosetta on Apple Silicon.
-      return 'MelonLoader.macOS.x64.zip';
+      return macOSArchiveNameForArchitecture(macOSArchitecture());
     }
     throw UnsupportedError('Unsupported platform for MelonLoader installation');
+  }
+
+  static String macOSArchiveNameForArchitecture(String architecture) {
+    final normalized = _normalizeMacOSArchitecture(architecture);
+    if (normalized == null) {
+      throw ArgumentError.value(
+        architecture,
+        'architecture',
+        'Expected x64, x86_64, arm64, or aarch64',
+      );
+    }
+    return 'MelonLoader.macOS.$normalized.zip';
+  }
+
+  static String macOSArchitecture() {
+    final override = _normalizeMacOSArchitecture(
+      Platform.environment['MODLIST_MELONLOADER_MACOS_ARCH'],
+    );
+    if (override != null) {
+      return override;
+    }
+
+    if (_isAppleSiliconHost() || ffi.Abi.current() == ffi.Abi.macosArm64) {
+      return 'arm64';
+    }
+    return 'x64';
+  }
+
+  static String? _normalizeMacOSArchitecture(String? architecture) {
+    switch (architecture?.trim().toLowerCase()) {
+      case 'arm64':
+      case 'aarch64':
+        return 'arm64';
+      case 'x64':
+      case 'x86_64':
+      case 'amd64':
+        return 'x64';
+      default:
+        return null;
+    }
+  }
+
+  static bool _isAppleSiliconHost() {
+    if (!Platform.isMacOS) {
+      return false;
+    }
+
+    try {
+      final result = Process.runSync('/usr/sbin/sysctl', [
+        '-in',
+        'hw.optional.arm64',
+      ]);
+      return result.exitCode == 0 && result.stdout.toString().trim() == '1';
+    } catch (_) {
+      return false;
+    }
   }
 
   static String setupHelperScript() {
@@ -54,13 +122,17 @@ if [ -d "${1:-}" ] && [ "${1%.app}" != "$1" ]; then
   BIN_NAME="$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP/Contents/Info.plist" 2>/dev/null)"
   set -- "$APP/Contents/MacOS/$BIN_NAME" "$@"
 fi
-
-# v0.7.3 ships an x86_64 bootstrap only; force the game's x64 slice through
-# Rosetta so the dylib can inject on Apple Silicon.
+''' +
+          (macOSArchitecture() == 'x64'
+              ? r'''
+# The installed x64 bootstrap can only inject into the x64 game slice.
 if [ "$(uname -m)" = "arm64" ]; then
   exec arch -x86_64 "$@"
 fi
 
+'''
+              : '') +
+          r'''
 exec "$@"
 ''';
     }
@@ -115,7 +187,10 @@ exec "$@"
     } else if (Platform.isMacOS) {
       // v0.7.3 ships MelonLoader.Bootstrap.dylib (the old libMelonLoader.dylib
       // no longer exists). Clear its quarantine so dyld can inject it.
-      final bootstrapDylibPath = p.join(gamePath, 'MelonLoader.Bootstrap.dylib');
+      final bootstrapDylibPath = p.join(
+        gamePath,
+        'MelonLoader.Bootstrap.dylib',
+      );
       if (File(bootstrapDylibPath).existsSync()) {
         await _runIgnored('xattr', [
           '-d',

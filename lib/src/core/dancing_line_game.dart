@@ -234,7 +234,7 @@ class DancingLineGame extends Game {
       if (!versionFile.parent.existsSync()) {
         await versionFile.parent.create(recursive: true);
       }
-      await versionFile.writeAsString('0.7.3', flush: true);
+      await versionFile.writeAsString(MelonLoaderPlatform.version, flush: true);
       await DebugLog.info(
         'Dancing Line version file written: ${versionFile.path}',
       );

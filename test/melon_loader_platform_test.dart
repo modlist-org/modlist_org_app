@@ -42,6 +42,19 @@ void main() {
       );
     });
 
+    test(
+      'forces arm64 launch helper for arm64 macOS installs',
+      () {
+        final script = MelonLoaderPlatform.setupHelperScript(
+          macOSArchitecture: 'arm64',
+        );
+
+        expect(script, contains(r'exec arch -arm64 "$@"'));
+        expect(script, isNot(contains(r'exec arch -x86_64 "$@"')));
+      },
+      skip: !Platform.isMacOS,
+    );
+
     test('detects x64-only macOS game executables', () async {
       final tempDir = await Directory.systemTemp.createTemp(
         'modlist_macho_x64_',

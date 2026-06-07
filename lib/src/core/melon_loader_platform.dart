@@ -70,17 +70,12 @@ class MelonLoaderPlatform {
       return override;
     }
 
-    if (gamePath != null) {
-      final gameArchitecture = macOSArchitectureForGamePath(gamePath);
-      if (gameArchitecture != null) {
-        return gameArchitecture;
-      }
-    }
+    final hostArchitecture = _macOSHostArchitecture();
+    final gameArchitecture = gamePath == null
+        ? null
+        : macOSArchitectureForGamePath(gamePath);
 
-    if (_isAppleSiliconHost() || ffi.Abi.current() == ffi.Abi.macosArm64) {
-      return 'arm64';
-    }
-    return 'x64';
+    return hostArchitecture ?? gameArchitecture ?? 'x64';
   }
 
   static String? macOSArchitectureForGamePath(String gamePath) {
@@ -290,6 +285,16 @@ class MelonLoaderPlatform {
     }
   }
 
+  static String? _macOSHostArchitecture() {
+    if (_isAppleSiliconHost() || ffi.Abi.current() == ffi.Abi.macosArm64) {
+      return 'arm64';
+    }
+    if (Platform.isMacOS || ffi.Abi.current() == ffi.Abi.macosX64) {
+      return 'x64';
+    }
+    return null;
+  }
+
   static String setupHelperScript({String? macOSArchitecture}) {
     if (Platform.isMacOS) {
       // Steam Launch Options must reference this script by ABSOLUTE path:
@@ -355,10 +360,14 @@ fi
     final selectedMacOSArchitecture = Platform.isMacOS && !isProtonOrWine
         ? macOSArchitecture(gamePath: gamePath)
         : null;
+    final detectedGameMacOSArchitecture = Platform.isMacOS && !isProtonOrWine
+        ? macOSArchitectureForGamePath(gamePath)
+        : null;
     await DebugLog.info(
       'MelonLoader configure start: gamePath=$gamePath '
       'platform=${Platform.operatingSystem} protonOrWine=$isProtonOrWine '
-      'macOSArchitecture=${selectedMacOSArchitecture ?? 'n/a'}',
+      'macOSArchitecture=${selectedMacOSArchitecture ?? 'n/a'} '
+      'gameMacOSArchitecture=${detectedGameMacOSArchitecture ?? 'unknown'}',
     );
 
     if (!Platform.isWindows && !isProtonOrWine) {

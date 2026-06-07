@@ -315,16 +315,9 @@ if [ -d "${1:-}" ] && [ "${1%.app}" != "$1" ]; then
   set -- "$APP/Contents/MacOS/$BIN_NAME" "$@"
 fi
 ''' +
-          ((macOSArchitecture ?? MelonLoaderPlatform.macOSArchitecture()) ==
-                  'x64'
-              ? r'''
-# The installed x64 bootstrap can only inject into the x64 game slice.
-if [ "$(uname -m)" = "arm64" ]; then
-  exec arch -x86_64 "$@"
-fi
-
-'''
-              : '') +
+          _macOSLaunchArchitectureScript(
+            macOSArchitecture ?? MelonLoaderPlatform.macOSArchitecture(),
+          ) +
           r'''
 exec "$@"
 ''';
@@ -336,6 +329,22 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
 export LD_PRELOAD="$DIR/libMelonLoader.so${LD_PRELOAD:+:$LD_PRELOAD}"
 exec "$@"
+''';
+  }
+
+  static String _macOSLaunchArchitectureScript(String architecture) {
+    final normalized = _normalizeMacOSArchitecture(architecture);
+    if (normalized == null) {
+      return '';
+    }
+
+    final archFlag = normalized == 'x64' ? 'x86_64' : 'arm64';
+    return '''
+# The installed $normalized bootstrap can only inject into the $archFlag game slice.
+if [ "\$(/usr/sbin/sysctl -in hw.optional.arm64 2>/dev/null)" = "1" ]; then
+  exec arch -$archFlag "\$@"
+fi
+
 ''';
   }
 

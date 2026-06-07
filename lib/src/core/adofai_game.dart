@@ -242,8 +242,10 @@ class AdofaiGame extends Game {
     );
 
     // 0.7.3 버전 다운로드 주소 정의
-    final downloadUrl =
-        MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
+    final downloadUrl = MelonLoaderPlatform.downloadUrl(
+      isProtonOrWine: isProtonOrWine,
+      gamePath: gamePath,
+    );
 
     // 임시 파일 다운로드 경로 설정
     final tempDir = await getTemporaryDirectory();
@@ -315,7 +317,7 @@ class AdofaiGame extends Game {
       if (!versionFile.parent.existsSync()) {
         await versionFile.parent.create(recursive: true);
       }
-      await versionFile.writeAsString('0.7.3', flush: true);
+      await versionFile.writeAsString(MelonLoaderPlatform.version, flush: true);
       await DebugLog.info('ADOFAI version file written: ${versionFile.path}');
     } catch (e, stackTrace) {
       await DebugLog.error(

@@ -103,7 +103,7 @@ class Localization {
         'macOS 네이티브 실행 시 아래 스팀 시작 옵션을 입력하세요 — 복사 버튼을 사용하세요'
         '(Steam은 macOS에서 상대 경로를 인식하지 못하므로 반드시 절대 경로여야 합니다):\n'
         '"<게임 폴더>/setup_helper.sh" %command%\n\n'
-        'Apple Silicon에서는 MelonLoader v0.7.3 macOS 배포본이 x64 전용이므로 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
+        'Modlist는 현재 Mac에 맞는 MelonLoader macOS 배포본을 설치합니다. Apple Silicon에서 x64 배포본을 설치한 경우 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
@@ -115,7 +115,7 @@ class Localization {
         'macOS 네이티브 실행 시 아래 스팀 시작 옵션을 입력하세요 — 복사 버튼을 사용하세요'
         '(Steam은 macOS에서 상대 경로를 인식하지 못하므로 반드시 절대 경로여야 합니다):\n'
         '"<게임 폴더>/setup_helper.sh" %command%\n\n'
-        'Apple Silicon에서는 MelonLoader v0.7.3 macOS 배포본이 x64 전용이므로 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
+        'Modlist는 현재 Mac에 맞는 MelonLoader macOS 배포본을 설치합니다. Apple Silicon에서 x64 배포본을 설치한 경우 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
@@ -125,7 +125,7 @@ class Localization {
         'macOS 네이티브 실행 시 아래 스팀 시작 옵션을 입력하세요 — 복사 버튼을 사용하세요'
         '(Steam은 macOS에서 상대 경로를 인식하지 못하므로 반드시 절대 경로여야 합니다):\n'
         '"<게임 폴더>/setup_helper.sh" %command%\n\n'
-        'Apple Silicon에서는 MelonLoader v0.7.3 macOS 배포본이 x64 전용이므로 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
+        'Modlist는 현재 Mac에 맞는 MelonLoader macOS 배포본을 설치합니다. Apple Silicon에서 x64 배포본을 설치한 경우 이 스크립트가 Rosetta로 게임을 실행합니다.\n\n'
         '* 게이트키퍼(보안) 경고 발생 시 터미널을 열고 게임 폴더로 이동하여 아래 명령어를 입력해 주세요:\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
 
@@ -381,7 +381,7 @@ class Localization {
         'For native macOS, set the Steam launch option below — use the Copy button '
         '(the path must be absolute; Steam on macOS ignores relative paths):\n'
         '"<game folder>/setup_helper.sh" %command%\n\n'
-        'On Apple Silicon, this script launches the game through Rosetta because MelonLoader v0.7.3 ships macOS x64 only.\n\n'
+        'Modlist installs the MelonLoader macOS archive that matches this Mac. If an x64 archive is installed on Apple Silicon, this script launches the game through Rosetta.\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
@@ -393,7 +393,7 @@ class Localization {
         'For native macOS, set the Steam launch option below — use the Copy button '
         '(the path must be absolute; Steam on macOS ignores relative paths):\n'
         '"<game folder>/setup_helper.sh" %command%\n\n'
-        'On Apple Silicon, this script launches the game through Rosetta because MelonLoader v0.7.3 ships macOS x64 only.\n\n'
+        'Modlist installs the MelonLoader macOS archive that matches this Mac. If an x64 archive is installed on Apple Silicon, this script launches the game through Rosetta.\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
@@ -403,7 +403,7 @@ class Localization {
         'For native macOS, set the Steam launch option below — use the Copy button '
         '(the path must be absolute; Steam on macOS ignores relative paths):\n'
         '"<game folder>/setup_helper.sh" %command%\n\n'
-        'On Apple Silicon, this script launches the game through Rosetta because MelonLoader v0.7.3 ships macOS x64 only.\n\n'
+        'Modlist installs the MelonLoader macOS archive that matches this Mac. If an x64 archive is installed on Apple Silicon, this script launches the game through Rosetta.\n\n'
         '* If a Gatekeeper security warning appears, open Terminal, navigate to the game folder, and run:\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
 
@@ -599,7 +599,7 @@ class Localization {
         '使用 macOS 原生版本时，请设置以下 Steam 启动选项 —— 请使用复制按钮'
         '（必须为绝对路径，Steam 在 macOS 上不解析相对路径）：\n'
         '"<游戏目录>/setup_helper.sh" %command%\n\n'
-        '在 Apple Silicon 上，由于 MelonLoader v0.7.3 的 macOS 包仅提供 x64，此脚本会通过 Rosetta 启动游戏。\n\n'
+        'Modlist 会安装与当前 Mac 匹配的 MelonLoader macOS 包。如果在 Apple Silicon 上安装的是 x64 包，此脚本会通过 Rosetta 启动游戏。\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_rd_linux':
@@ -611,7 +611,7 @@ class Localization {
         '使用 macOS 原生版本时，请设置以下 Steam 启动选项 —— 请使用复制按钮'
         '（必须为绝对路径，Steam 在 macOS 上不解析相对路径）：\n'
         '"<游戏目录>/setup_helper.sh" %command%\n\n'
-        '在 Apple Silicon 上，由于 MelonLoader v0.7.3 的 macOS 包仅提供 x64，此脚本会通过 Rosetta 启动游戏。\n\n'
+        'Modlist 会安装与当前 Mac 匹配的 MelonLoader macOS 包。如果在 Apple Silicon 上安装的是 x64 包，此脚本会通过 Rosetta 启动游戏。\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
       'installed_steamlaunchoptionsguide_dl_linux':
@@ -621,7 +621,7 @@ class Localization {
         '使用 macOS 原生版本时，请设置以下 Steam 启动选项 —— 请使用复制按钮'
         '（必须为绝对路径，Steam 在 macOS 上不解析相对路径）：\n'
         '"<游戏目录>/setup_helper.sh" %command%\n\n'
-        '在 Apple Silicon 上，由于 MelonLoader v0.7.3 的 macOS 包仅提供 x64，此脚本会通过 Rosetta 启动游戏。\n\n'
+        'Modlist 会安装与当前 Mac 匹配的 MelonLoader macOS 包。如果在 Apple Silicon 上安装的是 x64 包，此脚本会通过 Rosetta 启动游戏。\n\n'
         '* 如果出现 Gatekeeper（安全）警告，请打开终端，进入游戏目录后执行以下命令：\n'
         'xattr -dr com.apple.quarantine setup_helper.sh MelonLoader.Bootstrap.dylib MelonLoader/',
 

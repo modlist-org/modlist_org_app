@@ -166,8 +166,10 @@ class RhythmDoctorGame extends Game {
       'hasWindowsExe=$hasWindowsExe protonOrWine=$isProtonOrWine',
     );
 
-    final downloadUrl =
-        MelonLoaderPlatform.downloadUrl(isProtonOrWine: isProtonOrWine);
+    final downloadUrl = MelonLoaderPlatform.downloadUrl(
+      isProtonOrWine: isProtonOrWine,
+      gamePath: gamePath,
+    );
 
     final tempDir = await getTemporaryDirectory();
     final tempZipPath = p.join(tempDir.path, 'MelonLoader_rd_temp.zip');
@@ -234,7 +236,7 @@ class RhythmDoctorGame extends Game {
       if (!versionFile.parent.existsSync()) {
         await versionFile.parent.create(recursive: true);
       }
-      await versionFile.writeAsString('0.7.3', flush: true);
+      await versionFile.writeAsString(MelonLoaderPlatform.version, flush: true);
       await DebugLog.info(
         'Rhythm Doctor version file written: ${versionFile.path}',
       );

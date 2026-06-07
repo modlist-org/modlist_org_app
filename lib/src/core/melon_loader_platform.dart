@@ -303,14 +303,6 @@ class MelonLoaderPlatform {
       return r'''
 #!/bin/bash
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BOOTSTRAP="$DIR/MelonLoader.Bootstrap.dylib"
-
-export DYLD_LIBRARY_PATH="$DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
-if [ -n "$STEAM_DYLD_INSERT_LIBRARIES" ]; then
-  export DYLD_INSERT_LIBRARIES="$BOOTSTRAP:$STEAM_DYLD_INSERT_LIBRARIES"
-else
-  export DYLD_INSERT_LIBRARIES="$BOOTSTRAP${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
-fi
 
 # Steam passes the .app bundle as %command%. DYLD_INSERT_LIBRARIES is dropped
 # when LaunchServices opens a .app, so exec the inner Mach-O binary directly.
@@ -324,6 +316,15 @@ fi
             macOSArchitecture ?? MelonLoaderPlatform.macOSArchitecture(),
           ) +
           r'''
+BOOTSTRAP="$DIR/MelonLoader.Bootstrap.dylib"
+
+export DYLD_LIBRARY_PATH="$DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+if [ -n "$STEAM_DYLD_INSERT_LIBRARIES" ]; then
+  export DYLD_INSERT_LIBRARIES="$BOOTSTRAP:$STEAM_DYLD_INSERT_LIBRARIES"
+else
+  export DYLD_INSERT_LIBRARIES="$BOOTSTRAP${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+fi
+
 exec "$@"
 ''';
     }
@@ -346,8 +347,11 @@ exec "$@"
     final archFlag = normalized == 'x64' ? 'x86_64' : 'arm64';
     return '''
 # The installed $normalized bootstrap can only inject into the $archFlag game slice.
-if [ "\$(/usr/sbin/sysctl -in hw.optional.arm64 2>/dev/null)" = "1" ]; then
-  exec arch -$archFlag "\$@"
+# Re-run this helper under that architecture before setting DYLD_INSERT_LIBRARIES,
+# otherwise dyld may try to inject the bootstrap into the wrong-architecture shell.
+if [ "\$MELON_ARCH_SET" != "1" ] && [ "\$(/usr/sbin/sysctl -in hw.optional.arm64 2>/dev/null)" = "1" ]; then
+  export MELON_ARCH_SET=1
+  exec arch -$archFlag /bin/bash "\$0" "\$@"
 fi
 
 ''';

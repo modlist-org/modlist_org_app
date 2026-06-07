@@ -49,8 +49,32 @@ void main() {
           macOSArchitecture: 'arm64',
         );
 
-        expect(script, contains(r'exec arch -arm64 "$@"'));
+        expect(script, contains(r'exec arch -arm64 /bin/bash "$0" "$@"'));
         expect(script, isNot(contains(r'exec arch -x86_64 "$@"')));
+        expect(
+          script.indexOf(r'exec arch -arm64 /bin/bash "$0" "$@"'),
+          lessThan(script.indexOf('export DYLD_LIBRARY_PATH')),
+        );
+      },
+      skip: !Platform.isMacOS,
+    );
+
+    test(
+      'forces x64 launch helper before setting DYLD for x64 macOS installs',
+      () {
+        final script = MelonLoaderPlatform.setupHelperScript(
+          macOSArchitecture: 'x64',
+        );
+
+        expect(script, contains(r'exec arch -x86_64 /bin/bash "$0" "$@"'));
+        expect(
+          script,
+          isNot(contains(r'exec arch -arm64 /bin/bash "$0" "$@"')),
+        );
+        expect(
+          script.indexOf(r'exec arch -x86_64 /bin/bash "$0" "$@"'),
+          lessThan(script.indexOf('export DYLD_LIBRARY_PATH')),
+        );
       },
       skip: !Platform.isMacOS,
     );

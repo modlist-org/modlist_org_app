@@ -506,6 +506,38 @@ class InstallerState extends ChangeNotifier {
     );
   }
 
+  Future<void> _installModWithDependencies(ModItem mod, {String? version, bool isBeta = false, Set<String>? visited}) async {
+    visited ??= {};
+    if (visited.contains(mod.slug)) return;
+    visited.add(mod.slug);
+
+    if (mod.dependencySlugs.isNotEmpty) {
+      for (final depSlug in mod.dependencySlugs) {
+        final bool isInstalled = _installedMods.any((m) {
+          final cleanInstalled = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
+          final cleanDep = depSlug.startsWith('umm-') ? depSlug.substring(4) : depSlug;
+          return cleanInstalled == cleanDep || game.isModMatched(m.slug, depSlug);
+        });
+
+        if (!isInstalled) {
+          _statusMessage = t('status_mod_resolving_dependency', args: {'dependency': depSlug});
+          notifyListeners();
+
+          try {
+            final result = await apiService.fetchModDetails(depSlug);
+            final depMod = result['mod'] as ModItem;
+            await _installModWithDependencies(depMod, visited: visited);
+          } catch (e) {
+            await DebugLog.error('Failed to install dependency: $depSlug', error: e);
+            throw Exception('Failed to install dependency $depSlug: $e');
+          }
+        }
+      }
+    }
+
+    await _installModInternal(mod, version: version, isBeta: isBeta);
+  }
+
   // 모드 설치
   Future<void> installMod(ModItem mod, {String? version, bool isBeta = false}) async {
     if (_isProcessing || !_isValidPath) return;
@@ -516,7 +548,7 @@ class InstallerState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _installModInternal(mod, version: version, isBeta: isBeta);
+      await _installModWithDependencies(mod, version: version, isBeta: isBeta);
       _statusMessage = t('status_mod_install_success', args: {'name': mod.name});
     } catch (e) {
       _statusMessage = t('status_mod_install_failed', args: {'name': mod.name, 'error': describeAppError(e)});

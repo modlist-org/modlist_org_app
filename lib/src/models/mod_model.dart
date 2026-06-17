@@ -76,6 +76,7 @@ class ModItem {
   final ModVersion? latestBetaVersion;
   final String? sourceUrl;
   final String? communityUrl;
+  final List<String> dependencySlugs;
 
   ModItem({
     required this.id,
@@ -95,11 +96,13 @@ class ModItem {
     this.latestBetaVersion,
     this.sourceUrl,
     this.communityUrl,
+    required this.dependencySlugs,
   });
 
   ModItem copyWith({
     ModVersion? latestVersion,
     ModVersion? latestBetaVersion,
+    List<String>? dependencySlugs,
   }) {
     return ModItem(
       id: id,
@@ -119,6 +122,7 @@ class ModItem {
       latestBetaVersion: latestBetaVersion ?? this.latestBetaVersion,
       sourceUrl: sourceUrl,
       communityUrl: communityUrl,
+      dependencySlugs: dependencySlugs ?? this.dependencySlugs,
     );
   }
 
@@ -139,6 +143,14 @@ class ModItem {
     if (json['versions'] != null) {
       versionList = (json['versions'] as List)
           .map((v) => ModVersion.fromJson(v))
+          .toList();
+    }
+
+    var depSlugs = <String>[];
+    if (json['dependencies'] != null) {
+      depSlugs = (json['dependencies'] as List)
+          .map((d) => d is String ? d : (d['slug'] as String? ?? ''))
+          .where((s) => s.isNotEmpty)
           .toList();
     }
 
@@ -164,6 +176,7 @@ class ModItem {
           : null,
       sourceUrl: json['sourceUrl'],
       communityUrl: json['communityUrl'],
+      dependencySlugs: depSlugs,
     );
   }
 }

@@ -852,21 +852,29 @@ class _MainLayoutState extends State<MainLayout> {
                 style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, null),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(
-                    _installerState.t('preset_sync_saves_no'),
-                    style: const TextStyle(color: Color(0xFF919AFF)),
-                  ),
-                ),
-                UIButton(
-                  label: _installerState.t('preset_sync_saves_yes'),
-                  fontSize: 13.0,
-                  onClick: () => Navigator.pop(context, true),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, null),
+                      child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(
+                        _installerState.t('preset_sync_saves_no'),
+                        style: const TextStyle(color: Color(0xFF919AFF)),
+                      ),
+                    ),
+                    UIButton(
+                      label: _installerState.t('preset_sync_saves_yes'),
+                      fontSize: 13.0,
+                      onClick: () => Navigator.pop(context, true),
+                    ),
+                  ],
                 ),
               ],
             ),

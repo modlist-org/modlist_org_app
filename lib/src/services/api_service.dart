@@ -201,7 +201,7 @@ class ApiService {
         'name': name,
         'game': game,
         'mods': mods,
-        if (fileKey != null) 'fileKey': fileKey,
+        'fileKey': ?fileKey,
       }),
     );
 

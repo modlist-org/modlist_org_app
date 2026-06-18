@@ -837,6 +837,7 @@ class InstallerState extends ChangeNotifier {
     } finally {
       _isProcessing = false;
       await refreshCloudSaves();
+      await refreshMyPresets();
     }
   }
 }

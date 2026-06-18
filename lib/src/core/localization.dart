@@ -273,6 +273,10 @@ class Localization {
       'cloud_presets_copy_link': '링크 복사',
       'cloud_presets_delete_confirm': '정말 이 프리셋을 삭제하시겠습니까?',
       'btn_cancel': '취소',
+      'backup_badge_sharing': '프리셋 공유 중',
+      'backup_delete_warning_normal': '정말 이 클라우드 백업을 삭제하시겠습니까?',
+      'backup_delete_warning_attached': '이 백업은 현재 공유 중인 프리셋에 복사되어 사용 중입니다. 백업을 삭제하더라도 공유된 프리셋의 세이브 파일은 안전하게 유지됩니다.\n\n정말 이 클라우드 백업을 삭제하시겠습니까?',
+      'btn_delete_confirm': '삭제하기',
     },
     'en-US': {
       // Sidebar
@@ -555,6 +559,10 @@ class Localization {
       'cloud_presets_copy_link': 'Copy Link',
       'cloud_presets_delete_confirm': 'Are you sure you want to delete this preset?',
       'btn_cancel': 'Cancel',
+      'backup_badge_sharing': 'Sharing in Preset',
+      'backup_delete_warning_normal': 'Are you sure you want to delete this cloud backup?',
+      'backup_delete_warning_attached': 'This backup is copied and used in a shared preset. Deleting it will not affect the shared preset\'s copy of the saves.\n\nAre you sure you want to delete this cloud backup?',
+      'btn_delete_confirm': 'Delete',
     },
     'zh-CN': {
       // Sidebar
@@ -830,6 +838,10 @@ class Localization {
       'cloud_presets_copy_link': '复制链接',
       'cloud_presets_delete_confirm': '您确定要删除此预设吗？',
       'btn_cancel': '取消',
+      'backup_badge_sharing': '预设分享中',
+      'backup_delete_warning_normal': '您确定要删除此云端备份吗？',
+      'backup_delete_warning_attached': '此备份已复制并在共享预设中使用。删除它不会影响共享预设中的存档副本。\n\n您确定要删除此云端备份吗？',
+      'btn_delete_confirm': '删除',
     },
   };
 

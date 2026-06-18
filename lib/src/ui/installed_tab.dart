@@ -58,13 +58,69 @@ class _InstalledTabState extends State<InstalledTab> {
       final gameLabel = widget.state.game.name;
       final presetName = 'Preset for $gameLabel (${DateTime.now().toLocal().toString().split('.').first})';
 
+      // 1. Check if user wants to attach latest cloud backup (optional)
+      final backups = widget.state.cloudSaves.where((s) => s['game'] == widget.state.game.id).toList();
+      String? attachedFileKey;
+
+      if (backups.isNotEmpty) {
+        backups.sort((a, b) {
+          final aDate = DateTime.tryParse(a['updatedAt'] ?? '') ?? DateTime(0);
+          final bDate = DateTime.tryParse(b['updatedAt'] ?? '') ?? DateTime(0);
+          return bDate.compareTo(aDate);
+        });
+        final latestBackup = backups.first;
+        final fileKey = latestBackup['fileKey'] as String;
+
+        if (mounted) {
+          final attachChoice = await showDialog<bool?>(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1C28),
+              title: Text(
+                widget.state.t('preset_attach_saves_title'),
+                style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
+              ),
+              content: Text(
+                widget.state.t('preset_attach_saves_body'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(
+                    widget.state.t('preset_attach_saves_no'),
+                    style: const TextStyle(color: Color(0xFF919AFF)),
+                  ),
+                ),
+                UIButton(
+                  label: widget.state.t('preset_attach_saves_yes'),
+                  fontSize: 13.0,
+                  onClick: () => Navigator.pop(context, true),
+                ),
+              ],
+            ),
+          );
+
+          if (attachChoice == null) return; // Cancelled preset sharing
+          if (attachChoice == true) {
+            attachedFileKey = fileKey;
+          }
+        }
+      }
+
       final res = await widget.state.apiService.createPreset(
         name: presetName,
         game: widget.state.game.id,
         mods: modsData,
+        fileKey: attachedFileKey,
       );
 
       if (res['success'] == true) {
+        widget.state.refreshMyPresets(); // Refresh presets list
         final shareUrl = res['shareUrl'] as String;
         Clipboard.setData(ClipboardData(text: shareUrl));
         

@@ -55,6 +55,9 @@ class InstallerState extends ChangeNotifier {
   List<dynamic> _cloudSaves = [];
   List<dynamic> get cloudSaves => _cloudSaves;
 
+  List<dynamic> _myPresets = [];
+  List<dynamic> get myPresets => _myPresets;
+
   int _cloudUsedBytes = 0;
   int get cloudUsedBytes => _cloudUsedBytes;
 
@@ -116,8 +119,9 @@ class InstallerState extends ChangeNotifier {
     _integrationToken = prefs.getString('modlist_integration_token');
     if (_integrationToken != null && _integrationToken!.isNotEmpty) {
       await apiService.setIntegrationToken(_integrationToken!);
-      // Refresh cloud saves in background
+      // Refresh cloud saves and presets in background
       refreshCloudSaves();
+      refreshMyPresets();
     }
 
     await refreshStatus();
@@ -692,11 +696,13 @@ class InstallerState extends ChangeNotifier {
       await prefs.remove('modlist_integration_token');
       await apiService.setIntegrationToken('');
       _cloudSaves = [];
+      _myPresets = [];
       _cloudUsedBytes = 0;
     } else {
       await prefs.setString('modlist_integration_token', _integrationToken!);
       await apiService.setIntegrationToken(_integrationToken!);
       await refreshCloudSaves();
+      await refreshMyPresets();
     }
     notifyListeners();
   }
@@ -714,6 +720,34 @@ class InstallerState extends ChangeNotifier {
       debugPrint('Failed to refresh cloud saves: $e');
     }
     notifyListeners();
+  }
+
+  Future<void> refreshMyPresets() async {
+    if (_integrationToken == null || _integrationToken!.isEmpty) return;
+    try {
+      final res = await apiService.fetchMyPresets();
+      if (res['success'] == true) {
+        _myPresets = res['presets'] ?? [];
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh my presets: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> deletePreset(String presetId) async {
+    if (_integrationToken == null || _integrationToken!.isEmpty) return;
+    try {
+      final res = await apiService.deletePreset(presetId);
+      if (res['success'] == true) {
+        _myPresets = _myPresets.where((p) => p['id'] != presetId).toList();
+      }
+    } catch (e) {
+      debugPrint('Failed to delete preset: $e');
+      rethrow;
+    } finally {
+      notifyListeners();
+    }
   }
 
   Future<void> backupCloudSave() async {
@@ -749,6 +783,7 @@ class InstallerState extends ChangeNotifier {
       }
     } catch (e) {
       _statusMessage = t('status_cloud_backup_failed', args: {'error': e.toString()});
+      rethrow;
     } finally {
       _isProcessing = false;
       await refreshCloudSaves();
@@ -779,6 +814,7 @@ class InstallerState extends ChangeNotifier {
       _statusMessage = t('status_cloud_restore_success');
     } catch (e) {
       _statusMessage = t('status_cloud_restore_failed', args: {'error': e.toString()});
+      rethrow;
     } finally {
       _isProcessing = false;
       notifyListeners();
@@ -797,6 +833,7 @@ class InstallerState extends ChangeNotifier {
       _statusMessage = t('status_cloud_delete_success');
     } catch (e) {
       _statusMessage = t('status_cloud_delete_failed', args: {'error': e.toString()});
+      rethrow;
     } finally {
       _isProcessing = false;
       await refreshCloudSaves();

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/installer_state.dart';
 
@@ -12,6 +13,24 @@ class CloudSaveTab extends StatefulWidget {
 }
 
 class _CloudSaveTabState extends State<CloudSaveTab> {
+  @override
+  void initState() {
+    super.initState();
+    widget.state.addListener(_onStateChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.state.removeListener(_onStateChanged);
+    super.dispose();
+  }
+
+  void _onStateChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   Future<void> _openProfileLink() async {
     final String url = '${widget.state.apiUrl}/profile';
     try {
@@ -187,7 +206,41 @@ class _CloudSaveTabState extends State<CloudSaveTab> {
                           fontSize: 14.0,
                           blocked: widget.state.isProcessing,
                           onClick: () async {
-                            await widget.state.backupCloudSave();
+                            try {
+                              await widget.state.backupCloudSave();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(widget.state.t('status_cloud_backup_success')),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: const Color(0xFF1E1C28),
+                                    title: Text(
+                                      widget.state.t('status_cloud_backup_failed', args: {'error': ''}).replaceAll(': ', ''),
+                                      style: const TextStyle(color: Colors.redAccent, fontSize: 16.0, fontWeight: FontWeight.bold),
+                                    ),
+                                    content: Text(
+                                      e.toString(),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 14.0),
+                                    ),
+                                    actions: [
+                                      UIButton(
+                                        label: 'OK',
+                                        fontSize: 14.0,
+                                        onClick: () => Navigator.pop(context),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            }
                           },
                         ),
                       ),
@@ -196,9 +249,9 @@ class _CloudSaveTabState extends State<CloudSaveTab> {
                   const SizedBox(height: 24.0),
 
                   // Backups List
-                  const Text(
-                    'Cloud Backups',
-                    style: TextStyle(
+                  Text(
+                    widget.state.t('cloud_backups_title'),
+                    style: const TextStyle(
                       fontSize: 14.0,
                       fontWeight: FontWeight.bold,
                       color: Colors.white70,
@@ -206,6 +259,20 @@ class _CloudSaveTabState extends State<CloudSaveTab> {
                   ),
                   const SizedBox(height: 8.0),
                   _buildBackupsList(),
+
+                  const SizedBox(height: 24.0),
+
+                  // Shared Presets List
+                  Text(
+                    widget.state.t('cloud_presets_title'),
+                    style: const TextStyle(
+                      fontSize: 14.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                  _buildPresetsList(),
 
                   const SizedBox(height: 24.0),
                   const Divider(color: Colors.white10),
@@ -371,14 +438,265 @@ class _CloudSaveTabState extends State<CloudSaveTab> {
                     tooltip: widget.state.t('settings_cloud_btn_restore'),
                     icon: const Icon(Icons.settings_backup_restore, color: Colors.greenAccent, size: 20.0),
                     onPressed: widget.state.isProcessing ? null : () async {
-                      await widget.state.restoreCloudSave(fileKey);
+                      try {
+                        await widget.state.restoreCloudSave(fileKey);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(widget.state.t('status_cloud_restore_success')),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: const Color(0xFF1E1C28),
+                              title: Text(
+                                widget.state.t('status_cloud_restore_failed', args: {'error': ''}).replaceAll(': ', ''),
+                                style: const TextStyle(color: Colors.redAccent, fontSize: 16.0, fontWeight: FontWeight.bold),
+                              ),
+                              content: Text(
+                                e.toString(),
+                                style: const TextStyle(color: Colors.white70, fontSize: 14.0),
+                              ),
+                              actions: [
+                                UIButton(
+                                  label: 'OK',
+                                  fontSize: 14.0,
+                                  onClick: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                   IconButton(
                     tooltip: widget.state.t('settings_cloud_btn_delete'),
                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20.0),
                     onPressed: widget.state.isProcessing ? null : () async {
-                      await widget.state.deleteCloudSave(fileKey);
+                      final confirmDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: const Color(0xFF1E1C28),
+                          title: Text(widget.state.t('settings_cloud_btn_delete'), style: const TextStyle(color: Colors.white)),
+                          content: const Text('Are you sure you want to delete this cloud backup?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('No', style: TextStyle(color: Colors.white38)),
+                            ),
+                            UIButton(
+                              label: 'Yes, Delete',
+                              fontSize: 14.0,
+                              onClick: () => Navigator.pop(context, true),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmDelete != true) return;
+                      try {
+                        await widget.state.deleteCloudSave(fileKey);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(widget.state.t('status_cloud_delete_success')),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: const Color(0xFF1E1C28),
+                              title: Text(
+                                widget.state.t('status_cloud_delete_failed', args: {'error': ''}).replaceAll(': ', ''),
+                                style: const TextStyle(color: Colors.redAccent, fontSize: 16.0, fontWeight: FontWeight.bold),
+                              ),
+                              content: Text(
+                                e.toString(),
+                                style: const TextStyle(color: Colors.white70, fontSize: 14.0),
+                              ),
+                              actions: [
+                                UIButton(
+                                  label: 'OK',
+                                  fontSize: 14.0,
+                                  onClick: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPresetsList() {
+    final presets = widget.state.myPresets.where((p) => p['game'] == widget.state.game.id).toList();
+    if (presets.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Text(
+          widget.state.t('cloud_presets_empty'),
+          style: const TextStyle(color: Colors.white30, fontSize: 13.0, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
+    return Column(
+      children: presets.map<Widget>((preset) {
+        final presetId = preset['id'] as String;
+        final name = preset['name'] as String? ?? 'Shared Preset';
+        final modsCount = preset['modsCount'] as int? ?? 0;
+        final hasAttachedSaves = preset['fileKey'] != null;
+        
+        final updatedAtStr = preset['createdAt'] as String? ?? '';
+        String formattedDate = '';
+        if (updatedAtStr.isNotEmpty) {
+          try {
+            final date = DateTime.parse(updatedAtStr).toLocal();
+            formattedDate = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          } catch (_) {}
+        }
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 6.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1C28),
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.04),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.share_outlined, color: Color(0xFF919AFF), size: 20.0),
+              const SizedBox(width: 12.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13.0, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasAttachedSaves) ...[
+                          const SizedBox(width: 8.0),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
+                            child: const Text(
+                              'Save Attached',
+                              style: TextStyle(color: Colors.orange, fontSize: 10.0, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2.0),
+                    Text(
+                      'Mods: $modsCount | $formattedDate',
+                      style: const TextStyle(color: Colors.white38, fontSize: 11.0),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: widget.state.t('cloud_presets_copy_link'),
+                    icon: const Icon(Icons.copy, color: Color(0xFF919AFF), size: 18.0),
+                    onPressed: () {
+                      final shareUrl = '${widget.state.apiUrl}/presets/$presetId';
+                      Clipboard.setData(ClipboardData(text: shareUrl));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(widget.state.t('settings_preset_created_body'))),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    tooltip: widget.state.t('settings_cloud_btn_delete'),
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20.0),
+                    onPressed: widget.state.isProcessing ? null : () async {
+                      final confirmDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: const Color(0xFF1E1C28),
+                          title: Text(widget.state.t('settings_cloud_btn_delete'), style: const TextStyle(color: Colors.white)),
+                          content: Text(widget.state.t('cloud_presets_delete_confirm')),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('No', style: TextStyle(color: Colors.white38)),
+                            ),
+                            UIButton(
+                              label: 'Yes, Delete',
+                              fontSize: 14.0,
+                              onClick: () => Navigator.pop(context, true),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmDelete != true) return;
+                      try {
+                        await widget.state.deletePreset(presetId);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Preset deleted successfully.'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: const Color(0xFF1E1C28),
+                              title: const Text(
+                                'Delete Failed',
+                                style: TextStyle(color: Colors.redAccent, fontSize: 16.0, fontWeight: FontWeight.bold),
+                              ),
+                              content: Text(
+                                e.toString(),
+                                style: const TextStyle(color: Colors.white70, fontSize: 14.0),
+                              ),
+                              actions: [
+                                UIButton(
+                                  label: 'OK',
+                                  fontSize: 14.0,
+                                  onClick: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                 ],

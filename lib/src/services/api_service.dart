@@ -182,6 +182,7 @@ class ApiService {
     required String name,
     required String game,
     required List<Map<String, dynamic>> mods,
+    String? fileKey,
   }) async {
     final baseUrl = await getBaseUrl();
     final token = await getIntegrationToken();
@@ -200,6 +201,7 @@ class ApiService {
         'name': name,
         'game': game,
         'mods': mods,
+        if (fileKey != null) 'fileKey': fileKey,
       }),
     );
 
@@ -208,6 +210,72 @@ class ApiService {
     } else {
       final Map<String, dynamic> body = jsonDecode(response.body);
       throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to create preset: ${response.statusCode}');
+    }
+  }
+
+  // 내 Preset 목록 조회
+  Future<Map<String, dynamic>> fetchMyPresets() async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set.');
+    }
+    final uri = Uri.parse('$baseUrl/api/premium/presets/my');
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to fetch your presets: ${response.statusCode}');
+    }
+  }
+
+  // Preset 삭제
+  Future<Map<String, dynamic>> deletePreset(String presetId) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set.');
+    }
+    final uri = Uri.parse('$baseUrl/api/premium/presets/$presetId');
+    final response = await http.delete(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to delete preset: ${response.statusCode}');
+    }
+  }
+
+  // Preset에 연결된 파일 다운로드 링크 생성
+  Future<String> fetchPresetAttachedFile(String presetId) async {
+    final baseUrl = await getBaseUrl();
+    final uri = Uri.parse('$baseUrl/api/premium/presets/download-file');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'presetId': presetId,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final res = jsonDecode(response.body);
+      return res['downloadUrl'] as String;
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to fetch preset file: ${response.statusCode}');
     }
   }
 

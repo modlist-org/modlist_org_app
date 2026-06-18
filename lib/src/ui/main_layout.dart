@@ -9,6 +9,7 @@ import 'explore_tab.dart';
 import 'installed_tab.dart';
 import 'cloud_save_tab.dart';
 import 'settings_tab.dart';
+import '../services/cloud_save_service.dart';
 
 const String _modlistLogoSvg = '''
 <svg viewBox="0 0 300 291" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -834,6 +835,107 @@ class _MainLayoutState extends State<MainLayout> {
       );
 
       if (confirmSync == true) {
+        bool shouldRestoreSaves = false;
+        final String? fileKey = preset['fileKey'] as String?;
+        if (fileKey != null && fileKey.isNotEmpty) {
+          if (!mounted) return;
+          final savesChoice = await showDialog<bool?>(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1C28),
+              title: Text(
+                _installerState.t('preset_sync_saves_title'),
+                style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
+              ),
+              content: Text(
+                _installerState.t('preset_sync_saves_body'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(
+                    _installerState.t('preset_sync_saves_no'),
+                    style: const TextStyle(color: Color(0xFF919AFF)),
+                  ),
+                ),
+                UIButton(
+                  label: _installerState.t('preset_sync_saves_yes'),
+                  fontSize: 13.0,
+                  onClick: () => Navigator.pop(context, true),
+                ),
+              ],
+            ),
+          );
+
+          if (savesChoice == null) return; // Cancel entire sync
+          shouldRestoreSaves = savesChoice;
+        }
+
+        if (shouldRestoreSaves) {
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
+              ),
+            ),
+          );
+
+          try {
+            // Get presigned URL
+            final downloadUrl = await _installerState.apiService.fetchPresetAttachedFile(presetId);
+            
+            // Download bytes
+            final zipBytes = await CloudSaveService.httpGet(downloadUrl);
+            
+            // Extract
+            CloudSaveService.extractBackupZip(_installerState.gamePath, zipBytes);
+            
+            if (mounted) {
+              Navigator.pop(context); // Close loading dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_installerState.t('status_cloud_restore_success')),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              Navigator.pop(context); // Close loading dialog
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF1E1C28),
+                  title: Text(
+                    _installerState.t('status_cloud_restore_failed', args: {'error': ''}).replaceAll(': ', ''),
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 16.0, fontWeight: FontWeight.bold),
+                  ),
+                  content: Text(
+                    e.toString(),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14.0),
+                  ),
+                  actions: [
+                    UIButton(
+                      label: 'OK',
+                      fontSize: 14.0,
+                      onClick: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return; // Abort sync on save restore failure
+          }
+        }
+
         _performPresetSync(presetMods);
       }
     } catch (e) {

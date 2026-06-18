@@ -272,6 +272,7 @@ class Localization {
       'cloud_presets_empty': '공유한 프리셋이 없습니다.',
       'cloud_presets_copy_link': '링크 복사',
       'cloud_presets_delete_confirm': '정말 이 프리셋을 삭제하시겠습니까?',
+      'btn_cancel': '취소',
     },
     'en-US': {
       // Sidebar
@@ -553,6 +554,7 @@ class Localization {
       'cloud_presets_empty': 'No shared presets found.',
       'cloud_presets_copy_link': 'Copy Link',
       'cloud_presets_delete_confirm': 'Are you sure you want to delete this preset?',
+      'btn_cancel': 'Cancel',
     },
     'zh-CN': {
       // Sidebar
@@ -827,6 +829,7 @@ class Localization {
       'cloud_presets_empty': '未找到分享的预设。',
       'cloud_presets_copy_link': '复制链接',
       'cloud_presets_delete_confirm': '您确定要删除此预设吗？',
+      'btn_cancel': '取消',
     },
   };
 

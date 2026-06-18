@@ -74,42 +74,78 @@ class _InstalledTabState extends State<InstalledTab> {
         if (mounted) {
           final attachChoice = await showDialog<bool?>(
             context: context,
-            builder: (context) => AlertDialog(
+            barrierColor: Colors.black87,
+            builder: (context) => Dialog(
               backgroundColor: const Color(0xFF1E1C28),
-              title: Text(
-                widget.state.t('preset_attach_saves_title'),
-                style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
               ),
-              content: Text(
-                widget.state.t('preset_attach_saves_body'),
-                style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
-              ),
-              actions: [
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+              child: Container(
+                width: 480.0,
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, null),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: Text(
-                        widget.state.t('preset_attach_saves_no'),
-                        style: const TextStyle(color: Color(0xFF919AFF)),
+                    Text(
+                      widget.state.t('preset_attach_saves_title'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17.0,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    UIButton(
-                      label: widget.state.t('preset_attach_saves_yes'),
-                      fontSize: 13.0,
-                      onClick: () => Navigator.pop(context, true),
+                    const SizedBox(height: 16.0),
+                    Text(
+                      widget.state.t('preset_attach_saves_body'),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13.5,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24.0),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          height: 42.0,
+                          child: UIButton(
+                            label: widget.state.t('preset_attach_saves_yes'),
+                            fontSize: 13.0,
+                            onClick: () => Navigator.pop(context, true),
+                          ),
+                        ),
+                        const SizedBox(height: 10.0),
+                        SizedBox(
+                          height: 42.0,
+                          child: UIButton(
+                            label: widget.state.t('preset_attach_saves_no'),
+                            fontSize: 13.0,
+                            color: const Color(0xFFC56363),
+                            hoverColor: const Color(0xFFD67474),
+                            pressedColor: const Color(0xFFE28A8A),
+                            onClick: () => Navigator.pop(context, false),
+                          ),
+                        ),
+                        const SizedBox(height: 10.0),
+                        SizedBox(
+                          height: 42.0,
+                          child: UIButton(
+                            label: widget.state.t('btn_cancel'),
+                            fontSize: 13.0,
+                            color: const Color(0xFF383946),
+                            hoverColor: const Color(0xFF494A5B),
+                            pressedColor: const Color(0xFF5D5E72),
+                            onClick: () => Navigator.pop(context, null),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           );
 

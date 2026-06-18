@@ -15,20 +15,16 @@ class SettingsTab extends StatefulWidget {
 
 class _SettingsTabState extends State<SettingsTab> {
   final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _tokenController = TextEditingController();
-  bool _obscureToken = true;
 
   @override
   void initState() {
     super.initState();
     _urlController.text = widget.state.apiUrl;
-    _tokenController.text = widget.state.integrationToken ?? '';
   }
 
   @override
   void dispose() {
     _urlController.dispose();
-    _tokenController.dispose();
     super.dispose();
   }
 
@@ -222,124 +218,7 @@ class _SettingsTabState extends State<SettingsTab> {
           ),
           const SizedBox(height: 24.0),
 
-          // App Integration Token Card
-          _buildCard(
-            title: widget.state.t('settings_token_title'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _tokenController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                        obscureText: _obscureToken,
-                        decoration: InputDecoration(
-                          hintText: widget.state.t('settings_token_hint'),
-                          hintStyle: const TextStyle(color: Colors.white24),
-                          filled: true,
-                          fillColor: const Color(0xFF16151D),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureToken ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.white38,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureToken = !_obscureToken;
-                              });
-                            },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                            borderSide: const BorderSide(color: Color(0xFF919AFF)),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12.0),
-                    SizedBox(
-                      width: 120,
-                      child: UIButton(
-                        label: widget.state.t('settings_btn_save'),
-                        fontSize: 14.0,
-                        onClick: () async {
-                          final token = _tokenController.text.trim();
-                          final messenger = ScaffoldMessenger.of(context);
-                          await widget.state.setIntegrationToken(token);
-                          messenger.showSnackBar(
-                            SnackBar(content: Text(widget.state.t('settings_token_saved'))),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  widget.state.t('settings_token_guide'),
-                  style: const TextStyle(color: Colors.white30, fontSize: 12.0),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24.0),
 
-          if (widget.state.integrationToken != null && widget.state.integrationToken!.isNotEmpty) ...[
-            _buildCard(
-              title: widget.state.t('settings_cloud_title'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    widget.state.t('settings_cloud_desc'),
-                    style: const TextStyle(color: Colors.white70, fontSize: 13.0),
-                  ),
-                  const SizedBox(height: 16.0),
-                  
-                  // Usage Info
-                  _buildStorageUsage(),
-                  const SizedBox(height: 20.0),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: UIButton(
-                          label: widget.state.t('settings_cloud_btn_backup'),
-                          fontSize: 14.0,
-                          blocked: widget.state.isProcessing,
-                          onClick: () async {
-                            await widget.state.backupCloudSave();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20.0),
-
-                  // Backups List
-                  const Text(
-                    'Cloud Backups',
-                    style: TextStyle(
-                      fontSize: 14.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 8.0),
-                  _buildBackupsList(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24.0),
-          ],
 
           // Language Card (New)
           _buildCard(
@@ -440,130 +319,5 @@ class _SettingsTabState extends State<SettingsTab> {
     );
   }
 
-  Widget _buildStorageUsage() {
-    final used = widget.state.cloudUsedBytes;
-    final maxBytes = widget.state.cloudMaxBytes;
-    final ratio = maxBytes > 0 ? (used / maxBytes).clamp(0.0, 1.0) : 0.0;
-    
-    final usedMb = (used / (1024 * 1024)).toStringAsFixed(1);
-    final maxGb = (maxBytes / (1024 * 1024 * 1024)).toStringAsFixed(0);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              widget.state.t('settings_cloud_used', args: {
-                'used': '$usedMb MB',
-                'max': '$maxGb GB',
-              }),
-              style: const TextStyle(color: Colors.white54, fontSize: 12.0),
-            ),
-            Text(
-              '${(ratio * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(color: Color(0xFF919AFF), fontSize: 12.0, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8.0),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4.0),
-          child: LinearProgressIndicator(
-            value: ratio,
-            backgroundColor: const Color(0xFF16151D),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
-            minHeight: 8.0,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildBackupsList() {
-    final saves = widget.state.cloudSaves.where((s) => s['game'] == widget.state.game.id).toList();
-    if (saves.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
-        child: Text(
-          widget.state.t('settings_cloud_no_backup'),
-          style: const TextStyle(color: Colors.white30, fontSize: 13.0, fontStyle: FontStyle.italic),
-        ),
-      );
-    }
-
-    return Column(
-      children: saves.map<Widget>((save) {
-        final fileKey = save['fileKey'] as String;
-        final fileSize = save['fileSize'] as int? ?? 0;
-        final sizeMb = (fileSize / (1024 * 1024)).toStringAsFixed(2);
-        
-        final updatedAtStr = save['updatedAt'] as String? ?? '';
-        String formattedDate = '';
-        if (updatedAtStr.isNotEmpty) {
-          try {
-            final date = DateTime.parse(updatedAtStr).toLocal();
-            formattedDate = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-                '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-          } catch (_) {
-            formattedDate = updatedAtStr;
-          }
-        }
-
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 6.0),
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1C28),
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.04),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.cloud_done, color: Color(0xFF919AFF), size: 20.0),
-              const SizedBox(width: 12.0),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      save['fileName'] as String? ?? 'backup.zip',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13.0, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2.0),
-                    Text(
-                      '$sizeMb MB | $formattedDate',
-                      style: const TextStyle(color: Colors.white38, fontSize: 11.0),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: widget.state.t('settings_cloud_btn_restore'),
-                    icon: const Icon(Icons.settings_backup_restore, color: Colors.greenAccent, size: 20.0),
-                    onPressed: widget.state.isProcessing ? null : () async {
-                      await widget.state.restoreCloudSave(fileKey);
-                    },
-                  ),
-                  IconButton(
-                    tooltip: widget.state.t('settings_cloud_btn_delete'),
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20.0),
-                    onPressed: widget.state.isProcessing ? null : () async {
-                      await widget.state.deleteCloudSave(fileKey);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
 }

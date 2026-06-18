@@ -32,9 +32,9 @@ class CloudSaveService {
 
             final stat = file.statSync();
 
-            // Exclude files larger than 10MB (configs and saves are normally smaller,
-            // but we allow up to 10MB to avoid skipping larger valid save databases/files)
-            if (stat.size > 10 * 1024 * 1024) continue;
+            // Exclude files larger than 100MB (configs and saves are normally smaller,
+            // but we allow up to 100MB to avoid skipping larger valid save databases/files)
+            if (stat.size > 100 * 1024 * 1024) continue;
 
             // Exclude executables, libraries, pdb, and compressed archives
             final ext = p.extension(file.path).toLowerCase();

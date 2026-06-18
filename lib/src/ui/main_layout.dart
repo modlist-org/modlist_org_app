@@ -7,6 +7,7 @@ import '../core/update_checker.dart';
 import '../models/mod_model.dart';
 import 'explore_tab.dart';
 import 'installed_tab.dart';
+import 'cloud_save_tab.dart';
 import 'settings_tab.dart';
 
 const String _modlistLogoSvg = '''
@@ -173,6 +174,7 @@ class _MainLayoutState extends State<MainLayout> {
                             children: [
                               ExploreTab(state: _installerState),
                               InstalledTab(state: _installerState),
+                              CloudSaveTab(state: _installerState),
                               SettingsTab(state: _installerState),
                             ],
                           ),
@@ -341,6 +343,12 @@ class _MainLayoutState extends State<MainLayout> {
           const SizedBox(height: 8.0),
           _buildSidebarTabButton(
             index: 2,
+            label: _installerState.t('tab_cloud_save').toUpperCase(),
+            icon: Icons.cloud_outlined,
+          ),
+          const SizedBox(height: 8.0),
+          _buildSidebarTabButton(
+            index: 3,
             label: _installerState.t('tab_settings').toUpperCase(),
             icon: Icons.settings_outlined,
           ),

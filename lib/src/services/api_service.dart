@@ -19,6 +19,229 @@ class ApiService {
     await prefs.setString(_baseUrlKey, url);
   }
 
+  static const String _tokenKey = 'modlist_integration_token';
+
+  Future<String?> getIntegrationToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  Future<void> setIntegrationToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  // Premium Cloud Saving Status 조회
+  Future<Map<String, dynamic>> fetchSavingStatus() async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set in Settings.');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/premium/saving');
+    final response = await http.get(uri, headers: {
+      'Authorization': 'Bearer $token',
+    });
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to load cloud saves: ${response.statusCode}');
+    }
+  }
+
+  // Presign upload URL 요청
+  Future<Map<String, dynamic>> getUploadPresignedUrl({
+    required String game,
+    required String fileName,
+    required int fileSize,
+  }) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set in Settings.');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/premium/saving/presign-upload');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'game': game,
+        'fileName': fileName,
+        'fileSize': fileSize,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to generate upload URL: ${response.statusCode}');
+    }
+  }
+
+  // Confirm upload 요청
+  Future<Map<String, dynamic>> confirmUpload({
+    required String game,
+    required String fileName,
+    required String fileKey,
+    required int fileSize,
+  }) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set in Settings.');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/premium/saving/confirm-upload');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'game': game,
+        'fileName': fileName,
+        'fileKey': fileKey,
+        'fileSize': fileSize,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to confirm upload: ${response.statusCode}');
+    }
+  }
+
+  // Presign download URL 요청
+  Future<String> getDownloadPresignedUrl(String fileKey) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set in Settings.');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/premium/saving/presign-download');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'fileKey': fileKey,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['downloadUrl'] as String;
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to generate download URL: ${response.statusCode}');
+    }
+  }
+
+  // Delete cloud save 파일 요청
+  Future<void> deleteCloudSave(String fileKey) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set in Settings.');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/premium/saving/delete');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'fileKey': fileKey,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to delete cloud save: ${response.statusCode}');
+    }
+  }
+
+  // Preset 생성
+  Future<Map<String, dynamic>> createPreset({
+    required String name,
+    required String game,
+    required List<Map<String, dynamic>> mods,
+  }) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getIntegrationToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('App Integration Token is not set in Settings.');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/premium/presets');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'name': name,
+        'game': game,
+        'mods': mods,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to create preset: ${response.statusCode}');
+    }
+  }
+
+  // Preset 상세 조회 (인증 불필요)
+  Future<Map<String, dynamic>> fetchPreset(String presetId) async {
+    final baseUrl = await getBaseUrl();
+    final uri = Uri.parse('$baseUrl/api/premium/presets/$presetId');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? body['statusMessage'] ?? 'Failed to fetch preset details: ${response.statusCode}');
+    }
+  }
+
+  // 파일 업로드 (R2 직통)
+  Future<void> uploadFileToR2(String uploadUrl, List<int> bytes) async {
+    final uri = Uri.parse(uploadUrl);
+    final response = await http.put(
+      uri,
+      headers: {
+        'Content-Length': bytes.length.toString(),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: bytes,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to upload file to storage: ${response.statusCode}');
+    }
+  }
+
   // 모드 목록 조회
   Future<Map<String, dynamic>> fetchMods({
     required String game,

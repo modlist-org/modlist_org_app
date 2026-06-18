@@ -8,8 +8,16 @@ import 'package:path_provider/path_provider.dart';
 
 import 'src/ui/main_layout.dart';
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  String? initialDeepLink;
+  for (final arg in args) {
+    if (arg.startsWith('modlist://')) {
+      initialDeepLink = arg;
+      break;
+    }
+  }
 
   // await clearFontCache(); for debug
 
@@ -18,7 +26,7 @@ void main() async {
     _loadNotoSansSC(),
   ]);
 
-  runApp(const ModlistApp());
+  runApp(ModlistApp(initialDeepLink: initialDeepLink));
 }
 
 /*
@@ -97,7 +105,8 @@ Future<void> _loadNotoSansSC() {
 }
 
 class ModlistApp extends StatelessWidget {
-  const ModlistApp({super.key});
+  final String? initialDeepLink;
+  const ModlistApp({super.key, this.initialDeepLink});
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +126,7 @@ class ModlistApp extends StatelessWidget {
           surface: Color(0xFF1E1C28),
         ),
       ),
-      home: const MainLayout(),
+      home: MainLayout(initialDeepLink: initialDeepLink),
     );
   }
 }

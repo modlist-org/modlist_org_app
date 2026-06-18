@@ -42,6 +42,86 @@ class _InstalledTabState extends State<InstalledTab> {
     );
   }
 
+  Future<void> _sharePreset() async {
+    if (widget.state.installedMods.isEmpty) return;
+
+    try {
+      final modsData = widget.state.installedMods.map((m) {
+        final cleanSlug = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
+        return {
+          'slug': cleanSlug,
+          'version': m.version,
+          'isEnabled': m.isEnabled,
+        };
+      }).toList();
+
+      final gameLabel = widget.state.game.name;
+      final presetName = 'Preset for $gameLabel (${DateTime.now().toLocal().toString().split('.').first})';
+
+      final res = await widget.state.apiService.createPreset(
+        name: presetName,
+        game: widget.state.game.id,
+        mods: modsData,
+      );
+
+      if (res['success'] == true) {
+        final shareUrl = res['shareUrl'] as String;
+        Clipboard.setData(ClipboardData(text: shareUrl));
+        
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1C28),
+              title: Text(
+                widget.state.t('settings_preset_created_title'),
+                style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    widget.state.t('settings_preset_created_body'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13.0),
+                  ),
+                  const SizedBox(height: 16.0),
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16151D),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: SelectableText(
+                      shareUrl,
+                      style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0, fontFamily: 'SUIT'),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                UIButton(
+                  label: 'OK',
+                  fontSize: 14.0,
+                  onClick: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share preset: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _pickAndInstallMod() async {
     try {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -303,18 +383,39 @@ class _InstalledTabState extends State<InstalledTab> {
             title: widget.state.t('installed_list_title'),
             action: widget.state.isProcessing || !widget.state.isValidPath
                 ? null
-                : Tooltip(
-                    message: widget.state.t('installed_btn_add_mod_manually'),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.file_open_outlined,
-                        color: Color(0xFF919AFF),
-                        size: 20.0,
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.state.integrationToken != null && widget.state.integrationToken!.isNotEmpty) ...[
+                        Tooltip(
+                          message: widget.state.t('settings_preset_btn_share'),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.share_outlined,
+                              color: Color(0xFF919AFF),
+                              size: 20.0,
+                            ),
+                            hoverColor: const Color(0xFF919AFF).withValues(alpha: 0.08),
+                            splashRadius: 20.0,
+                            onPressed: _sharePreset,
+                          ),
+                        ),
+                        const SizedBox(width: 4.0),
+                      ],
+                      Tooltip(
+                        message: widget.state.t('installed_btn_add_mod_manually'),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.file_open_outlined,
+                            color: Color(0xFF919AFF),
+                            size: 20.0,
+                          ),
+                          hoverColor: const Color(0xFF919AFF).withValues(alpha: 0.08),
+                          splashRadius: 20.0,
+                          onPressed: _pickAndInstallMod,
+                        ),
                       ),
-                      hoverColor: const Color(0xFF919AFF).withValues(alpha: 0.08),
-                      splashRadius: 20.0,
-                      onPressed: _pickAndInstallMod,
-                    ),
+                    ],
                   ),
             child: widget.state.installedMods.isEmpty
                 ? Padding(

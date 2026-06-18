@@ -165,6 +165,7 @@ class _InstalledTabState extends State<InstalledTab> {
 
       if (res['success'] == true) {
         widget.state.refreshMyPresets(); // Refresh presets list
+        widget.state.refreshCloudSaves(); // Refresh cloud saves/storage usage
         final shareUrl = res['shareUrl'] as String;
         Clipboard.setData(ClipboardData(text: shareUrl));
         

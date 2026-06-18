@@ -741,6 +741,7 @@ class InstallerState extends ChangeNotifier {
       final res = await apiService.deletePreset(presetId);
       if (res['success'] == true) {
         _myPresets = _myPresets.where((p) => p['id'] != presetId).toList();
+        await refreshCloudSaves();
       }
     } catch (e) {
       debugPrint('Failed to delete preset: $e');

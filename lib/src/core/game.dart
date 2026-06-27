@@ -76,6 +76,38 @@ abstract class Game {
   // Folder names Steam may use under steamapps/common.
   List<String> getSteamInstallFolderNames() => [name];
 
+  /// Candidate Windows executable file names, used to detect a Proton/Wine
+  /// install on a non-Windows host. Subclasses override when the Windows build
+  /// uses a name that differs from `<name>.exe`.
+  List<String> windowsExecutableNames() => ['$name.exe'];
+
+  /// True when this install is the Windows build running through Proton/Wine —
+  /// i.e. a Windows .exe is present on a non-Windows host.
+  bool isProtonOrWineInstall(String gamePath) {
+    if (Platform.isWindows) return false;
+    for (final exe in windowsExecutableNames()) {
+      if (File(p.join(gamePath, exe)).existsSync()) return true;
+    }
+    return false;
+  }
+
+  /// The exact Steam Launch Options string MelonLoader needs for this install,
+  /// or null when none is required (Windows, where the bootstrap injects
+  /// without a wrapper). Used to auto-write Steam's localconfig.vdf after
+  /// install and to populate the manual guide.
+  String? steamLaunchOptionsValue(String gamePath) {
+    if (Platform.isWindows) return null;
+    if (isProtonOrWineInstall(gamePath)) {
+      return r'WINEDLLOVERRIDES="winhttp=n,b" %command%';
+    }
+    if (Platform.isMacOS) {
+      // Steam on macOS does not resolve relative paths; use the absolute script.
+      return '"${p.join(gamePath, 'setup_helper.sh')}" %command%';
+    }
+    // Linux native
+    return './setup_helper.sh %command%';
+  }
+
   String? findSteamInstallPath() {
     for (final candidate in getSteamInstallCandidatePaths()) {
       if (isValidGamePath(candidate)) {

@@ -92,6 +92,9 @@ class Localization {
       'installed_copied_clipboard': '클립보드에 복사되었습니다.',
       'installed_err_file_picker': '파일 선택 중 오류가 발생했습니다: {error}',
       'installed_launch_guide_title': '💡 비윈도우 OS 추가 안내 사항',
+      'installed_launch_auto_set': '✓ 스팀 실행 옵션이 자동으로 설정되었습니다.',
+      'installed_launch_auto_set_restart':
+          '변경 사항을 적용하려면 스팀을 완전히 종료한 후 다시 실행하세요.',
       'installed_btn_copy_native_launch': '네이티브 시작 옵션 복사',
       'installed_btn_copy_proton_launch': 'Proton 시작 옵션 복사',
       'settings_btn_check_updates': '업데이트 확인',
@@ -375,6 +378,10 @@ class Localization {
       'installed_copied_clipboard': 'Copied to clipboard.',
       'installed_err_file_picker': 'An error occurred while picking file: {error}',
       'installed_launch_guide_title': '💡 Additional Guide for Non-Windows OS',
+      'installed_launch_auto_set':
+          '✓ Steam launch options were configured automatically.',
+      'installed_launch_auto_set_restart':
+          'Fully quit and reopen Steam for the change to take effect.',
       'installed_btn_copy_native_launch': 'Copy Native Launch Options',
       'installed_btn_copy_proton_launch': 'Copy Proton Launch Options',
       'settings_btn_check_updates': 'Check for Updates',
@@ -656,6 +663,8 @@ class Localization {
       'installed_copied_clipboard': '已复制到剪贴板。',
       'installed_err_file_picker': '选择文件时出错: {error}',
       'installed_launch_guide_title': '💡 非 Windows 系统额外说明',
+      'installed_launch_auto_set': '✓ 已自动配置 Steam 启动选项。',
+      'installed_launch_auto_set_restart': '请完全退出并重新打开 Steam 以使更改生效。',
       'installed_btn_copy_native_launch': '复制原生启动选项',
       'installed_btn_copy_proton_launch': '复制 Proton 启动选项',
       'settings_btn_check_updates': '检查更新',

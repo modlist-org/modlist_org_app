@@ -433,6 +433,17 @@ class _InstalledTabState extends State<InstalledTab> {
                           widget.state.t('installed_launch_guide_title'),
                           style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0, fontWeight: FontWeight.bold),
                         ),
+                        // Auto-set confirmation (when we wrote localconfig.vdf).
+                        if (widget.state.steamLaunchOptionsApplied) ...[
+                          const SizedBox(height: 8.0),
+                          Text(
+                            widget.state.steamLaunchOptionsNeedRestart
+                                ? '${widget.state.t('installed_launch_auto_set')} '
+                                    '${widget.state.t('installed_launch_auto_set_restart')}'
+                                : widget.state.t('installed_launch_auto_set'),
+                            style: const TextStyle(color: Color(0xFF7CE38B), fontSize: 12.0, height: 1.4, fontWeight: FontWeight.w600),
+                          ),
+                        ],
                         const SizedBox(height: 8.0),
                         Text(
                           launchGuide,

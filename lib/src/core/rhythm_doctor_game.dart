@@ -21,6 +21,12 @@ class RhythmDoctorGame extends Game {
   String? get steamAppId => '774181';
 
   @override
+  List<String> windowsExecutableNames() => const [
+        'Rhythm Doctor.exe',
+        'RhythmDoctor.exe',
+      ];
+
+  @override
   List<String> getSteamInstallFolderNames() => const [
         'Rhythm Doctor',
         'RhythmDoctor',

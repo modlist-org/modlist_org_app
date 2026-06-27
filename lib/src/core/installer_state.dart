@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
 import 'game.dart';
+import 'steam_config.dart';
 import 'adofai_game.dart';
 import 'dancing_line_game.dart';
 import 'rhythm_doctor_game.dart';
@@ -44,6 +45,11 @@ class InstallerState extends ChangeNotifier {
   bool _isProcessing = false;
   String? _statusMessage;
 
+  // Whether the last install auto-wrote Steam's Launch Options for this game,
+  // and whether Steam needs a full restart for that write to take effect.
+  bool _steamLaunchOptionsApplied = false;
+  bool _steamLaunchOptionsNeedRestart = false;
+
   // Mod Update Cache & Status
   final Map<String, ModItem> _onlineModsCache = {};
   List<String> _modsWithUpdates = [];
@@ -73,6 +79,9 @@ class InstallerState extends ChangeNotifier {
   bool get isUmmDetected => _isUmmDetected;
   String get loaderVersion => _loaderVersion;
   bool get isLoaderOutdated => _isLoaderOutdated;
+
+  bool get steamLaunchOptionsApplied => _steamLaunchOptionsApplied;
+  bool get steamLaunchOptionsNeedRestart => _steamLaunchOptionsNeedRestart;
   
   String get locale => _locale;
   
@@ -325,6 +334,8 @@ class InstallerState extends ChangeNotifier {
     _isProcessing = true;
     _progress = 0.0;
     _statusMessage = t('status_loader_downloading');
+    _steamLaunchOptionsApplied = false;
+    _steamLaunchOptionsNeedRestart = false;
     notifyListeners();
 
     var installTimedOut = false;
@@ -371,6 +382,10 @@ class InstallerState extends ChangeNotifier {
       );
       await DebugLog.info('Core MelonLoader install completed');
 
+      // Point Steam's Launch Options at the setup_helper.sh wrapper so the
+      // loader actually injects on launch (no-op on Windows / unknown appid).
+      await _applySteamLaunchOptions();
+
       if (_isUmmDetected && installUmmCompat) {
         _statusMessage = t('status_loader_checking_ummcompat');
         notifyListeners();
@@ -409,6 +424,58 @@ class InstallerState extends ChangeNotifier {
         'Install MelonLoader finished: installed=$_isLoaderInstalled '
         'loaderVersion=$_loaderVersion status=$_statusMessage',
       );
+    }
+  }
+
+  // Steam Launch Options 자동 설정 (localconfig.vdf 직접 편집)
+  Future<void> _applySteamLaunchOptions() async {
+    final appId = game.steamAppId;
+    final value = game.steamLaunchOptionsValue(_gamePath);
+    if (appId == null || value == null) {
+      // Windows (no wrapper needed) or unknown app id — nothing to write.
+      return;
+    }
+    try {
+      final result = await SteamConfig.setLaunchOptions(
+        appId: appId,
+        value: value,
+      );
+      _steamLaunchOptionsApplied = result.applied;
+      _steamLaunchOptionsNeedRestart = result.applied && result.steamRunning;
+      await DebugLog.info(
+        'Steam launch options: applied=${result.applied} '
+        'updated=${result.updatedCount} configFound=${result.configFound} '
+        'steamRunning=${result.steamRunning} appId=$appId',
+      );
+    } catch (e, stackTrace) {
+      _steamLaunchOptionsApplied = false;
+      await DebugLog.error(
+        'Failed to set Steam launch options',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  // Steam Launch Options 정리 (우리가 설정한 래퍼만 제거)
+  Future<void> _clearSteamLaunchOptions() async {
+    final appId = game.steamAppId;
+    if (appId == null) return;
+    try {
+      final result = await SteamConfig.clearLaunchOptions(appId: appId);
+      await DebugLog.info(
+        'Cleared Steam launch options: updated=${result.updatedCount} '
+        'appId=$appId',
+      );
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'Failed to clear Steam launch options',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _steamLaunchOptionsApplied = false;
+      _steamLaunchOptionsNeedRestart = false;
     }
   }
 
@@ -500,6 +567,7 @@ class InstallerState extends ChangeNotifier {
 
     try {
       await game.uninstallLoader(_gamePath);
+      await _clearSteamLaunchOptions();
       _statusMessage = t('status_loader_uninstall_success');
     } catch (e) {
       _statusMessage = t('status_loader_uninstall_failed', args: {'error': describeAppError(e)});

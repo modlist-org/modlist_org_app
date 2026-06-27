@@ -21,6 +21,12 @@ class DancingLineGame extends Game {
   String? get steamAppId => '4395300';
 
   @override
+  List<String> windowsExecutableNames() => const [
+        'Dancing Line.exe',
+        'DancingLine.exe',
+      ];
+
+  @override
   List<String> getSteamInstallFolderNames() => const [
         'Dancing Line',
         'DancingLine',

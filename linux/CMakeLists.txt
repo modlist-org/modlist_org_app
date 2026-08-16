@@ -74,6 +74,15 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# zstandard_linux is a shared-library plugin, but version 1.5.0 does not add
+# its own target to the list of libraries copied into the Flutter bundle. The
+# runner is linked against it nonetheless, so packaged builds otherwise fail
+# at startup with a missing libzstandard_linux.so. Keep this workaround
+# conditional so removing or updating the plugin does not break Linux builds.
+if(TARGET zstandard_linux)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES "$<TARGET_FILE:zstandard_linux>")
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

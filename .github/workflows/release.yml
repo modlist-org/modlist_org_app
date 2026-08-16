@@ -145,6 +145,12 @@ jobs:
       - name: Build & Package Linux
         run: dart run flutter_distributor:main release --name linux
 
+      - name: Validate Linux zip libraries
+        run: |
+          linux_zip="$(find dist -type f -iname '*.zip' -print -quit)"
+          test -n "$linux_zip"
+          unzip -l "$linux_zip" | grep -q 'lib/libzstandard_linux\.so$'
+
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:

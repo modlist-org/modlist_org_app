@@ -41,7 +41,7 @@ jobs:
         run: flutter config --enable-windows-desktop
 
       - name: Build & Package Windows
-        run: dart run flutter_distributor:main release --name windows
+        run: dart run fastforge:main release --name windows
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -90,7 +90,7 @@ jobs:
         run: cp web/icons/Icon-512.png macos/packaging/dmg/app_icon.png
 
       - name: Build & Package macOS
-        run: dart run flutter_distributor:main release --name macos
+        run: dart run fastforge:main release --name macos
 
       - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
@@ -143,7 +143,7 @@ jobs:
         run: flutter config --enable-linux-desktop
 
       - name: Build & Package Linux
-        run: dart run flutter_distributor:main release --name linux
+        run: dart run fastforge:main release --name linux
 
       - name: Validate Linux zip libraries
         run: |

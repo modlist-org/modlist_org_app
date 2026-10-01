@@ -6,7 +6,7 @@
 
 ## English
 
-A premium, high-fidelity Flutter application designed to manage, browse, and install mods for **A Dance of Fire and Ice (ADOFAI)** and other supported games. It interfaces with the official **modlist.org** API to provide a seamless modding experience.
+A high-fidelity Flutter application designed to manage, browse, and install mods for **A Dance of Fire and Ice (ADOFAI)** and other supported games. It interfaces with the official **modlist.org** API to provide a seamless modding experience.
 
 ### Features
 
@@ -28,7 +28,7 @@ A premium, high-fidelity Flutter application designed to manage, browse, and ins
 - **Clean Uninstallation**: Safely delete mods and associated config files.
 
 #### 4. Design & Aesthetics
-- **Premium Pastel Dark Mode**: A custom-designed dark theme incorporating harmonious pastel colors, micro-animations, and glassmorphism-inspired elements.
+- **Pastel Dark Mode**: A custom-designed dark theme incorporating harmonious pastel colors, micro-animations, and glassmorphism-inspired elements.
 - **Responsive Layout**: Adapts smoothly to various window dimensions on desktop and web builds.
 - **Dynamic Fonts**: Dynamically downloads and applies the modern **SUIT** typeface at runtime for consistent, high-end typography on all platforms.
 
@@ -95,7 +95,7 @@ This project is licensed under the GNU General Public License v3 (GPL-3.0). See 
 
 ## 한국어
 
-**얼음과 불의 춤 (ADOFAI)** 및 기타 지원되는 게임을 위한 프리미엄 고성능 Flutter 모드 매니저/인스톨러 앱입니다. 공식 **modlist.org** API와 연동하여 편리하고 쾌적한 모딩 경험을 제공합니다.
+**얼음과 불의 춤 (ADOFAI)** 및 기타 지원되는 게임을 위한 고성능 Flutter 모드 매니저/인스톨러 앱입니다. 공식 **modlist.org** API와 연동하여 편리하고 쾌적한 모딩 경험을 제공합니다.
 
 ### 주요 기능
 
@@ -117,7 +117,7 @@ This project is licensed under the GNU General Public License v3 (GPL-3.0). See 
 - **안전한 삭제**: 모드 파일 및 개별 설정 정보를 게임 디렉토리에서 깔끔하게 제거합니다.
 
 #### 4. 디자인 및 시각적 요소
-- **프리미엄 파스텔 다크 모드**: 감각적인 다크 테마 배경에 세련된 파스텔 톤 포인트 컬러, 미세 애니메이션, 글래스모피즘 스타일 디자인을 적용하였습니다.
+- **파스텔 다크 모드**: 감각적인 다크 테마 배경에 세련된 파스텔 톤 포인트 컬러, 미세 애니메이션, 글래스모피즘 스타일 디자인을 적용하였습니다.
 - **반응형 레이아웃**: 데스크톱 프로그램 창 크기 조정 및 웹 브라우저 환경에 유연하게 대응합니다.
 - **동적 폰트 다운로드**: 앱 실행 시 CDN으로부터 현대적인 **SUIT** 서체를 자동으로 다운로드하여 적용해, 플랫폼을 막론하고 미려한 타이포그래피를 유지합니다.
 

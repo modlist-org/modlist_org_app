@@ -14,7 +14,6 @@ import 'debug_log.dart';
 import 'protocol_helper.dart';
 import '../models/mod_model.dart';
 import '../services/api_service.dart';
-import '../services/cloud_save_service.dart';
 
 class InstallerState extends ChangeNotifier {
   Game _game = AdofaiGame();
@@ -48,21 +47,6 @@ class InstallerState extends ChangeNotifier {
   final Map<String, ModItem> _onlineModsCache = {};
   List<String> _modsWithUpdates = [];
   bool _isCheckingModUpdates = false;
-
-  String? _integrationToken;
-  String? get integrationToken => _integrationToken;
-
-  List<dynamic> _cloudSaves = [];
-  List<dynamic> get cloudSaves => _cloudSaves;
-
-  List<dynamic> _myPresets = [];
-  List<dynamic> get myPresets => _myPresets;
-
-  int _cloudUsedBytes = 0;
-  int get cloudUsedBytes => _cloudUsedBytes;
-
-  int _cloudMaxBytes = 10 * 1024 * 1024 * 1024; // 10 GB
-  int get cloudMaxBytes => _cloudMaxBytes;
 
   String get gamePath => _gamePath;
   String get apiUrl => _apiUrl;
@@ -119,15 +103,6 @@ class InstallerState extends ChangeNotifier {
         _gamePath = detectedPath;
         await prefs.setString('${_game.id}_install_path', _gamePath);
       }
-    }
-
-    // Load integration token
-    _integrationToken = prefs.getString('modlist_integration_token');
-    if (_integrationToken != null && _integrationToken!.isNotEmpty) {
-      await apiService.setIntegrationToken(_integrationToken!);
-      // Refresh cloud saves and presets in background
-      refreshCloudSaves();
-      refreshMyPresets();
     }
 
     await refreshStatus();
@@ -696,156 +671,4 @@ class InstallerState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setIntegrationToken(String token) async {
-    _integrationToken = token.trim();
-    final prefs = await SharedPreferences.getInstance();
-    if (_integrationToken!.isEmpty) {
-      await prefs.remove('modlist_integration_token');
-      await apiService.setIntegrationToken('');
-      _cloudSaves = [];
-      _myPresets = [];
-      _cloudUsedBytes = 0;
-    } else {
-      await prefs.setString('modlist_integration_token', _integrationToken!);
-      await apiService.setIntegrationToken(_integrationToken!);
-      await refreshCloudSaves();
-      await refreshMyPresets();
-    }
-    notifyListeners();
-  }
-
-  Future<void> refreshCloudSaves() async {
-    if (_integrationToken == null || _integrationToken!.isEmpty) return;
-    try {
-      final res = await apiService.fetchSavingStatus();
-      if (res['success'] == true) {
-        _cloudSaves = res['files'] ?? [];
-        _cloudUsedBytes = res['usedBytes'] ?? 0;
-        _cloudMaxBytes = res['maxBytes'] ?? (10 * 1024 * 1024 * 1024);
-      }
-    } catch (e) {
-      debugPrint('Failed to refresh cloud saves: $e');
-    }
-    notifyListeners();
-  }
-
-  Future<void> refreshMyPresets() async {
-    if (_integrationToken == null || _integrationToken!.isEmpty) return;
-    try {
-      final res = await apiService.fetchMyPresets();
-      if (res['success'] == true) {
-        _myPresets = res['presets'] ?? [];
-      }
-    } catch (e) {
-      debugPrint('Failed to refresh my presets: $e');
-    }
-    notifyListeners();
-  }
-
-  Future<void> deletePreset(String presetId) async {
-    if (_integrationToken == null || _integrationToken!.isEmpty) return;
-    try {
-      final res = await apiService.deletePreset(presetId);
-      if (res['success'] == true) {
-        _myPresets = _myPresets.where((p) => p['id'] != presetId).toList();
-        await refreshCloudSaves();
-      }
-    } catch (e) {
-      debugPrint('Failed to delete preset: $e');
-      rethrow;
-    } finally {
-      notifyListeners();
-    }
-  }
-
-  Future<void> backupCloudSave() async {
-    if (_isProcessing || !_isValidPath) return;
-
-    _isProcessing = true;
-    _progress = 0.0;
-    _statusMessage = t('status_cloud_backup_start');
-    notifyListeners();
-
-    try {
-      final List<String> installedModFiles = [];
-      for (final mod in _installedMods) {
-        installedModFiles.addAll(mod.installedFiles);
-      }
-
-      final res = await CloudSaveService.backup(
-        gameId: game.id,
-        gamePath: _gamePath,
-        apiService: apiService,
-        installedModFiles: installedModFiles,
-        onProgress: (val) {
-          _progress = val;
-          _statusMessage = t('status_cloud_backup_progress', args: {
-            'progress': (val * 100).toStringAsFixed(0)
-          });
-          notifyListeners();
-        },
-      );
-      _statusMessage = t('status_cloud_backup_success');
-      if (res['usedBytes'] != null) {
-        _cloudUsedBytes = res['usedBytes'];
-      }
-    } catch (e) {
-      _statusMessage = t('status_cloud_backup_failed', args: {'error': e.toString()});
-      rethrow;
-    } finally {
-      _isProcessing = false;
-      await refreshCloudSaves();
-    }
-  }
-
-  Future<void> restoreCloudSave(String fileKey) async {
-    if (_isProcessing || !_isValidPath) return;
-
-    _isProcessing = true;
-    _progress = 0.0;
-    _statusMessage = t('status_cloud_restore_start');
-    notifyListeners();
-
-    try {
-      await CloudSaveService.restore(
-        gamePath: _gamePath,
-        fileKey: fileKey,
-        apiService: apiService,
-        onProgress: (val) {
-          _progress = val;
-          _statusMessage = t('status_cloud_restore_progress', args: {
-            'progress': (val * 100).toStringAsFixed(0)
-          });
-          notifyListeners();
-        },
-      );
-      _statusMessage = t('status_cloud_restore_success');
-    } catch (e) {
-      _statusMessage = t('status_cloud_restore_failed', args: {'error': e.toString()});
-      rethrow;
-    } finally {
-      _isProcessing = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> deleteCloudSave(String fileKey) async {
-    if (_isProcessing) return;
-
-    _isProcessing = true;
-    _statusMessage = t('status_cloud_delete_start');
-    notifyListeners();
-
-    try {
-      await apiService.deleteCloudSave(fileKey);
-      _statusMessage = t('status_cloud_delete_success');
-    } catch (e) {
-      _statusMessage = t('status_cloud_delete_failed', args: {'error': e.toString()});
-      rethrow;
-    } finally {
-      _isProcessing = false;
-      await refreshCloudSaves();
-      await refreshMyPresets();
-    }
-  }
 }

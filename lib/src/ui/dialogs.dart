@@ -7,7 +7,8 @@ import '../core/installer_state.dart';
 void checkAndPromptUmmCompat(BuildContext context, InstallerState state) {
   if (state.isLoaderInstalled &&
       !state.installedMods.any((m) =>
-          m.slug.toLowerCase() == 'ummcompat' ||
+          state.game.canonicalModSlug(m.slug).toLowerCase() == 'ummcompat' ||
+          state.game.canonicalModSlug(m.id).toLowerCase() == 'ummcompat' ||
           m.id.toLowerCase() == 'umm-ummcompat' ||
           m.slug.toLowerCase() == 'umm-ummcompat') &&
       state.installedMods.any((m) => m.id.startsWith('umm-'))) {

@@ -383,7 +383,9 @@ class DancingLineGame extends Game {
           installedFiles.add(relativePath);
         } else {
           await Directory(outPath).create(recursive: true);
-          installedFiles.add(relativePath);
+          if (!isProtectedGameDirectory(relativePath)) {
+            installedFiles.add(relativePath);
+          }
         }
       }
     } else {
@@ -554,7 +556,9 @@ class DancingLineGame extends Game {
           installedFiles.add(relativePath);
         } else {
           await Directory(outPath).create(recursive: true);
-          installedFiles.add(relativePath);
+          if (!isProtectedGameDirectory(relativePath)) {
+            installedFiles.add(relativePath);
+          }
         }
       }
     } else {
@@ -695,13 +699,7 @@ class DancingLineGame extends Game {
             .relative(fullPath, from: gamePath)
             .toLowerCase()
             .replaceAll('\\', '/');
-        final isSharedDir =
-            relativeToGame == '.' ||
-            relativeToGame == 'mods' ||
-            relativeToGame == 'plugins' ||
-            relativeToGame == 'userlibs';
-
-        if (!isSharedDir) {
+        if (!isProtectedGameDirectory(relativeToGame)) {
           final dir = Directory(fullPath);
           await safeDeleteDirectory(dir);
         }
@@ -750,7 +748,12 @@ class DancingLineGame extends Game {
       try {
         final content = metaFile.readAsStringSync();
         final List<dynamic> jsonList = jsonDecode(content);
-        metaMods.addAll(jsonList.map((j) => InstalledMod.fromJson(j)));
+        metaMods.addAll(
+          migrateInstalledMods(
+            gamePath,
+            jsonList.map((j) => InstalledMod.fromJson(j)).toList(),
+          ),
+        );
       } catch (_) {}
     }
 

@@ -525,8 +525,154 @@ abstract class Game {
   // 스팀 런치 옵션 가이드 스트링 (Linux/macOS 비네이티브용)
   String? getSteamLaunchOptionsGuideKey();
 
+  // 로컬에서 감지되는 이름(소문자) -> 서버 슬러그. 이름이 바뀌었지만 서버 슬러그는 호환성을 위해 유지된 모드용
+  Map<String, String> get modSlugAliases => const {};
+
+  // 특정 파일(소문자, '/' 구분)이 설치되어 있으면 해당 서버 슬러그의 모드로 간주
+  Map<String, String> get modFileAliases => const {};
+
+  String canonicalModSlug(String slug) {
+    return modSlugAliases[slug.toLowerCase()] ?? slug;
+  }
+
+  // 게임 루트, 공용 모드 폴더, 게임 데이터 폴더 등 모드가 소유할 수 없는 디렉토리인지 확인
+  bool isProtectedGameDirectory(String relPath) {
+    final segments = relPath
+        .replaceAll('\\', '/')
+        .toLowerCase()
+        .split('/')
+        .where((s) => s.isNotEmpty && s != '.')
+        .toList();
+
+    if (segments.isEmpty) return true;
+    if (segments.contains('..')) return true;
+    if (segments.length == 1 &&
+        const {
+          'mods',
+          'plugins',
+          'userlibs',
+          'userdata',
+          'ummmods',
+          'melonloader',
+        }.contains(segments.first)) {
+      return true;
+    }
+    // <Game>_Data, <Game>_Data/Managed 등
+    if (segments.first.endsWith('_data') && segments.length <= 2) return true;
+    // macOS: <Game>.app/Contents/Resources/Data/Managed 까지
+    if (segments.first.endsWith('.app') && segments.length <= 5) return true;
+    return false;
+  }
+
+  // 메타데이터의 installedFiles 에서 보호 대상 디렉토리 항목을 제거
+  List<String> sanitizeInstalledFiles(
+    String gamePath,
+    List<String> installedFiles,
+  ) {
+    return installedFiles
+        .where(
+          (relPath) =>
+              !isProtectedGameDirectory(relPath) ||
+              FileSystemEntity.isFileSync(p.join(gamePath, relPath)),
+        )
+        .toList();
+  }
+
+  // 메타데이터 마이그레이션: 보호 디렉토리 항목 제거, 이름이 바뀐 모드의 슬러그 정규화 및 중복 병합
+  List<InstalledMod> migrateInstalledMods(
+    String gamePath,
+    List<InstalledMod> mods,
+  ) {
+    final migrated = <InstalledMod>[];
+    for (final mod in mods) {
+      final files = sanitizeInstalledFiles(gamePath, mod.installedFiles);
+
+      String? aliasTarget;
+      final canonical = canonicalModSlug(mod.slug);
+      if (canonical != mod.slug) {
+        aliasTarget = canonical;
+      } else if (canonicalModSlug(mod.id) != mod.id) {
+        aliasTarget = canonicalModSlug(mod.id);
+      } else {
+        for (final file in files) {
+          final target =
+              modFileAliases[file.toLowerCase().replaceAll('\\', '/')];
+          if (target != null) {
+            aliasTarget = target;
+            break;
+          }
+        }
+      }
+
+      migrated.add(
+        InstalledMod(
+          id: aliasTarget ?? mod.id,
+          slug: aliasTarget ?? mod.slug,
+          name: mod.name,
+          version: mod.version,
+          isBeta: mod.isBeta,
+          installedAt: mod.installedAt,
+          installedFiles: files,
+          isEnabled: mod.isEnabled,
+        ),
+      );
+    }
+
+    final aliasTargets = {
+      ...modSlugAliases.values,
+      ...modFileAliases.values,
+    }.map((s) => s.toLowerCase()).toSet();
+    if (aliasTargets.isEmpty) return migrated;
+
+    final result = <InstalledMod>[];
+    final mergedIndex = <String, int>{};
+    for (final mod in migrated) {
+      final key = mod.slug.toLowerCase();
+      if (!aliasTargets.contains(key)) {
+        result.add(mod);
+        continue;
+      }
+      final existingIndex = mergedIndex[key];
+      if (existingIndex == null) {
+        mergedIndex[key] = result.length;
+        result.add(mod);
+        continue;
+      }
+
+      final existing = result[existingIndex];
+      final primary =
+          existing.installedFiles.length >= mod.installedFiles.length
+          ? existing
+          : mod;
+      final secondary = identical(primary, existing) ? mod : existing;
+      final seen = <String>{};
+      final mergedFiles = <String>[];
+      for (final file in [
+        ...primary.installedFiles,
+        ...secondary.installedFiles,
+      ]) {
+        if (seen.add(file.toLowerCase().replaceAll('\\', '/'))) {
+          mergedFiles.add(file);
+        }
+      }
+      result[existingIndex] = InstalledMod(
+        id: primary.id,
+        slug: primary.slug,
+        name: primary.name,
+        version: primary.version,
+        isBeta: primary.isBeta,
+        installedAt: primary.installedAt,
+        installedFiles: mergedFiles,
+        isEnabled: primary.isEnabled,
+      );
+    }
+    return result;
+  }
+
   // UMM ID(예: Tweaks)와 서버 슬러그(예: adofai-tweaks) 간의 유연한 매칭 지원 헬퍼
   bool isModMatched(String localSlug, String serverSlug) {
+    localSlug = canonicalModSlug(localSlug);
+    serverSlug = canonicalModSlug(serverSlug);
     final cleanLocal = localSlug.startsWith('umm-')
         ? localSlug.substring(4).toLowerCase()
         : localSlug.toLowerCase();

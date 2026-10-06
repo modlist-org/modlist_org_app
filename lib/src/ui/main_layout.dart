@@ -11,6 +11,7 @@ import 'dialogs.dart';
 import 'settings_tab.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'task_panel.dart';
 
 const String _modlistLogoSvg = '''
 <svg viewBox="0 0 300 291" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -162,10 +163,6 @@ class _MainLayoutState extends State<MainLayout> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // 상단 글로벌 프로세싱 안내 바
-                        if (_installerState.isProcessing)
-                          _buildGlobalProgressBar(),
-
                         // 탭별 콘텐츠 영역
                         Expanded(
                           child: IndexedStack(
@@ -181,6 +178,13 @@ class _MainLayoutState extends State<MainLayout> {
                     ),
                   ),
                 ],
+              ),
+
+              // Floating task panel: overlays content so the layout never shifts
+              Positioned(
+                right: 24.0,
+                bottom: 24.0,
+                child: TaskPanel(state: _installerState),
               ),
 
               // 3. 글로벌 툴팁 오버레이 렌더러 (overlayer_ui_flutter 사양)
@@ -315,7 +319,7 @@ class _MainLayoutState extends State<MainLayout> {
             isSelected: _installerState.game.id == 'adofai',
             isSupported: true,
             tooltip: _installerState.t('sidebar_adofai_tooltip'),
-            onTap: _installerState.isProcessing
+            onTap: _installerState.isBusy
                 ? null
                 : () => _installerState.setSelectedGame('adofai'),
             overlayerState: _overlayerState,
@@ -331,7 +335,7 @@ class _MainLayoutState extends State<MainLayout> {
             isSelected: _installerState.game.id == 'dancing-line',
             isSupported: true,
             tooltip: _installerState.t('sidebar_dancing-line_tooltip'),
-            onTap: _installerState.isProcessing
+            onTap: _installerState.isBusy
                 ? null
                 : () => _installerState.setSelectedGame('dancing-line'),
             overlayerState: _overlayerState,
@@ -347,7 +351,7 @@ class _MainLayoutState extends State<MainLayout> {
             isSelected: _installerState.game.id == 'rhythm-doctor',
             isSupported: true,
             tooltip: _installerState.t('sidebar_rhythm-doctor_tooltip'),
-            onTap: _installerState.isProcessing
+            onTap: _installerState.isBusy
                 ? null
                 : () => _installerState.setSelectedGame('rhythm-doctor'),
             overlayerState: _overlayerState,
@@ -446,62 +450,6 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  Widget _buildGlobalProgressBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bgElev,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      padding: const EdgeInsets.fromLTRB(32.0, 12.0, 32.0, 14.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const SizedBox(
-                width: 12.0,
-                height: 12.0,
-                child: CircularProgressIndicator(strokeWidth: 2.0),
-              ),
-              const SizedBox(width: 10.0),
-              Expanded(
-                child: Text(
-                  _installerState.statusMessage ??
-                      _installerState.t('explore_modal_loading'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 13.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12.0),
-              Text(
-                '${(_installerState.progress * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10.0),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999.0),
-            child: LinearProgressIndicator(
-              value: _installerState.progress,
-              minHeight: 4.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _handleDeepLink(String url) async {
     try {
       final uri = Uri.parse(url);
@@ -585,7 +533,7 @@ class _MainLayoutState extends State<MainLayout> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(mod.summary),
+              Text(mod.summaryFor(_installerState.locale)),
               const SizedBox(height: 14.0),
               AppBadge(
                 label: 'Version: v${latest.version}',

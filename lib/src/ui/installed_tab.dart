@@ -198,14 +198,15 @@ class _InstalledTabState extends State<InstalledTab> {
           AppCard(
             title: widget.state.t('installed_list_title'),
             padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 8.0),
-            action: widget.state.isProcessing || !widget.state.isValidPath
+            // Always rendered so the header doesn't jump while tasks run
+            action: !widget.state.isValidPath
                 ? null
                 : AppButton(
                     label: widget.state.t('installed_btn_add_mod_manually'),
                     icon: Icons.upload_file_outlined,
                     variant: AppButtonVariant.secondary,
                     size: AppButtonSize.sm,
-                    onPressed: _pickAndInstallMod,
+                    onPressed: widget.state.isProcessing ? null : _pickAndInstallMod,
                   ),
             child: widget.state.installedMods.isEmpty
                 ? Container(
@@ -245,6 +246,7 @@ class _InstalledTabState extends State<InstalledTab> {
                           onlineMod.latestVersion != null &&
                           VersionUtils.isNewerVersion(mod.version, onlineMod.latestVersion!.version);
                       final showSwitch = !mod.id.startsWith('umm-');
+                      final bool modBusy = widget.state.isProcessing || widget.state.activeTaskFor(mod.slug) != null;
                       final opacity = mod.isEnabled ? 1.0 : 0.45;
 
                       return Padding(
@@ -254,7 +256,7 @@ class _InstalledTabState extends State<InstalledTab> {
                             if (showSwitch) ...[
                               OlSwitch(
                                 value: mod.isEnabled,
-                                onChanged: widget.state.isProcessing
+                                onChanged: modBusy
                                     ? null
                                     : (value) async {
                                         await widget.state.toggleModActive(mod, value);
@@ -355,25 +357,24 @@ class _InstalledTabState extends State<InstalledTab> {
                               spacing: 8.0,      // 버튼 간 가로 간격
                               runSpacing: 8.0,   // 줄바꿈 발생 시 세로 간격
                               children: [
-                                if (hasUpdate && !widget.state.isProcessing)
+                                if (hasUpdate)
                                   OlButton(
                                     label: widget.state.t('installed_btn_update_mod'),
                                     icon: Icons.download_rounded,
                                     height: 36.0,
                                     fontSize: 13.0,
-                                    onClick: () async {
+                                    onClick: modBusy ? null : () async {
                                       await widget.state.installMod(onlineMod, version: onlineMod.latestVersion?.version);
                                       if (context.mounted) checkAndPromptUmmCompat(context, widget.state);
                                     },
                                   ),
-                                if (!widget.state.isProcessing)
-                                  OlButton(
+                                OlButton(
                                     label: widget.state.t('installed_btn_delete_mod'),
                                     icon: Icons.delete_outline_rounded,
                                     tone: OlButtonTone.danger,
                                     height: 36.0,
                                     fontSize: 13.0,
-                                    onClick: () async {
+                                    onClick: modBusy ? null : () async {
                                       final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
                                       if (confirm) await widget.state.uninstallMod(mod.slug, mod.name);
                                     },
@@ -459,7 +460,7 @@ class _InstalledTabState extends State<InstalledTab> {
                 OlButton(
                   label: widget.state.t('installed_btn_update_loader', args: {'version': '0.7.3'}),
                   icon: Icons.download_rounded,
-                  onClick: () async {
+                  onClick: widget.state.hasActiveTasks ? null : () async {
                     await widget.state.installMelonLoader();
                   },
                 ),
@@ -471,7 +472,7 @@ class _InstalledTabState extends State<InstalledTab> {
                 icon: installed
                     ? Icons.delete_outline_rounded
                     : (umm ? Icons.swap_horiz_rounded : Icons.download_rounded),
-                onClick: () async {
+                onClick: widget.state.hasActiveTasks ? null : () async {
                   if (widget.state.isLoaderInstalled) {
                     final confirm = await showLoaderUninstallConfirmDialog(context, widget.state);
                     if (confirm) {

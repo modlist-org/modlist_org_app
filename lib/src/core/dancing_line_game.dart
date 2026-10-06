@@ -310,7 +310,7 @@ class DancingLineGame extends Game {
     } catch (_) {}
 
     final tempDir = await getTemporaryDirectory();
-    final tempFilePath = p.join(tempDir.path, '${mod.slug}_dl_temp');
+    final tempFilePath = p.join(tempDir.path, '${mod.slug}_dl_temp_${DateTime.now().microsecondsSinceEpoch}');
 
     final client = http.Client();
     final response = await client.send(
@@ -332,6 +332,10 @@ class DancingLineGame extends Game {
     await sink.flush();
     await sink.close();
     client.close();
+
+    // Downloads run concurrently; extracting and updating the installed-mods metadata is serialized
+    final release = await Game.fsLock.acquire();
+    try {
 
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
@@ -420,7 +424,11 @@ class DancingLineGame extends Game {
     );
 
     await saveInstalledMods(gamePath, installedMods);
-  }
+      } finally {
+      release();
+      if (await file.exists()) await file.delete().catchError((_) => file);
+    }
+}
 
   @override
   Future<void> installModFromFile(String gamePath, String filePath) async {

@@ -803,7 +803,7 @@ class _ExploreTabState extends State<ExploreTab> {
                       // Summary
                       Expanded(
                         child: Text(
-                          mod.summary,
+                          mod.summaryFor(widget.state.locale),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13.5,
@@ -1065,13 +1065,17 @@ class _ModDetailModalState extends State<_ModDetailModal> {
           })
         : null;
 
-    final String? statusMessage = widget.state.statusMessage;
-    final bool statusIsError =
-        statusMessage != null &&
-        (statusMessage.toLowerCase().contains('실패') ||
-            statusMessage.toLowerCase().contains('fail') ||
-            statusMessage.toLowerCase().contains('失败') ||
-            statusMessage.toLowerCase().contains('error'));
+    // Progress and result are tracked per mod, so other installs don't affect this dialog
+    final ModTask? modTask = widget.state.latestTaskFor(mod.slug);
+    final bool modBusy = modTask?.isActive ?? false;
+    final bool showProgress = widget.state.isProcessing || modBusy;
+    // Without a task for this mod, fall back to the last loader operation result
+    final String? loaderMessage = widget.state.statusMessage;
+    final String? statusMessage = modBusy ? null : (modTask?.message ?? loaderMessage);
+    final bool statusIsError = modTask != null
+        ? modTask.isFailed
+        : loaderMessage != null &&
+            ['실패', 'fail', '失败', 'error'].any((w) => loaderMessage.toLowerCase().contains(w));
 
     return Dialog(
       insetPadding: const EdgeInsets.all(40.0),
@@ -1233,7 +1237,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 // Description
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final text = mod.description ?? mod.summary;
+                    final text = mod.descriptionFor(widget.state.locale) ?? mod.summaryFor(widget.state.locale);
 
                     final overflow = _checkOverflow(
                       text,
@@ -1308,7 +1312,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                                         child: SingleChildScrollView(
                                           child: MarkdownBody(
                                             data:
-                                                mod.description ?? mod.summary,
+                                                mod.descriptionFor(widget.state.locale) ?? mod.summaryFor(widget.state.locale),
                                             styleSheet: markdownStyleSheet,
                                           ),
                                         ),
@@ -1326,7 +1330,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 const SizedBox(height: 20.0),
 
                 // Installation status and Installer logic
-                if (widget.state.isProcessing) ...[
+                if (showProgress) ...[
                   // Progress indicator
                   Container(
                     padding: const EdgeInsets.all(16.0),
@@ -1338,7 +1342,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          widget.state.statusMessage ??
+                          (modBusy ? modTask!.message : widget.state.statusMessage) ??
                               widget.state.t('explore_modal_loading'),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
@@ -1350,7 +1354,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(999.0),
                           child: LinearProgressIndicator(
-                            value: widget.state.progress,
+                            value: modBusy ? modTask!.progress : widget.state.progress,
                             minHeight: 4.0,
                           ),
                         ),
@@ -1528,7 +1532,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 ],
 
                 // Global status response helper
-                if (statusMessage != null && !widget.state.isProcessing)
+                if (statusMessage != null && !showProgress)
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
                     child: Row(

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
 import 'game.dart';
+import 'mod_task.dart';
+export 'mod_task.dart';
 import 'adofai_game.dart';
 import 'dancing_line_game.dart';
 import 'rhythm_doctor_game.dart';
@@ -43,6 +45,11 @@ class InstallerState extends ChangeNotifier {
   bool _isProcessing = false;
   String? _statusMessage;
 
+  final List<ModTask> _tasks = [];
+  final Map<String, Future<void>> _inflightInstalls = {};
+  final Map<String, Future<void>> _resolvingDependencies = {};
+  int _nextTaskId = 1;
+
   // Mod Update Cache & Status
   final Map<String, ModItem> _onlineModsCache = {};
   List<String> _modsWithUpdates = [];
@@ -69,6 +76,11 @@ class InstallerState extends ChangeNotifier {
   double get progress => _progress;
   bool get isProcessing => _isProcessing;
   String? get statusMessage => _statusMessage;
+
+  List<ModTask> get tasks => List.unmodifiable(_tasks);
+  bool get hasActiveTasks => _tasks.any((t) => t.isActive);
+  // True while anything is changing the game folder (blocks loader changes and game switching)
+  bool get isBusy => _isProcessing || hasActiveTasks;
 
   Map<String, ModItem> get onlineModsCache => _onlineModsCache;
   List<String> get modsWithUpdates => _modsWithUpdates;
@@ -154,7 +166,9 @@ class InstallerState extends ChangeNotifier {
   }
 
   // 상태 갱신
-  Future<void> refreshStatus() async {
+  Future<void> refreshStatus() => Game.fsLock.run(_refreshStatusLocked);
+
+  Future<void> _refreshStatusLocked() async {
     _isValidPath = game.isValidGamePath(_gamePath);
     if (_isValidPath) {
       _isLoaderInstalled = game.isLoaderInstalled(_gamePath);
@@ -296,7 +310,7 @@ class InstallerState extends ChangeNotifier {
 
   // MelonLoader 설치
   Future<void> installMelonLoader({bool installUmmCompat = false}) async {
-    if (_isProcessing || !_isValidPath) {
+    if (isBusy || !_isValidPath) {
       await DebugLog.info(
         'Install MelonLoader ignored: processing=$_isProcessing '
         'validPath=$_isValidPath path=$_gamePath',
@@ -361,7 +375,16 @@ class InstallerState extends ChangeNotifier {
           final result = await apiService.fetchModDetails('ummcompat');
           final mod = result['mod'] as ModItem;
           
-          await _installModInternal(mod);
+          await _installModInternal(
+            game,
+            _gamePath,
+            mod,
+            onProgress: (val, message) {
+              _progress = val;
+              _statusMessage = message;
+              notifyListeners();
+            },
+          );
           _statusMessage = t('status_loader_install_success_with_ummcompat');
           await DebugLog.info('UMM compatibility mod installed');
         } catch (e, stackTrace) {
@@ -397,22 +420,12 @@ class InstallerState extends ChangeNotifier {
   // UMM 호환 모드(ummcompat) 설치
   Future<void> installUmmCompat() async {
     if (_isProcessing || !_isValidPath) return;
-
-    _isProcessing = true;
-    _progress = 0.0;
-    _statusMessage = t('status_ummcompat_checking');
-    notifyListeners();
-
     try {
       final result = await apiService.fetchModDetails('ummcompat');
-      final mod = result['mod'] as ModItem;
-      await _installModInternal(mod);
-      _statusMessage = t('status_ummcompat_success');
+      await installMod(result['mod'] as ModItem);
     } catch (e) {
       _statusMessage = t('status_ummcompat_failed', args: {'error': describeAppError(e)});
-    } finally {
-      _isProcessing = false;
-      await refreshStatus();
+      notifyListeners();
     }
   }
 
@@ -474,7 +487,7 @@ class InstallerState extends ChangeNotifier {
 
   // MelonLoader 제거
   Future<void> uninstallMelonLoader() async {
-    if (_isProcessing || !_isValidPath) return;
+    if (isBusy || !_isValidPath) return;
     
     _isProcessing = true;
     _statusMessage = t('status_loader_uninstalling');
@@ -492,7 +505,80 @@ class InstallerState extends ChangeNotifier {
   }
 
   // 내부 모드 설치 헬퍼 (진행 상태가 이미 처리 중인 내부 호출용)
-  Future<void> _installModInternal(ModItem mod, {String? version, bool isBeta = false}) async {
+  // ---------------------------------------------------------------------------
+  // Mod tasks: installs/deletes run concurrently (downloads in parallel, disk
+  // changes serialized by Game.fsLock). Loader operations stay exclusive.
+  // ---------------------------------------------------------------------------
+
+  ModTask? activeTaskFor(String slug) {
+    final key = slug.toLowerCase();
+    for (final task in _tasks) {
+      if (task.isActive && (task.key == key || game.isModMatched(task.key, key))) return task;
+    }
+    return null;
+  }
+
+  ModTask? latestTaskFor(String slug) {
+    final key = slug.toLowerCase();
+    for (final task in _tasks.reversed) {
+      if (task.key == key || game.isModMatched(task.key, key)) return task;
+    }
+    return null;
+  }
+
+  void dismissTask(int id) {
+    _tasks.removeWhere((t) => t.id == id);
+    notifyListeners();
+  }
+
+  void _updateTask(ModTask task, {double? progress, bool clearProgress = false, String? message}) {
+    if (clearProgress) {
+      task.progress = null;
+    } else if (progress != null) {
+      task.progress = progress.clamp(0.0, 1.0).toDouble();
+    }
+    if (message != null) task.message = message;
+    notifyListeners();
+  }
+
+  Future<bool> _runTask(
+    ModTask task,
+    Future<void> Function() body, {
+    required String Function() onSuccess,
+    required String Function(Object error) onFailure,
+  }) async {
+    _tasks.add(task);
+    notifyListeners();
+    var ok = false;
+    try {
+      await body();
+      task.status = ModTaskStatus.done;
+      task.progress = 1.0;
+      task.message = onSuccess();
+      ok = true;
+    } catch (e, stackTrace) {
+      await DebugLog.error('Mod task failed: ${task.name}', error: e, stackTrace: stackTrace);
+      task.status = ModTaskStatus.failed;
+      task.message = onFailure(e);
+    }
+    notifyListeners();
+    if (ok) {
+      Future.delayed(const Duration(seconds: 5), () {
+        if (_tasks.remove(task)) notifyListeners();
+      });
+    }
+    await refreshStatus();
+    return ok;
+  }
+
+  Future<void> _installModInternal(
+    Game targetGame,
+    String gamePath,
+    ModItem mod, {
+    String? version,
+    bool isBeta = false,
+    required void Function(double progress, String message) onProgress,
+  }) async {
     final targetVersion = version ?? mod.latestVersion?.version ?? '';
     final redirectUrl = await apiService.getDownloadUrl(
       mod.slug,
@@ -501,155 +587,193 @@ class InstallerState extends ChangeNotifier {
       platform: platform,
     );
 
-    _statusMessage = t('status_mod_downloading', args: {'name': mod.name});
-    notifyListeners();
+    onProgress(0.0, t('status_mod_downloading', args: {'name': mod.name}));
 
-    await game.installMod(
-      _gamePath,
+    await targetGame.installMod(
+      gamePath,
       mod,
       redirectUrl,
       version: targetVersion,
       isBeta: isBeta,
       onProgress: (val) {
-        _progress = val;
-        _statusMessage = t('status_mod_downloading_progress', args: {'name': mod.name, 'progress': (val * 100).toStringAsFixed(1)});
-        notifyListeners();
+        onProgress(val, t('status_mod_downloading_progress', args: {'name': mod.name, 'progress': (val * 100).toStringAsFixed(1)}));
       },
     );
   }
 
-  Future<void> _installModWithDependencies(ModItem mod, {String? version, bool isBeta = false, Set<String>? visited}) async {
+  bool _isSlugInstalled(Game targetGame, String slug) {
+    final cleanDep = slug.startsWith('umm-') ? slug.substring(4) : slug;
+    return _installedMods.any((m) {
+      final cleanInstalled = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
+      return cleanInstalled == cleanDep || targetGame.isModMatched(m.slug, slug);
+    });
+  }
+
+  // Each key runs at most once at a time; concurrent callers share the same future
+  Future<void> _once(Map<String, Future<void>> inflight, String slug, Future<void> Function() run) {
+    final key = slug.toLowerCase();
+    final existing = inflight[key];
+    if (existing != null) return existing;
+    final future = run().whenComplete(() {
+      inflight.remove(key);
+    });
+    inflight[key] = future;
+    return future;
+  }
+
+  Future<void> _installModWithDependencies(
+    Game targetGame,
+    String gamePath,
+    ModItem mod,
+    ModTask task, {
+    String? version,
+    bool isBeta = false,
+    Set<String>? visited,
+  }) async {
     visited ??= {};
     if (visited.contains(mod.slug)) return;
     visited.add(mod.slug);
 
-    if (mod.dependencySlugs.isNotEmpty) {
-      for (final depSlug in mod.dependencySlugs) {
-        final bool isInstalled = _installedMods.any((m) {
-          final cleanInstalled = m.slug.startsWith('umm-') ? m.slug.substring(4) : m.slug;
-          final cleanDep = depSlug.startsWith('umm-') ? depSlug.substring(4) : depSlug;
-          return cleanInstalled == cleanDep || game.isModMatched(m.slug, depSlug);
+    for (final depSlug in mod.dependencySlugs) {
+      if (_isSlugInstalled(targetGame, depSlug)) continue;
+
+      _updateTask(task, clearProgress: true, message: t('status_mod_resolving_dependency', args: {'dependency': depSlug}));
+      try {
+        await _once(_resolvingDependencies, depSlug, () async {
+          final result = await apiService.fetchModDetails(depSlug);
+          final depMod = result['mod'] as ModItem;
+          await _installModWithDependencies(targetGame, gamePath, depMod, task, visited: visited);
         });
-
-        if (!isInstalled) {
-          _statusMessage = t('status_mod_resolving_dependency', args: {'dependency': depSlug});
-          notifyListeners();
-
-          try {
-            final result = await apiService.fetchModDetails(depSlug);
-            final depMod = result['mod'] as ModItem;
-            await _installModWithDependencies(depMod, visited: visited);
-          } catch (e) {
-            await DebugLog.error('Failed to install dependency: $depSlug', error: e);
-            throw Exception('Failed to install dependency $depSlug: $e');
-          }
-        }
+      } catch (e) {
+        await DebugLog.error('Failed to install dependency: $depSlug', error: e);
+        throw Exception('Failed to install dependency $depSlug: $e');
       }
     }
 
-    await _installModInternal(mod, version: version, isBeta: isBeta);
+    await _once(_inflightInstalls, mod.slug, () => _installModInternal(
+      targetGame,
+      gamePath,
+      mod,
+      version: version,
+      isBeta: isBeta,
+      onProgress: (val, message) => _updateTask(task, progress: val, message: message),
+    ));
   }
 
-  // 모드 설치
+  // 모드 설치 (여러 모드를 동시에 설치할 수 있음)
   Future<void> installMod(ModItem mod, {String? version, bool isBeta = false}) async {
     if (_isProcessing || !_isValidPath) return;
+    if (activeTaskFor(mod.slug) != null) return;
 
-    _isProcessing = true;
-    _progress = 0.0;
-    _statusMessage = t('status_mod_preparing', args: {'name': mod.name});
-    notifyListeners();
+    final targetGame = game;
+    final gamePath = _gamePath;
+    final task = ModTask(
+      id: _nextTaskId++,
+      key: mod.slug.toLowerCase(),
+      name: mod.name,
+      kind: ModTaskKind.install,
+      message: t('status_mod_preparing', args: {'name': mod.name}),
+      progress: 0.0,
+    );
 
-    try {
-      await _installModWithDependencies(mod, version: version, isBeta: isBeta);
-      _statusMessage = t('status_mod_install_success', args: {'name': mod.name});
-    } catch (e) {
-      _statusMessage = t('status_mod_install_failed', args: {'name': mod.name, 'error': describeAppError(e)});
-    } finally {
-      _isProcessing = false;
-      await refreshStatus();
-    }
+    await _runTask(
+      task,
+      () => _installModWithDependencies(targetGame, gamePath, mod, task, version: version, isBeta: isBeta),
+      onSuccess: () => t('status_mod_install_success', args: {'name': mod.name}),
+      onFailure: (e) => t('status_mod_install_failed', args: {'name': mod.name, 'error': describeAppError(e)}),
+    );
   }
 
   // 파일에서 모드 설치
   Future<void> installModFromFile(String filePath) async {
     if (_isProcessing || !_isValidPath) return;
 
-    _isProcessing = true;
-    _progress = 0.0;
-    _statusMessage = t('status_mod_local_installing');
-    notifyListeners();
+    final targetGame = game;
+    final gamePath = _gamePath;
+    final fileName = p.basename(filePath);
+    final task = ModTask(
+      id: _nextTaskId++,
+      key: 'file:$filePath',
+      name: fileName,
+      kind: ModTaskKind.local,
+      message: t('status_mod_local_installing'),
+    );
 
-    try {
-      await game.installModFromFile(_gamePath, filePath);
-      _statusMessage = t('status_mod_local_install_success');
-    } catch (e) {
-      _statusMessage = t('status_mod_local_install_failed', args: {'error': describeAppError(e)});
-    } finally {
-      _isProcessing = false;
-      await refreshStatus();
-    }
+    await _runTask(
+      task,
+      () => Game.fsLock.run(() => targetGame.installModFromFile(gamePath, filePath)),
+      onSuccess: () => t('status_mod_local_install_success'),
+      onFailure: (e) => t('status_mod_local_install_failed', args: {'error': describeAppError(e)}),
+    );
   }
 
   // 모드 삭제
   Future<void> uninstallMod(String slug, String name) async {
     if (_isProcessing || !_isValidPath) return;
+    if (activeTaskFor(slug) != null) return;
 
-    _isProcessing = true;
-    _statusMessage = t('status_mod_deleting', args: {'name': name});
-    notifyListeners();
+    final targetGame = game;
+    final gamePath = _gamePath;
+    final task = ModTask(
+      id: _nextTaskId++,
+      key: slug.toLowerCase(),
+      name: name,
+      kind: ModTaskKind.uninstall,
+      message: t('status_mod_deleting', args: {'name': name}),
+    );
 
-    try {
-      await game.uninstallMod(_gamePath, slug);
-      _statusMessage = t('status_mod_delete_success', args: {'name': name});
-    } catch (e) {
-      _statusMessage = t('status_mod_delete_failed', args: {'name': name, 'error': describeAppError(e)});
-    } finally {
-      _isProcessing = false;
-      await refreshStatus();
-    }
+    await _runTask(
+      task,
+      () => Game.fsLock.run(() => targetGame.uninstallMod(gamePath, slug)),
+      onSuccess: () => t('status_mod_delete_success', args: {'name': name}),
+      onFailure: (e) => t('status_mod_delete_failed', args: {'name': name, 'error': describeAppError(e)}),
+    );
   }
 
   // 모드 활성화 / 비활성화 토글
   Future<void> toggleModActive(InstalledMod mod, bool enable) async {
     if (_isProcessing || !_isValidPath) return;
+    if (activeTaskFor(mod.slug) != null) return;
 
-    _isProcessing = true;
-    _progress = 0.0;
-    _statusMessage = enable 
-        ? t('status_mod_enabling', args: {'name': mod.name}) 
-        : t('status_mod_disabling', args: {'name': mod.name});
-    notifyListeners();
+    final targetGame = game;
+    final gamePath = _gamePath;
+    final task = ModTask(
+      id: _nextTaskId++,
+      key: mod.slug.toLowerCase(),
+      name: mod.name,
+      kind: ModTaskKind.toggle,
+      message: enable
+          ? t('status_mod_enabling', args: {'name': mod.name})
+          : t('status_mod_disabling', args: {'name': mod.name}),
+    );
 
-    try {
-      await game.toggleModActive(_gamePath, mod, enable);
-
-      final updatedMod = InstalledMod(
-        id: mod.id,
-        slug: mod.slug,
-        name: mod.name,
-        version: mod.version,
-        isBeta: mod.isBeta,
-        installedAt: mod.installedAt,
-        installedFiles: mod.installedFiles,
-        isEnabled: enable,
-      );
-
-      final index = _installedMods.indexWhere((m) => m.id == mod.id);
-      if (index != -1) {
-        _installedMods[index] = updatedMod;
-      }
-
-      await game.saveInstalledMods(_gamePath, _installedMods);
-
-      _statusMessage = enable 
-          ? t('status_mod_enable_success', args: {'name': mod.name}) 
-          : t('status_mod_disable_success', args: {'name': mod.name});
-    } catch (e) {
-      _statusMessage = t('status_mod_toggle_failed', args: {'name': mod.name, 'error': describeAppError(e)});
-    } finally {
-      _isProcessing = false;
-      await refreshStatus();
-    }
+    await _runTask(
+      task,
+      () => Game.fsLock.run(() async {
+        await targetGame.toggleModActive(gamePath, mod, enable);
+        // Re-read under the lock so concurrent installs aren't overwritten
+        final current = await targetGame.getInstalledMods(gamePath);
+        final index = current.indexWhere((m) => m.id == mod.id);
+        if (index != -1) {
+          final m = current[index];
+          current[index] = InstalledMod(
+            id: m.id,
+            slug: m.slug,
+            name: m.name,
+            version: m.version,
+            isBeta: m.isBeta,
+            installedAt: m.installedAt,
+            installedFiles: m.installedFiles,
+            isEnabled: enable,
+          );
+        }
+        await targetGame.saveInstalledMods(gamePath, current);
+      }),
+      onSuccess: () => enable
+          ? t('status_mod_enable_success', args: {'name': mod.name})
+          : t('status_mod_disable_success', args: {'name': mod.name}),
+      onFailure: (e) => t('status_mod_toggle_failed', args: {'name': mod.name, 'error': describeAppError(e)}),
+    );
   }
 
   // 알림 메시지 클리어

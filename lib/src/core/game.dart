@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
@@ -7,7 +8,33 @@ import 'melon_dll_parser.dart';
 
 enum LoaderInstallPhase { extracting, configuring, finalizing }
 
+/// FIFO async lock. `acquire` resolves once every earlier holder has released.
+class AsyncMutex {
+  Future<void> _tail = Future<void>.value();
+
+  Future<void Function()> acquire() {
+    final previous = _tail;
+    final released = Completer<void>();
+    _tail = released.future;
+    return previous.then((_) => () {
+          if (!released.isCompleted) released.complete();
+        });
+  }
+
+  Future<T> run<T>(Future<T> Function() action) async {
+    final release = await acquire();
+    try {
+      return await action();
+    } finally {
+      release();
+    }
+  }
+}
+
 abstract class Game {
+  /// Serializes changes to game folders and installed-mod metadata across concurrent tasks.
+  static final AsyncMutex fsLock = AsyncMutex();
+
   Future<DecodedArchive> decodeModArchive(List<int> bytes) {
     return ModArchiveDecoder.decode(bytes);
   }

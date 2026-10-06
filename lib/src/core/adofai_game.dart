@@ -507,7 +507,7 @@ class AdofaiGame extends Game {
   }) async {
     // 임시 파일 다운로드 경로 설정
     final tempDir = await getTemporaryDirectory();
-    final tempFilePath = p.join(tempDir.path, '${mod.slug}_temp');
+    final tempFilePath = p.join(tempDir.path, '${mod.slug}_temp_${DateTime.now().microsecondsSinceEpoch}');
 
     // 1. 모드 파일 다운로드
     final client = http.Client();
@@ -530,6 +530,10 @@ class AdofaiGame extends Game {
     await sink.flush();
     await sink.close();
     client.close();
+
+    // Downloads run concurrently; extracting and updating the installed-mods metadata is serialized
+    final release = await Game.fsLock.acquire();
+    try {
 
     final List<String> installedFiles = [];
     final fileBytes = await file.readAsBytes();
@@ -733,7 +737,11 @@ class AdofaiGame extends Game {
     );
 
     await saveInstalledMods(gamePath, updatedInstalledMods);
-  }
+      } finally {
+      release();
+      if (await file.exists()) await file.delete().catchError((_) => file);
+    }
+}
 
   @override
   Future<void> installModFromFile(String gamePath, String filePath) async {

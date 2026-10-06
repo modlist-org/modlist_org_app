@@ -67,6 +67,10 @@ class ModItem {
   final String slug;
   final String summary;
   final String? description;
+
+  /// Optional per-locale overrides: {'ko-KR': {'summary': ..., 'description': ...}}
+  final Map<String, Map<String, String>> translations;
+
   /// Primary game (always `games.first`).
   final String game;
 
@@ -105,9 +109,22 @@ class ModItem {
     this.communityUrl,
     required this.dependencySlugs,
     List<String>? games,
+    this.translations = const {},
   }) : games = (games != null && games.isNotEmpty)
            ? List.unmodifiable(games)
            : List.unmodifiable([game]);
+
+  /// Summary in [locale] when the mod provides it, otherwise the default summary.
+  String summaryFor(String locale) {
+    final value = translations[locale]?['summary']?.trim();
+    return (value != null && value.isNotEmpty) ? value : summary;
+  }
+
+  /// Description in [locale] when provided, otherwise the default description.
+  String? descriptionFor(String locale) {
+    final value = translations[locale]?['description']?.trim();
+    return (value != null && value.isNotEmpty) ? value : description;
+  }
 
   /// Whether this mod targets [gameId] (any of [games]).
   bool supportsGame(String gameId) => games.contains(gameId);
@@ -137,7 +154,23 @@ class ModItem {
       communityUrl: communityUrl,
       dependencySlugs: dependencySlugs ?? this.dependencySlugs,
       games: games,
+      translations: translations,
     );
+  }
+
+  static Map<String, Map<String, String>> _parseTranslations(dynamic raw) {
+    if (raw is! Map) return const {};
+    final result = <String, Map<String, String>>{};
+    raw.forEach((locale, entry) {
+      if (locale is! String || entry is! Map) return;
+      final fields = <String, String>{};
+      for (final key in const ['summary', 'description']) {
+        final value = entry[key];
+        if (value is String && value.trim().isNotEmpty) fields[key] = value;
+      }
+      if (fields.isNotEmpty) result[locale] = fields;
+    });
+    return result;
   }
 
   factory ModItem.fromJson(Map<String, dynamic> json) {
@@ -192,6 +225,7 @@ class ModItem {
       description: json['description'],
       game: primaryGame,
       games: gameList,
+      translations: _parseTranslations(json['translations']),
       categories: categoryList,
       downloads: json['downloads'] ?? 0,
       logo: json['logo'],

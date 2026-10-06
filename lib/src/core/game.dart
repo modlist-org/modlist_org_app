@@ -306,6 +306,9 @@ abstract class Game {
   // 모드 로더 제거
   Future<void> uninstallLoader(String gamePath);
 
+  // 설치된 모드 로더와 충돌하는 다른 로더의 잔재 정리
+  Future<void> repairLoaderConflicts(String gamePath) async {}
+
   // 모드 설치
   Future<void> installMod(
     String gamePath,

@@ -147,6 +147,7 @@ class AdofaiGame extends Game {
       if (ummFolder.existsSync()) await ummFolder.delete(recursive: true);
       if (doorstopConfig.existsSync()) await doorstopConfig.delete();
       if (doorstopDll.existsSync()) await doorstopDll.delete();
+      await _removeUmmDoorstop(gamePath);
 
       // UMM Assembly 모드로 설치된 경우 백업본 복구 및 UMM 폴더 삭제
       String? managedPath;
@@ -209,21 +210,7 @@ class AdofaiGame extends Game {
       }
 
       if (managedPath != null) {
-        // DLL 복구
-        final targetDlls = ['UnityEngine.CoreModule.dll', 'UnityEngine.dll'];
-        for (final dllName in targetDlls) {
-          final dllFile = File(p.join(managedPath, dllName));
-          final dllBak = File(p.join(managedPath, '$dllName.bak'));
-          final dllOriginal = File(p.join(managedPath, '$dllName.original'));
-
-          if (dllBak.existsSync()) {
-            if (dllFile.existsSync()) await dllFile.delete();
-            await dllBak.rename(dllFile.path);
-          } else if (dllOriginal.existsSync()) {
-            if (dllFile.existsSync()) await dllFile.delete();
-            await dllOriginal.rename(dllFile.path);
-          }
-        }
+        await _restoreUmmPatchedAssemblies(managedPath);
 
         // Managed/UnityModManager 폴더 삭제
         final ummManagedFolder = Directory(
@@ -360,6 +347,124 @@ class AdofaiGame extends Game {
       await modsDir.create();
     }
     await DebugLog.info('ADOFAI installLoader finished');
+  }
+
+  // MelonLoader 환경에 남아 있는 UMM 자체 로더(Doorstop 프록시, Assembly 패치)를 제거합니다.
+  // 남아 있으면 UMMBridge가 UnityModManager.dll 을 다시 설치하는 순간 UMM이 두 번 시작되어 게임이 크래시합니다.
+  @override
+  Future<void> repairLoaderConflicts(String gamePath) async {
+    if (gamePath.isEmpty || !isLoaderInstalled(gamePath)) return;
+    try {
+      await _removeUmmDoorstop(gamePath);
+      for (final managedPath in _managedPaths(gamePath)) {
+        await _restoreUmmPatchedAssemblies(managedPath);
+      }
+    } catch (e, stackTrace) {
+      await DebugLog.error(
+        'ADOFAI UMM loader conflict repair failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  List<String> _managedPaths(String gamePath) {
+    final candidates = [
+      p.join(gamePath, 'A Dance of Fire and Ice_Data', 'Managed'),
+      p.join(gamePath, 'ADanceOfFireAndIce_Data', 'Managed'),
+      p.join(
+        gamePath,
+        'A Dance of Fire and Ice.app',
+        'Contents',
+        'Resources',
+        'Data',
+        'Managed',
+      ),
+      p.join(
+        gamePath,
+        'ADanceOfFireAndIce.app',
+        'Contents',
+        'Resources',
+        'Data',
+        'Managed',
+      ),
+      p.join(gamePath, 'Contents', 'Resources', 'Data', 'Managed'),
+    ];
+    return candidates.where((d) => Directory(d).existsSync()).toList();
+  }
+
+  static bool _containsAscii(List<int> bytes, String needle) {
+    final pattern = needle.codeUnits;
+    final last = bytes.length - pattern.length;
+    outer:
+    for (var i = 0; i <= last; i++) {
+      for (var j = 0; j < pattern.length; j++) {
+        if (bytes[i + j] != pattern[j]) continue outer;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  static Future<bool> _isUmmPatchedAssembly(File file) async {
+    if (!await file.exists()) return false;
+    return _containsAscii(await file.readAsBytes(), 'UnityModManager');
+  }
+
+  // UMM DoorstopProxy 설치(winhttp.dll + doorstop_config.ini) 제거.
+  // MelonLoader(Windows)는 version.dll 을 사용하므로 winhttp.dll 이 덮어써지지 않고 남습니다.
+  Future<void> _removeUmmDoorstop(String gamePath) async {
+    final config = File(p.join(gamePath, 'doorstop_config.ini'));
+    if (!await config.exists()) return;
+
+    final configContent = await config.readAsString();
+    if (!configContent.toLowerCase().contains('unitymodmanager')) return;
+
+    await config.delete();
+    await DebugLog.info('Removed UMM doorstop config: ${config.path}');
+
+    final proxy = File(p.join(gamePath, 'winhttp.dll'));
+    if (await proxy.exists()) {
+      final bytes = await proxy.readAsBytes();
+      if (!_containsAscii(bytes, 'MelonLoader')) {
+        await proxy.delete();
+        await DebugLog.info('Removed UMM doorstop proxy: ${proxy.path}');
+      }
+    }
+  }
+
+  // UMM Assembly 설치 방식으로 패치된 Unity DLL 을 원본으로 복구합니다.
+  // UMM 은 원본을 '<dll>.original_', 설치 직전 상태를 '<dll>.backup_' 으로 보관합니다.
+  Future<void> _restoreUmmPatchedAssemblies(String managedPath) async {
+    const targetDlls = ['UnityEngine.CoreModule.dll', 'UnityEngine.dll'];
+    const backupSuffixes = ['.original_', '.backup_', '.original', '.bak'];
+
+    for (final dllName in targetDlls) {
+      final dllFile = File(p.join(managedPath, dllName));
+      final backups = backupSuffixes
+          .map((suffix) => File('${dllFile.path}$suffix'))
+          .where((f) => f.existsSync())
+          .toList();
+      if (backups.isEmpty) continue;
+      if (!await _isUmmPatchedAssembly(dllFile)) continue;
+
+      File? clean;
+      for (final backup in backups) {
+        if (!await _isUmmPatchedAssembly(backup)) {
+          clean = backup;
+          break;
+        }
+      }
+      if (clean == null) {
+        await DebugLog.info(
+          'UMM-patched $dllName has no clean backup; verify game files',
+        );
+        continue;
+      }
+
+      await clean.copy(dllFile.path);
+      await DebugLog.info('Restored $dllName from ${p.basename(clean.path)}');
+    }
   }
 
   @override

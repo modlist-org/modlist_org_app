@@ -164,6 +164,7 @@ class InstallerState extends ChangeNotifier {
       _isUmmDetected = !_isLoaderInstalled && game.isUmmDetected(_gamePath);
       
       if (_isLoaderInstalled) {
+        await game.repairLoaderConflicts(_gamePath);
         _loaderVersion = game.getLoaderVersion(_gamePath);
         // 버전이 0.7.3이 아니면 구버전으로 판정
         _isLoaderOutdated = _loaderVersion == 'Unknown (Outdated)' || 

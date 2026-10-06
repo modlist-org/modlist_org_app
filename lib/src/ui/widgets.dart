@@ -413,10 +413,6 @@ class _OlSwitchState extends State<OlSwitch>
             child: Container(
               width: 40.0,
               height: 40.0,
-              decoration: BoxDecoration(
-                color: AppColors.control,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
               alignment: Alignment.center,
               child: ScaleTransition(
                 scale: _scale,

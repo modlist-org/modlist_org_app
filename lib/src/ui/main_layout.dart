@@ -7,7 +7,10 @@ import '../core/update_checker.dart';
 import '../models/mod_model.dart';
 import 'explore_tab.dart';
 import 'installed_tab.dart';
+import 'dialogs.dart';
 import 'settings_tab.dart';
+import 'theme.dart';
+import 'widgets.dart';
 
 const String _modlistLogoSvg = '''
 <svg viewBox="0 0 300 291" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -37,7 +40,7 @@ class _MainLayoutState extends State<MainLayout> {
     super.initState();
     _installerState.addListener(_onStateChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      UpdateChecker.check(context, _installerState);
+      checkForAppUpdate(context, _installerState);
       if (widget.initialDeepLink != null) {
         _handleDeepLink(widget.initialDeepLink!);
       }
@@ -70,24 +73,26 @@ class _MainLayoutState extends State<MainLayout> {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: const Color(0xFF1E1C28),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                side: BorderSide(
-                  color: const Color(0xFF919AFF).withValues(alpha: 0.2),
-                ),
-              ),
-              content: Text(
-                _installerState.t(
-                  'mod_update_toast_title',
-                  args: {'count': currentUpdates.length.toString()},
-                ),
-                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+              content: Row(
+                children: [
+                  const Icon(
+                    Icons.update_rounded,
+                    size: 18.0,
+                    color: AppColors.accent,
+                  ),
+                  const SizedBox(width: 10.0),
+                  Expanded(
+                    child: Text(
+                      _installerState.t(
+                        'mod_update_toast_title',
+                        args: {'count': currentUpdates.length.toString()},
+                      ),
+                    ),
+                  ),
+                ],
               ),
               action: SnackBarAction(
                 label: _installerState.t('mod_update_toast_action'),
-                textColor: const Color(0xFF919AFF),
                 onPressed: () {
                   setState(() {
                     _activeTabIndex = 1; // Switch to Installed Tab
@@ -112,10 +117,12 @@ class _MainLayoutState extends State<MainLayout> {
         // UI가 초기화되지 않았으면 스피너 렌더링
         if (!_overlayerState.isInitialized) {
           return const Scaffold(
-            backgroundColor: Color(0xFF16151D),
+            backgroundColor: AppColors.bg,
             body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
+              child: SizedBox(
+                width: 28.0,
+                height: 28.0,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
               ),
             ),
           );
@@ -126,20 +133,19 @@ class _MainLayoutState extends State<MainLayout> {
       child: OverlayerStateProvider(
         state: _overlayerState,
         child: Scaffold(
-          backgroundColor: const Color(0xFF16151D),
+          backgroundColor: AppColors.bg,
           body: Stack(
             children: [
               // 배경 Radial Glow 효과
               Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: [
-                        Color(0x13919AFF), // Soft accent glow
-                        Colors.transparent,
-                      ],
-                      center: Alignment(0.3, -0.4),
-                      radius: 1.4,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        colors: [Color(0x14919AFF), Color(0x00919AFF)],
+                        center: Alignment(0.3, -1.1),
+                        radius: 1.2,
+                      ),
                     ),
                   ),
                 ),
@@ -150,12 +156,6 @@ class _MainLayoutState extends State<MainLayout> {
                 children: [
                   // 1. 좌측 사이드바
                   _buildSidebar(),
-
-                  // 구분선
-                  Container(
-                    width: 1,
-                    color: Colors.white.withValues(alpha: 0.03),
-                  ),
 
                   // 2. 우측 메인 영역
                   Expanded(
@@ -203,10 +203,7 @@ class _MainLayoutState extends State<MainLayout> {
                           color: const Color(0xFA1E1C28),
                           borderRadius: BorderRadius.circular(6.0),
                           border: Border.all(
-                            color: const Color(
-                              0xFF919AFF,
-                            ).withValues(alpha: 0.3),
-                            width: 1.0,
+                            color: AppColors.accent.withValues(alpha: 0.3),
                           ),
                           boxShadow: const [
                             BoxShadow(
@@ -220,10 +217,12 @@ class _MainLayoutState extends State<MainLayout> {
                         child: Text(
                           _overlayerState.tooltipText,
                           style: const TextStyle(
-                            fontFamily: 'SUIT',
+                            fontFamily: appFontFamily,
+                            fontFamilyFallback: appFontFamilyFallback,
                             fontSize: 13.0,
                             fontWeight: FontWeight.normal,
-                            color: Colors.white,
+                            color: AppColors.text,
+                            height: 1.4,
                             decoration: TextDecoration.none,
                           ),
                         ),
@@ -241,41 +240,71 @@ class _MainLayoutState extends State<MainLayout> {
 
   Widget _buildSidebar() {
     return Container(
-      width: 250.0,
-      color: const Color(0xFF1B1A22),
-      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+      width: 240.0,
+      decoration: const BoxDecoration(
+        color: Color(0xE616151D),
+        border: Border(right: BorderSide(color: AppColors.border)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12.0, 20.0, 12.0, 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 브랜드 로고
-          Row(
-            children: [
-              SvgPicture.string(_modlistLogoSvg, width: 24, height: 24),
-              const SizedBox(width: 8.0),
-              const Text(
-                'modlist.org',
-                style: TextStyle(
-                  fontSize: 22.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                SvgPicture.string(_modlistLogoSvg, width: 22, height: 22),
+                const SizedBox(width: 10.0),
+                const Text(
+                  'modlist.org',
+                  style: TextStyle(
+                    fontSize: 17.0,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.text,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32.0),
-
-          // 지원 대상 게임 리스트 (확장성 시각화)
-          Text(
-            _installerState.t('sidebar_games_title'),
-            style: const TextStyle(
-              color: Colors.white24,
-              fontSize: 11.0,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+              ],
             ),
           ),
-          const SizedBox(height: 12.0),
+          const SizedBox(height: 24.0),
+
+          // 탭 네비게이션 버튼
+          _buildSidebarTabButton(
+            index: 0,
+            label: _installerState.t('tab_explore'),
+            icon: Icons.explore_outlined,
+          ),
+          const SizedBox(height: 2.0),
+          _buildSidebarTabButton(
+            index: 1,
+            label: _installerState.t('tab_installed'),
+            icon: Icons.inventory_2_outlined,
+          ),
+          const SizedBox(height: 2.0),
+          _buildSidebarTabButton(
+            index: 2,
+            label: _installerState.t('tab_settings'),
+            icon: Icons.settings_outlined,
+          ),
+
+          const SizedBox(height: 20.0),
+          const Divider(),
+          const SizedBox(height: 20.0),
+
+          // 지원 대상 게임 리스트 (확장성 시각화)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            child: Text(
+              _installerState.t('sidebar_games_title'),
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12.0,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8.0),
 
           // 게임 1: 얼불춤
           _SidebarGameItem(
@@ -291,7 +320,7 @@ class _MainLayoutState extends State<MainLayout> {
                 : () => _installerState.setSelectedGame('adofai'),
             overlayerState: _overlayerState,
           ),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 2.0),
 
           // 게임 2: 댄싱라인
           _SidebarGameItem(
@@ -307,7 +336,7 @@ class _MainLayoutState extends State<MainLayout> {
                 : () => _installerState.setSelectedGame('dancing-line'),
             overlayerState: _overlayerState,
           ),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 2.0),
 
           // 게임 3: 리듬닥터
           _SidebarGameItem(
@@ -326,25 +355,16 @@ class _MainLayoutState extends State<MainLayout> {
 
           const Spacer(),
 
-          // 탭 네비게이션 버튼
-          _buildSidebarTabButton(
-            index: 0,
-            label: _installerState.t('tab_explore').toUpperCase(),
-            icon: Icons.explore_outlined,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            child: Text(
+              'v${UpdateChecker.currentVersion}',
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12.0,
+              ),
+            ),
           ),
-          const SizedBox(height: 8.0),
-          _buildSidebarTabButton(
-            index: 1,
-            label: _installerState.t('tab_installed').toUpperCase(),
-            icon: Icons.folder_zip_outlined,
-          ),
-          const SizedBox(height: 8.0),
-          _buildSidebarTabButton(
-            index: 2,
-            label: _installerState.t('tab_settings').toUpperCase(),
-            icon: Icons.settings_outlined,
-          ),
-          const SizedBox(height: 12.0),
         ],
       ),
     );
@@ -356,113 +376,125 @@ class _MainLayoutState extends State<MainLayout> {
     required IconData icon,
   }) {
     final bool isSelected = _activeTabIndex == index;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _activeTabIndex = index;
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          height: 46.0,
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF919AFF) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: isSelected
-                  ? Colors.transparent
-                  : Colors.white.withValues(alpha: 0.04),
+    return HoverBuilder(
+      onTap: () {
+        setState(() {
+          _activeTabIndex = index;
+        });
+      },
+      builder: (context, hovered) {
+        final Color fg = isSelected || hovered
+            ? AppColors.text
+            : AppColors.textSecondary;
+        return HoverOutline(
+          visible: hovered && !isSelected,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            height: 40.0,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.control : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? Colors.black : Colors.white70,
-                size: 18.0,
-              ),
-              const SizedBox(width: 12.0),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white70,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontSize: 12.5,
-                  ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? AppColors.accent : fg,
+                  size: 18.0,
                 ),
-              ),
-              if (index == 1 && _installerState.modsWithUpdates.isNotEmpty) ...[
-                const SizedBox(width: 8.0),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                    vertical: 4.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.black : const Color(0xFF919AFF),
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
+                const SizedBox(width: 10.0),
+                Expanded(
                   child: Text(
-                    _installerState.modsWithUpdates.length.toString(),
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: isSelected
-                          ? const Color(0xFF919AFF)
-                          : Colors.black,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
+                      color: fg,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14.0,
                     ),
                   ),
                 ),
+                if (index == 1 &&
+                    _installerState.modsWithUpdates.isNotEmpty) ...[
+                  const SizedBox(width: 8.0),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 20.0),
+                    height: 20.0,
+                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(999.0),
+                    ),
+                    child: Text(
+                      _installerState.modsWithUpdates.length.toString(),
+                      style: const TextStyle(
+                        color: AppColors.bg,
+                        fontSize: 11.0,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildGlobalProgressBar() {
     return Container(
-      color: const Color(0xFF1E1C28),
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+      decoration: const BoxDecoration(
+        color: AppColors.bgElev,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      padding: const EdgeInsets.fromLTRB(32.0, 12.0, 32.0, 14.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _installerState.statusMessage ??
-                    _installerState.t('explore_modal_loading'),
-                style: const TextStyle(
-                  color: Color(0xFF919AFF),
-                  fontSize: 12.0,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(
+                width: 12.0,
+                height: 12.0,
+                child: CircularProgressIndicator(strokeWidth: 2.0),
+              ),
+              const SizedBox(width: 10.0),
+              Expanded(
+                child: Text(
+                  _installerState.statusMessage ??
+                      _installerState.t('explore_modal_loading'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
+              const SizedBox(width: 12.0),
               Text(
                 '${(_installerState.progress * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(color: Colors.white70, fontSize: 12.0),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 10.0),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4.0),
+            borderRadius: BorderRadius.circular(999.0),
             child: LinearProgressIndicator(
               value: _installerState.progress,
-              backgroundColor: const Color(0xFF16151D),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF919AFF),
-              ),
-              minHeight: 5.0,
+              minHeight: 4.0,
             ),
           ),
         ],
@@ -494,8 +526,10 @@ class _MainLayoutState extends State<MainLayout> {
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
+          child: SizedBox(
+            width: 28.0,
+            height: 28.0,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
           ),
         ),
       );
@@ -512,29 +546,22 @@ class _MainLayoutState extends State<MainLayout> {
         throw Exception('Mod or version info not found on the server.');
       }
 
-      if (mod.game != _installerState.game.id) {
+      if (!mod.supportsGame(_installerState.game.id)) {
         final confirmSwitch = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF1E1C28),
-            title: const Text(
-              'Switch Game Required',
-              style: TextStyle(color: Colors.white),
-            ),
+            title: const Text('Switch Game Required'),
             content: Text(
-              'This mod is for "${mod.game}". Do you want to switch the active game to install it?',
+              'This mod is for "${mod.games.join('", "')}". Do you want to switch the active game to install it?',
             ),
+            actionsPadding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 20.0),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text(
-                  'No',
-                  style: TextStyle(color: Colors.white38),
-                ),
+                child: const Text('No'),
               ),
-              UIButton(
+              OlButton(
                 label: 'Yes, Switch',
-                fontSize: 14.0,
                 onClick: () => Navigator.pop(context, true),
               ),
             ],
@@ -551,45 +578,30 @@ class _MainLayoutState extends State<MainLayout> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1C28),
           title: Text(
             isBeta ? 'Install ${mod.name} (Beta)' : 'Install ${mod.name}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16.0,
-              fontWeight: FontWeight.bold,
-            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                mod.summary,
-                style: const TextStyle(color: Colors.white70, fontSize: 13.0),
-              ),
-              const SizedBox(height: 12.0),
-              Text(
-                'Version: v${latest.version}',
-                style: const TextStyle(
-                  color: Color(0xFF919AFF),
-                  fontSize: 12.0,
-                  fontWeight: FontWeight.bold,
-                ),
+              Text(mod.summary),
+              const SizedBox(height: 14.0),
+              AppBadge(
+                label: 'Version: v${latest.version}',
+                tone: isBeta ? BadgeTone.warning : BadgeTone.accent,
               ),
             ],
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 20.0),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white38),
-              ),
+              child: const Text('Cancel'),
             ),
-            UIButton(
+            OlButton(
               label: 'Install',
-              fontSize: 14.0,
+              icon: Icons.download_rounded,
               onClick: () async {
                 Navigator.pop(context);
                 await _installerState.installMod(
@@ -611,25 +623,20 @@ class _MainLayoutState extends State<MainLayout> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF1E1C28),
             title: const Text(
               'Error',
-              style: TextStyle(color: Colors.redAccent),
+              style: TextStyle(color: AppColors.danger),
             ),
             content: Text('Failed to load mod details: $e'),
+            actionsPadding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 20.0),
             actions: [
-              UIButton(
-                label: 'OK',
-                fontSize: 14.0,
-                onClick: () => Navigator.pop(context),
-              ),
+              OlButton(label: 'OK', onClick: () => Navigator.pop(context)),
             ],
           ),
         );
       }
     }
   }
-
 }
 
 class _SidebarGameItem extends StatefulWidget {
@@ -662,19 +669,13 @@ class _SidebarGameItemState extends State<_SidebarGameItem> {
   Widget build(BuildContext context) {
     final double opacity = widget.isSelected
         ? 1.0
-        : (widget.isSupported ? (_isHovered ? 0.95 : 0.75) : 0.35);
+        : (widget.isSupported ? 1.0 : 0.4);
 
     final Color bgColor = widget.isSelected
-        ? const Color(0x1F919AFF)
-        : (widget.isSupported && _isHovered
-              ? Colors.white.withValues(alpha: 0.03)
-              : Colors.transparent);
-
-    final Color borderColor = widget.isSelected
-        ? const Color(0x3F919AFF)
-        : (widget.isSupported && _isHovered
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.transparent);
+        ? AppColors.control
+        : Colors.transparent;
+    final bool showOutline =
+        !widget.isSelected && widget.isSupported && _isHovered;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -696,36 +697,86 @@ class _SidebarGameItemState extends State<_SidebarGameItem> {
         onTap: widget.onTap,
         child: Opacity(
           opacity: opacity,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.all(12.0),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(8.0),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13.0,
+          child: HoverOutline(
+            visible: showOutline,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 8.0,
+              ),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30.0,
+                    height: 30.0,
+                    decoration: BoxDecoration(
+                      gradient: fallbackLogoGradient(widget.name),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      widget.name.isNotEmpty
+                          ? widget.name[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.0,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4.0),
-                Text(
-                  widget.subName,
-                  style: TextStyle(
-                    color: widget.isSelected
-                        ? const Color(0xFF919AFF)
-                        : Colors.white24,
-                    fontSize: 11.0,
+                  const SizedBox(width: 10.0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: widget.isSelected || _isHovered
+                                ? AppColors.text
+                                : AppColors.textSecondary,
+                            fontWeight: widget.isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            fontSize: 13.0,
+                          ),
+                        ),
+                        const SizedBox(height: 2.0),
+                        Text(
+                          widget.subName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: widget.isSelected
+                                ? AppColors.accent
+                                : AppColors.muted,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  if (widget.isSelected) ...[
+                    const SizedBox(width: 8.0),
+                    Container(
+                      width: 6.0,
+                      height: 6.0,
+                      decoration: const BoxDecoration(
+                        color: AppColors.accent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),

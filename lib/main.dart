@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import 'src/ui/main_layout.dart';
+import 'src/ui/theme.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,19 +114,7 @@ class ModlistApp extends StatelessWidget {
     return MaterialApp(
       title: 'modlist.org app',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF16151D),
-        fontFamily: 'SUIT',
-        fontFamilyFallback: const [
-          'NotoSansSC',
-        ],
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF919AFF),
-          secondary: Color(0xFF626696),
-          surface: Color(0xFF1E1C28),
-        ),
-      ),
+      theme: buildAppTheme(),
       home: MainLayout(initialDeepLink: initialDeepLink),
     );
   }

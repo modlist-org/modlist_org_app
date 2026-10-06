@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import 'dart:convert';
 import 'dart:io';
 import '../core/installer_state.dart';
 import '../core/app_errors.dart';
 import '../models/mod_model.dart';
 import 'dialogs.dart';
+import 'theme.dart';
+import 'widgets.dart';
 
 const String _githubSvg = '''
 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
@@ -105,7 +107,7 @@ Widget _buildFallbackLogo(
       name.isNotEmpty ? name[0].toUpperCase() : 'M',
       style: TextStyle(
         fontSize: fontSize,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w700,
         color: Colors.white,
       ),
     ),
@@ -114,50 +116,166 @@ Widget _buildFallbackLogo(
 
 final markdownStyleSheet = MarkdownStyleSheet(
   p: const TextStyle(
-    color: Colors.white70,
-    fontSize: 13.5,
-    height: 1.4,
-    fontFamily: 'SUIT',
+    color: AppColors.textSecondary,
+    fontSize: 14.0,
+    height: 1.6,
+    fontFamily: appFontFamily,
   ),
+  a: const TextStyle(color: AppColors.accent),
   blockquote: const TextStyle(
-    color: Colors.white60,
-    fontStyle: FontStyle.italic,
-    fontFamily: 'SUIT',
+    color: AppColors.textSecondary,
+    fontFamily: appFontFamily,
   ),
   blockquoteDecoration: const BoxDecoration(
-    border: Border(left: BorderSide(color: Color(0xFF919AFF), width: 3.0)),
+    color: AppColors.bgElev,
+    border: Border(left: BorderSide(color: AppColors.accent, width: 3.0)),
   ),
   blockquotePadding: const EdgeInsets.symmetric(
     horizontal: 12.0,
-    vertical: 6.0,
+    vertical: 8.0,
   ),
   h1: const TextStyle(
-    color: Colors.white,
-    fontSize: 16.0,
-    fontWeight: FontWeight.bold,
-    fontFamily: 'SUIT',
+    color: AppColors.text,
+    fontSize: 18.0,
+    fontWeight: FontWeight.w600,
+    fontFamily: appFontFamily,
   ),
   h2: const TextStyle(
-    color: Colors.white,
-    fontSize: 14.0,
-    fontWeight: FontWeight.bold,
-    fontFamily: 'SUIT',
+    color: AppColors.text,
+    fontSize: 16.0,
+    fontWeight: FontWeight.w600,
+    fontFamily: appFontFamily,
   ),
-  strong: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+  h3: const TextStyle(
+    color: AppColors.text,
+    fontSize: 14.5,
+    fontWeight: FontWeight.w600,
+    fontFamily: appFontFamily,
+  ),
+  strong: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w600),
   em: const TextStyle(fontStyle: FontStyle.italic),
-  listBullet: const TextStyle(color: Color(0xFF919AFF)),
+  listBullet: const TextStyle(color: AppColors.textTertiary),
   code: const TextStyle(
-    color: Color.fromARGB(255, 193, 194, 255),
+    color: AppColors.text,
+    backgroundColor: AppColors.control,
     fontFamily: 'Consolas',
+    fontFamilyFallback: ['Menlo', 'monospace'],
     fontSize: 13.0,
   ),
   codeblockDecoration: BoxDecoration(
-    color: const Color(0xFF111118),
-    borderRadius: BorderRadius.circular(8.0),
-    border: Border.all(color: Colors.white10),
+    color: AppColors.bg,
+    borderRadius: BorderRadius.circular(AppRadius.sm),
   ),
-  codeblockPadding: const EdgeInsets.all(12.0),
+  codeblockPadding: const EdgeInsets.all(14.0),
+  horizontalRuleDecoration: const BoxDecoration(
+    border: Border(top: BorderSide(color: AppColors.border)),
+  ),
 );
+
+String _gameLabel(InstallerState state, String game) {
+  switch (game.toLowerCase()) {
+    case 'adofai':
+      return state.t('game_adofai');
+    case 'dancing-line':
+      return state.t('game_dancing_line');
+    case 'rhythm-doctor':
+      return state.t('game_rhythm_doctor');
+    default:
+      return game.toUpperCase();
+  }
+}
+
+Widget _buildLetterAvatar(Author author, double size) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: const BoxDecoration(
+      color: AppColors.control,
+      shape: BoxShape.circle,
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      author.displayName.isNotEmpty ? author.displayName[0].toUpperCase() : 'A',
+      style: TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: size * 0.45,
+        fontWeight: FontWeight.w600,
+        height: 1.0,
+      ),
+    ),
+  );
+}
+
+Widget _buildAuthorAvatar(Author author, {double size = 24.0}) {
+  if (author.avatar == null || author.avatar!.isEmpty) {
+    return _buildLetterAvatar(author, size);
+  }
+
+  // data:image 또는 http url
+  if (author.avatar!.startsWith('data:image')) {
+    try {
+      final commaIndex = author.avatar!.indexOf(',');
+      if (commaIndex != -1) {
+        final base64Str = author.avatar!.substring(commaIndex + 1);
+        final bytes = base64.decode(base64Str);
+        return ClipOval(
+          child: Image.memory(
+            bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
+  return ClipOval(
+    child: Image.network(
+      author.avatar!,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          _buildLetterAvatar(author, size),
+    ),
+  );
+}
+
+/// Overlapping avatar stack (web `.avatar-stack`).
+Widget _buildAvatarStack(
+  List<Author> authors, {
+  double size = 18.0,
+  int max = 3,
+  Color ringColor = AppColors.surface,
+}) {
+  if (authors.isEmpty) return const SizedBox.shrink();
+  final int displayCount = authors.length > max ? max : authors.length;
+  const double ring = 2.0;
+  final double outer = size + ring * 2;
+  final double step = outer - 8.0;
+
+  return SizedBox(
+    width: outer + (displayCount - 1) * step,
+    height: outer,
+    child: Stack(
+      children: [
+        for (int i = 0; i < displayCount; i++)
+          Positioned(
+            left: i * step,
+            child: Container(
+              padding: const EdgeInsets.all(ring),
+              decoration: BoxDecoration(
+                color: ringColor,
+                shape: BoxShape.circle,
+              ),
+              child: _buildAuthorAvatar(authors[i], size: size),
+            ),
+          ),
+      ],
+    ),
+  );
+}
 
 class ExploreTab extends StatefulWidget {
   final InstallerState state;
@@ -217,7 +335,9 @@ class _ExploreTabState extends State<ExploreTab> {
     try {
       final result = await widget.state.apiService.fetchMods(
         game: widget.state.game.id,
-        categories: _selectedCategories.isEmpty ? 'all' : _selectedCategories.join(','),
+        categories: _selectedCategories.isEmpty
+            ? 'all'
+            : _selectedCategories.join(','),
         search: _searchController.text,
         sortBy: _selectedSort,
         page: _currentPage,
@@ -238,9 +358,7 @@ class _ExploreTabState extends State<ExploreTab> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               widget.state.t(
@@ -266,22 +384,8 @@ class _ExploreTabState extends State<ExploreTab> {
   }
 
   // 모드명에 기반한 백업 그라데이션 스타일 계산
-  LinearGradient _getFallbackGradient(String name) {
-    int hash = 0;
-    for (int i = 0; i < name.length; i++) {
-      hash = name.codeUnitAt(i) + ((hash << 5) - hash);
-    }
-    final double h1 = (hash.abs() % 360).toDouble();
-    final double h2 = ((h1 + 40) % 360).toDouble();
-    return LinearGradient(
-      colors: [
-        HSLColor.fromAHSL(1.0, h1, 0.7, 0.5).toColor(),
-        HSLColor.fromAHSL(1.0, h2, 0.7, 0.4).toColor(),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-  }
+  LinearGradient _getFallbackGradient(String name) =>
+      fallbackLogoGradient(name);
 
   Widget _buildCategoryChip(String cat) {
     final bool isSelected = cat == 'all'
@@ -292,59 +396,42 @@ class _ExploreTabState extends State<ExploreTab> {
         ? widget.state.t('explore_filter_category_all')
         : widget.state.t('category_$cat');
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            if (cat == 'all') {
-              _selectedCategories.clear();
+    return HoverBuilder(
+      onTap: () {
+        setState(() {
+          if (cat == 'all') {
+            _selectedCategories.clear();
+          } else {
+            if (_selectedCategories.contains(cat)) {
+              _selectedCategories.remove(cat);
             } else {
-              if (_selectedCategories.contains(cat)) {
-                _selectedCategories.remove(cat);
-              } else {
-                _selectedCategories.add(cat);
-              }
+              _selectedCategories.add(cat);
             }
-            _currentPage = 1;
-          });
-          _fetchMods();
-        },
+          }
+          _currentPage = 1;
+        });
+        _fetchMods();
+      },
+      builder: (context, hovered) => HoverOutline(
+        visible: hovered && !isSelected,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          duration: const Duration(milliseconds: 120),
+          height: 34.0,
+          padding: const EdgeInsets.symmetric(horizontal: 14.0),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF919AFF).withValues(alpha: 0.15)
-                : const Color(0xFF1E1C28),
-            borderRadius: BorderRadius.circular(20.0),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF919AFF)
-                  : Colors.white.withValues(alpha: 0.08),
-              width: 1.5,
-            ),
+            color: isSelected ? AppColors.button : AppColors.control,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isSelected) ...[
-                const Icon(
-                  Icons.check,
-                  color: Color(0xFF919AFF),
-                  size: 14.0,
-                ),
-                const SizedBox(width: 6.0),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? const Color(0xFF919AFF) : Colors.white70,
-                  fontSize: 13.0,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected || hovered
+                  ? AppColors.text
+                  : AppColors.textSecondary,
+              fontSize: 13.0,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -358,59 +445,49 @@ class _ExploreTabState extends State<ExploreTab> {
       children: [
         // 필터 및 검색 바
         Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.fromLTRB(32.0, 28.0, 32.0, 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              PageHeader(
+                title: widget.state.t('tab_explore'),
+                subtitle: _gameLabel(widget.state, widget.state.game.id),
+              ),
+              const SizedBox(height: 20.0),
               Row(
                 children: [
                   // 검색어 입력
                   Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                      onChanged: _onSearchChanged,
-                      decoration: InputDecoration(
-                        hintText: widget.state.t('explore_search_placeholder'),
-                        hintStyle: const TextStyle(
-                          color: Colors.white24,
+                    child: HoverOutlineField(
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(
+                          color: AppColors.text,
                           fontSize: 14.0,
                         ),
-                        suffixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.white30,
-                          size: 20.0,
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF3C3A4B),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 12.0,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF919AFF),
-                            width: 1.5,
+                        onChanged: _onSearchChanged,
+                        decoration: InputDecoration(
+                          hintText: widget.state.t(
+                            'explore_search_placeholder',
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 18.0,
+                          ),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 40.0,
+                            minHeight: 42.0,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16.0),
+                  const SizedBox(width: 12.0),
                   // 정렬 필터
                   SizedBox(
-                    width: 180,
+                    width: 200,
                     height: 42,
-                    child: _SortDropdown<String>(
+                    child: UIDropdown<String>(
                       modelValue: _selectedSort,
                       defaultValue: 'downloads_desc',
                       values: const [
@@ -423,14 +500,10 @@ class _ExploreTabState extends State<ExploreTab> {
                       ],
                       display: (val) {
                         if (val == 'updated') {
-                          return widget.state.t(
-                            'explore_filter_sort_updated',
-                          );
+                          return widget.state.t('explore_filter_sort_updated');
                         }
                         if (val == 'created') {
-                          return widget.state.t(
-                            'explore_filter_sort_created',
-                          );
+                          return widget.state.t('explore_filter_sort_created');
                         }
                         if (val == 'downloads_desc') {
                           return widget.state.t(
@@ -443,9 +516,7 @@ class _ExploreTabState extends State<ExploreTab> {
                           );
                         }
                         if (val == 'name_asc') {
-                          return widget.state.t(
-                            'explore_filter_sort_name',
-                          );
+                          return widget.state.t('explore_filter_sort_name');
                         }
                         if (val == 'name_desc') {
                           return widget.state.t(
@@ -466,24 +537,29 @@ class _ExploreTabState extends State<ExploreTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16.0),
+              const SizedBox(height: 14.0),
               // 카테고리 필터 (Chips)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildCategoryChip('all'),
-                    const SizedBox(width: 8.0),
-                    _buildCategoryChip('ui'),
-                    const SizedBox(width: 8.0),
-                    _buildCategoryChip('gameplay'),
-                    const SizedBox(width: 8.0),
-                    _buildCategoryChip('utility'),
-                    const SizedBox(width: 8.0),
-                    _buildCategoryChip('visuals'),
-                    const SizedBox(width: 8.0),
-                    _buildCategoryChip('library'),
-                  ],
+              ScrollConfiguration(
+                behavior: const MaterialScrollBehavior().copyWith(
+                  scrollbars: false,
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildCategoryChip('all'),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryChip('ui'),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryChip('gameplay'),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryChip('utility'),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryChip('visuals'),
+                      const SizedBox(width: 8.0),
+                      _buildCategoryChip('library'),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -494,19 +570,43 @@ class _ExploreTabState extends State<ExploreTab> {
         Expanded(
           child: _isLoading
               ? const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF919AFF),
-                    ),
+                  child: SizedBox(
+                    width: 28.0,
+                    height: 28.0,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
                   ),
                 )
               : _mods.isEmpty
-              ? Center(
-                  child: Text(
-                    widget.state.t('explore_no_mods_found'),
-                    style: const TextStyle(
-                      color: Colors.white30,
-                      fontSize: 14.0,
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(32.0, 0.0, 32.0, 32.0),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 48.0),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.inventory_2_outlined,
+                            size: 32.0,
+                            color: AppColors.textTertiary,
+                          ),
+                          const SizedBox(height: 12.0),
+                          Text(
+                            widget.state.t('explore_no_mods_found'),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14.0,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 )
@@ -515,25 +615,28 @@ class _ExploreTabState extends State<ExploreTab> {
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          const double minCardWidth = 388.0;
+                          const double minCardWidth = 400.0;
                           const double spacing = 16.0;
 
                           final count =
-                              ((constraints.maxWidth + spacing) /
+                              ((constraints.maxWidth - 64.0 + spacing) /
                                       (minCardWidth + spacing))
                                   .floor()
                                   .clamp(1, 999);
 
                           return GridView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24.0,
+                            padding: const EdgeInsets.fromLTRB(
+                              32.0,
+                              0.0,
+                              32.0,
+                              24.0,
                             ),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: count,
                                   crossAxisSpacing: spacing,
                                   mainAxisSpacing: spacing,
-                                  mainAxisExtent: 154.0,
+                                  mainAxisExtent: 168.0,
                                 ),
                             itemCount: _mods.length,
                             itemBuilder: (context, index) {
@@ -576,412 +679,234 @@ class _ExploreTabState extends State<ExploreTab> {
     final String authorNames = authorNamesStr;
     final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
 
-    final String gameLabel = mod.game.toLowerCase() == 'adofai'
-        ? widget.state.t('game_adofai')
-        : (mod.game.toLowerCase() == 'dancing-line'
-            ? widget.state.t('game_dancing_line')
-            : (mod.game.toLowerCase() == 'rhythm-doctor'
-                ? widget.state.t('game_rhythm_doctor')
-                : mod.game.toUpperCase()));
+    final List<String> shownCategories = mod.categories.take(3).toList();
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => _showModDetailDialog(mod),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1C28),
-            borderRadius: BorderRadius.circular(12.0),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.04),
-              width: 1.0,
-            ),
-          ),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Logo and Title/Summary info (Row)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Logo
-                  Container(
-                    width: 44.0,
-                    height: 44.0,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: buildModLogo(
-                      logoPath: mod.logo,
-                      fallbackName: mod.name,
-                      apiUrl: widget.state.apiUrl,
-                      width: 44.0,
-                      height: 44.0,
-                      fallbackFontSize: 18.0,
-                      getFallbackGradient: _getFallbackGradient,
-                    ),
-                  ),
-                  const SizedBox(width: 12.0),
-                  // Title and Subtitle
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          mod.name,
-                          style: const TextStyle(
-                            fontSize: 15.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+    return HoverBuilder(
+      onTap: () => _showModDetailDialog(mod),
+      builder: (context, hovered) {
+        final Color base = hovered ? AppColors.surfaceHover : AppColors.surface;
+
+        return HoverOutline(
+          visible: hovered,
+          radius: AppRadius.lg,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            decoration: BoxDecoration(
+              color: mod.isFeatured ? null : base,
+              gradient: mod.isFeatured
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.0, 0.65],
+                      colors: [
+                        Color.alphaBlend(
+                          AppColors.warning.withValues(alpha: 0.06),
+                          base,
                         ),
-                        const SizedBox(height: 3.0),
-                        Text(
-                          mod.summary,
-                          style: const TextStyle(
-                            color: Colors.white38,
-                            fontSize: 11.5,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        base,
                       ],
-                    ),
-                  ),
-                ],
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: mod.isFeatured
+                    ? AppColors.warning.withValues(alpha: 0.18)
+                    : AppColors.border,
               ),
-              const SizedBox(height: 10.0),
-
-              // 2. Badges Row
-              Row(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+            ),
+            padding: const EdgeInsets.all(18.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Logo
+                Container(
+                  width: 56.0,
+                  height: 56.0,
+                  decoration: BoxDecoration(
+                    color: AppColors.control,
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: buildModLogo(
+                    logoPath: mod.logo,
+                    fallbackName: mod.name,
+                    apiUrl: widget.state.apiUrl,
+                    width: 56.0,
+                    height: 56.0,
+                    fallbackFontSize: 22.0,
+                    getFallbackGradient: _getFallbackGradient,
+                  ),
+                ),
+                const SizedBox(width: 16.0),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Heading
+                      Row(
                         children: [
+                          Flexible(
+                            child: Text(
+                              mod.name,
+                              style: const TextStyle(
+                                fontSize: 17.0,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.text,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           if (mod.isFeatured) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6.0,
-                                vertical: 2.0,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0x1FFFB300),
-                                borderRadius: BorderRadius.circular(4.0),
-                                border: Border.all(
-                                  color: const Color(0xFFFFB300),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    color: Color(0xFFFFB300),
-                                    size: 10.0,
-                                  ),
-                                  const SizedBox(width: 2.0),
-                                  Text(
-                                    widget.state.t('explore_card_featured'),
-                                    style: const TextStyle(
-                                      color: Color(0xFFFFB300),
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            const SizedBox(width: 8.0),
+                            AppBadge(
+                              label:
+                                  '★ ${widget.state.t('explore_card_featured')}',
+                              tone: BadgeTone.warning,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6.0),
+
+                      // Authors
+                      Row(
+                        children: [
+                          if (authors.isNotEmpty) ...[
+                            _buildAvatarStack(
+                              authors,
+                              ringColor: hovered
+                                  ? AppColors.surfaceHover
+                                  : AppColors.surface,
                             ),
                             const SizedBox(width: 6.0),
                           ],
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6.0,
-                              vertical: 2.0,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0x1F7E808F),
-                              borderRadius: BorderRadius.circular(4.0),
-                              border: Border.all(
-                                color: const Color(0x5F7E808F),
-                              ),
-                            ),
+                          Flexible(
                             child: Text(
-                              gameLabel,
+                              authorNames,
                               style: const TextStyle(
-                                color: Color(0xFFC2C3D3),
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                                fontSize: 13.0,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 6.0),
-                          ...mod.categories.map(
-                            (cat) => Container(
-                              margin: const EdgeInsets.only(right: 6.0),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6.0,
-                                vertical: 2.0,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0x1F919AFF),
-                                borderRadius: BorderRadius.circular(4.0),
-                                border: Border.all(
-                                  color: const Color(0x3F919AFF),
-                                ),
-                              ),
-                              child: Text(
-                                widget.state.t('category_$cat'),
-                                style: const TextStyle(
-                                  color: Color(0xFF919AFF),
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
+                          if (isAnyAuthorVerified) ...[
+                            const SizedBox(width: 6.0),
+                            const VerifiedDot(),
+                          ],
                         ],
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
+                      const SizedBox(height: 8.0),
 
-              // 3. Divider
-              Divider(
-                color: Colors.white.withValues(alpha: 0.04),
-                height: 1.0,
-                thickness: 1.0,
-              ),
-              const SizedBox(height: 10.0),
+                      // Summary
+                      Expanded(
+                        child: Text(
+                          mod.summary,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13.5,
+                            height: 1.5,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
 
-              // 4. Footer
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Author Info
-                  Expanded(
-                    child: Row(
-                      children: [
-                        if (authors.isNotEmpty) ...[
-                          _buildOverlappingAvatars(authors),
-                          const SizedBox(width: 8.0),
-                        ],
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  authorNames,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 11.0,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (isAnyAuthorVerified) ...[
-                                const SizedBox(width: 3.0),
-                                const Icon(
-                                  Icons.check_circle,
-                                  color: Color(0xFF4CAF50),
-                                  size: 12.0,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8.0),
-                  // Mod Version, Game Version & Downloads
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Mod Version Pill
-                      if (mod.latestVersion != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5.0,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2B283D),
-                            borderRadius: BorderRadius.circular(4.0),
-                          ),
-                          child: Text(
-                            'v${mod.latestVersion!.version}',
-                            style: const TextStyle(
-                              color: Color(0xFF919AFF),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5.0),
-                      ],
-                      // Game Version Pill
-                      if (mod.latestVersion?.gameVersion != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5.0,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0x1FFFFFFF),
-                            borderRadius: BorderRadius.circular(4.0),
-                          ),
-                          child: Text(
-                            '🎮 ${mod.latestVersion!.gameVersion}',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5.0),
-                      ],
-                      // Download count
+                      // Meta: badges + stats
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.download,
-                            color: Colors.white30,
-                            size: 12.0,
-                          ),
-                          const SizedBox(width: 1.5),
-                          Text(
-                            '${mod.downloads}',
-                            style: const TextStyle(
-                              color: Colors.white30,
-                              fontSize: 10.5,
+                          Expanded(
+                            child: SizedBox(
+                              height: 22.0,
+                              child: Wrap(
+                                spacing: 6.0,
+                                runSpacing: 6.0,
+                                clipBehavior: Clip.hardEdge,
+                                children: [
+                                  for (final g in mod.games)
+                                    AppBadge(
+                                      label: _gameLabel(widget.state, g),
+                                      tone: BadgeTone.game,
+                                    ),
+                                  for (final cat in shownCategories)
+                                    AppBadge(
+                                      label: widget.state.t('category_$cat'),
+                                    ),
+                                  if (mod.categories.length > 3)
+                                    AppBadge(
+                                      label: '+${mod.categories.length - 3}',
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 10.0),
+                          _buildCardStats(mod),
                         ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildMiniAvatar(Author author) {
-    if (author.avatar == null || author.avatar!.isEmpty) {
-      return CircleAvatar(
-        radius: 8.0,
-        backgroundColor: const Color(0xFF919AFF),
-        child: Text(
-          author.displayName.isNotEmpty
-              ? author.displayName[0].toUpperCase()
-              : 'A',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 7.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-    }
-
-    // data:image 또는 http url
-    if (author.avatar!.startsWith('data:image')) {
-      try {
-        final commaIndex = author.avatar!.indexOf(',');
-        if (commaIndex != -1) {
-          final base64Str = author.avatar!.substring(commaIndex + 1);
-          final bytes = base64.decode(base64Str);
-          return ClipOval(
-            child: Image.memory(
-              bytes,
-              width: 16.0,
-              height: 16.0,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-      } catch (_) {}
-    }
-
-    return ClipOval(
-      child: Image.network(
-        author.avatar!,
-        width: 16.0,
-        height: 16.0,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => CircleAvatar(
-          radius: 8.0,
-          backgroundColor: const Color(0xFF919AFF),
-          child: Text(
-            author.displayName.isNotEmpty
-                ? author.displayName[0].toUpperCase()
-                : 'A',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 7.0,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+  Widget _buildCardStats(ModItem mod) {
+    const TextStyle statStyle = TextStyle(
+      color: AppColors.textTertiary,
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      fontFeatures: [FontFeature.tabularFigures()],
     );
-  }
-
-  Widget _buildOverlappingAvatars(List<Author> authors) {
-    if (authors.isEmpty) return const SizedBox.shrink();
-
-    final List<Widget> avatarWidgets = [];
-    final int displayCount = authors.length > 3 ? 3 : authors.length;
-
-    for (int i = 0; i < displayCount; i++) {
-      avatarWidgets.add(
-        Positioned(
-          left: i * 12.0,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF1E1C28), width: 1.5),
-            ),
-            child: _buildMiniAvatar(authors[i]),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Mod Version
+        if (mod.latestVersion != null) ...[
+          Text('v${mod.latestVersion!.version}', style: statStyle),
+          const SizedBox(width: 10.0),
+        ],
+        // Game Version
+        if (mod.latestVersion?.gameVersion != null) ...[
+          const Icon(
+            Icons.sports_esports_outlined,
+            color: AppColors.textTertiary,
+            size: 14.0,
           ),
+          const SizedBox(width: 3.0),
+          Text(mod.latestVersion!.gameVersion!, style: statStyle),
+          const SizedBox(width: 10.0),
+        ],
+        // Download count
+        const Icon(
+          Icons.download_rounded,
+          color: AppColors.textTertiary,
+          size: 14.0,
         ),
-      );
-    }
-
-    return SizedBox(
-      width: 16.0 + (displayCount - 1) * 12.0 + 3.0,
-      height: 19.0,
-      child: Stack(alignment: Alignment.centerLeft, children: avatarWidgets),
+        const SizedBox(width: 3.0),
+        Text('${mod.downloads}', style: statStyle),
+      ],
     );
   }
 
   Widget _buildPagination() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left, color: Colors.white),
-            disabledColor: Colors.white24,
+          AppButton(
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
             onPressed: _currentPage > 1
                 ? () {
                     setState(() {
@@ -990,14 +915,23 @@ class _ExploreTabState extends State<ExploreTab> {
                     _fetchMods();
                   }
                 : null,
+            child: const Icon(Icons.chevron_left_rounded, size: 18.0),
           ),
-          Text(
-            '$_currentPage / $_totalPages',
-            style: const TextStyle(color: Colors.white, fontSize: 14.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              '$_currentPage / $_totalPages',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right, color: Colors.white),
-            disabledColor: Colors.white24,
+          AppButton(
+            variant: AppButtonVariant.secondary,
+            size: AppButtonSize.sm,
             onPressed: _currentPage < _totalPages
                 ? () {
                     setState(() {
@@ -1006,6 +940,7 @@ class _ExploreTabState extends State<ExploreTab> {
                     _fetchMods();
                   }
                 : null,
+            child: const Icon(Icons.chevron_right_rounded, size: 18.0),
           ),
         ],
       ),
@@ -1016,7 +951,6 @@ class _ExploreTabState extends State<ExploreTab> {
   void _showModDetailDialog(ModItem summaryMod) {
     showDialog(
       context: context,
-      barrierColor: Colors.black87,
       builder: (context) {
         return _ModDetailModal(modSlug: summaryMod.slug, state: widget.state);
       },
@@ -1086,44 +1020,31 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     if (_loading) {
       return const Dialog(
         backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(side: BorderSide.none),
         child: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
+          child: SizedBox(
+            width: 28.0,
+            height: 28.0,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
           ),
         ),
       );
     }
 
     if (_error != null || _mod == null) {
-      return Dialog(
-        backgroundColor: const Color(0xFF1E1C28),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.state.t('explore_modal_err_title'),
-                style: const TextStyle(
-                  color: Colors.redAccent,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12.0),
-              Text(
-                _error ?? widget.state.t('explore_modal_err_body'),
-                style: const TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 24.0),
-              UIButton(
-                label: widget.state.t('explore_modal_btn_close'),
-                fontSize: 14.0,
-                onClick: () => Navigator.pop(context),
-              ),
-            ],
+      return AppDialogFrame(
+        icon: Icons.error_outline_rounded,
+        iconColor: AppColors.danger,
+        iconBackground: AppColors.dangerSoft,
+        title: widget.state.t('explore_modal_err_title'),
+        body: _error ?? widget.state.t('explore_modal_err_body'),
+        actions: [
+          OlButton(
+            expand: true,
+            label: widget.state.t('explore_modal_btn_close'),
+            onClick: () => Navigator.pop(context),
           ),
-        ),
+        ],
       );
     }
 
@@ -1144,15 +1065,18 @@ class _ModDetailModalState extends State<_ModDetailModal> {
           })
         : null;
 
+    final String? statusMessage = widget.state.statusMessage;
+    final bool statusIsError =
+        statusMessage != null &&
+        (statusMessage.toLowerCase().contains('실패') ||
+            statusMessage.toLowerCase().contains('fail') ||
+            statusMessage.toLowerCase().contains('失败') ||
+            statusMessage.toLowerCase().contains('error'));
+
     return Dialog(
-      backgroundColor: const Color(0xFF1E1C28),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-      ),
       insetPadding: const EdgeInsets.all(40.0),
       child: Container(
-        width: 680.0,
+        width: 720.0,
         padding: const EdgeInsets.all(24.0),
         child: ScrollConfiguration(
           behavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
@@ -1161,75 +1085,26 @@ class _ModDetailModalState extends State<_ModDetailModal> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Top Close Button & Game Label
+                // Header (Logo, Name, Author, Close)
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 3.0,
-                      ),
+                      width: 72.0,
+                      height: 72.0,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16151D),
-                        borderRadius: BorderRadius.circular(4.0),
-                      ),
-                      child: Text(
-                        mod.game.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 11.0,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white54),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12.0),
-
-                // Header (Logo, Name, Author)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 64.0,
-                      height: 64.0,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
-                        ),
+                        color: AppColors.control,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: buildModLogo(
                         logoPath: mod.logo,
                         fallbackName: mod.name,
                         apiUrl: widget.state.apiUrl,
-                        width: 64.0,
-                        height: 64.0,
-                        fallbackFontSize: 28.0,
-                        getFallbackGradient: (name) {
-                          int hash = 0;
-                          for (int i = 0; i < name.length; i++) {
-                            hash = name.codeUnitAt(i) + ((hash << 5) - hash);
-                          }
-                          final double h1 = (hash.abs() % 360).toDouble();
-                          final double h2 = ((h1 + 40) % 360).toDouble();
-                          return LinearGradient(
-                            colors: [
-                              HSLColor.fromAHSL(1.0, h1, 0.7, 0.5).toColor(),
-                              HSLColor.fromAHSL(1.0, h2, 0.7, 0.4).toColor(),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          );
-                        },
+                        width: 72.0,
+                        height: 72.0,
+                        fallbackFontSize: 30.0,
+                        getFallbackGradient: fallbackLogoGradient,
                       ),
                     ),
                     const SizedBox(width: 16.0),
@@ -1237,19 +1112,31 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            mod.name,
-                            style: const TextStyle(
-                              fontSize: 20.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  mod.name,
+                                  style: const TextStyle(
+                                    fontSize: 22.0,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.text,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (mod.isFeatured) ...[
+                                const SizedBox(width: 10.0),
+                                AppBadge(
+                                  label:
+                                      '★ ${widget.state.t('explore_card_featured')}',
+                                  tone: BadgeTone.warning,
+                                ),
+                              ],
+                            ],
                           ),
-
-                          const SizedBox(height: 4.0),
-
+                          const SizedBox(height: 8.0),
                           Row(
                             children: [
                               if (mod.author != null)
@@ -1257,63 +1144,18 @@ class _ModDetailModalState extends State<_ModDetailModal> {
 
                               if (mod.collaborators.isNotEmpty) ...[
                                 const SizedBox(width: 10.0),
-
+                                _buildAvatarStack(
+                                  mod.collaborators,
+                                  size: 20.0,
+                                  max: 8,
+                                ),
+                                const SizedBox(width: 6.0),
                                 Text(
                                   '+${mod.collaborators.length}',
                                   style: const TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 12.0,
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-
-                                const SizedBox(width: 6.0),
-
-                                Transform.translate(
-                                  offset: const Offset(0.0, -1.0),
-                                  child: SizedBox(
-                                    width:
-                                        mod.collaborators.take(8).length *
-                                            12.0 +
-                                        20.0,
-                                    height: 20.0,
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        for (
-                                          int i = 0;
-                                          i < mod.collaborators.take(8).length;
-                                          i++
-                                        )
-                                          Positioned(
-                                            left: i * 14.0,
-                                            child: Opacity(
-                                              opacity: (1.0 - i * 0.08).clamp(
-                                                0.4,
-                                                1.0,
-                                              ),
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFF16151D,
-                                                  ),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: const Color(
-                                                      0xFF16151D,
-                                                    ),
-                                                    width: 2.0,
-                                                  ),
-                                                ),
-                                                child: _buildAvatar(
-                                                  mod.collaborators[i],
-                                                  size: 20.0,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
                                   ),
                                 ),
                               ],
@@ -1322,44 +1164,80 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         ],
                       ),
                     ),
-                    // Download Conut
-                    Padding(
-                      padding: const EdgeInsets.only(left: 16.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.download_rounded,
-                            size: 18.0,
-                            color: Colors.white54,
-                          ),
-
-                          const SizedBox(width: 6.0),
-
-                          Text(
-                            '${mod.downloads}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(width: 12.0),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20.0),
+                      tooltip: widget.state.t('explore_modal_btn_close'),
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14.0),
+                const SizedBox(height: 16.0),
 
-                // Tabs / Description / Changelog
-                const SizedBox(height: 6.0),
+                // Badges
+                Wrap(
+                  spacing: 6.0,
+                  runSpacing: 6.0,
+                  children: [
+                    for (final g in mod.games)
+                      AppBadge(
+                        label: _gameLabel(widget.state, g),
+                        tone: BadgeTone.game,
+                      ),
+                    for (final cat in mod.categories)
+                      AppBadge(label: widget.state.t('category_$cat')),
+                  ],
+                ),
+                const SizedBox(height: 16.0),
+
+                // Stats
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4.0,
+                    vertical: 12.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgElev,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        _buildStat(
+                          widget.state.t('explore_modal_downloads'),
+                          '${mod.downloads}',
+                          Icons.download_rounded,
+                        ),
+                        if (_latestVersion != null) ...[
+                          const VerticalDivider(width: 1.0),
+                          _buildStat(
+                            widget.state.t('explore_modal_latest_ver'),
+                            'v${_latestVersion!.version}',
+                            Icons.sell_outlined,
+                          ),
+                        ],
+                        if (_latestVersion?.gameVersion != null) ...[
+                          const VerticalDivider(width: 1.0),
+                          _buildStat(
+                            widget.state.t('explore_modal_game_ver'),
+                            _latestVersion!.gameVersion!,
+                            Icons.sports_esports_outlined,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16.0),
+
+                // Description
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final text = mod.description ?? mod.summary;
 
                     final overflow = _checkOverflow(
                       text,
-                      constraints.maxWidth - 24,
+                      constraints.maxWidth - 32,
                     );
 
                     return Stack(
@@ -1367,13 +1245,12 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         Container(
                           width: double.infinity,
                           height: 220.0,
-                          padding: const EdgeInsets.all(12.0),
+                          padding: const EdgeInsets.all(16.0),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16151D),
-                            borderRadius: BorderRadius.circular(8.0),
+                            color: AppColors.bgElev,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
+                          child: ClipRect(
                             child: ShaderMask(
                               shaderCallback: (rect) {
                                 return const LinearGradient(
@@ -1404,138 +1281,135 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                           Positioned(
                             top: 8,
                             right: 8,
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.open_in_full,
-                                size: 18,
-                                color: Colors.white54,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.control,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.sm,
+                                ),
                               ),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => Dialog(
-                                    backgroundColor: const Color(0xFF1E1C28),
-                                    insetPadding: const EdgeInsets.all(40.0),
-                                    child: Container(
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 1000.0,
-                                        maxHeight: 900.0,
-                                      ),
-                                      padding: const EdgeInsets.all(24.0),
-                                      child: SingleChildScrollView(
-                                        child: MarkdownBody(
-                                          data: mod.description ?? mod.summary,
-                                          styleSheet: markdownStyleSheet,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.open_in_full_rounded,
+                                  size: 16,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (dialogContext) => Dialog(
+                                      insetPadding: const EdgeInsets.all(40.0),
+                                      child: Container(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 1000.0,
+                                          maxHeight: 900.0,
+                                        ),
+                                        padding: const EdgeInsets.all(28.0),
+                                        child: SingleChildScrollView(
+                                          child: MarkdownBody(
+                                            data:
+                                                mod.description ?? mod.summary,
+                                            styleSheet: markdownStyleSheet,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
                       ],
                     );
                   },
                 ),
-                const SizedBox(height: 12.0),
+                const SizedBox(height: 20.0),
 
                 // Installation status and Installer logic
                 if (widget.state.isProcessing) ...[
                   // Progress indicator
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4.0),
-                        child: LinearProgressIndicator(
-                          value: widget.state.progress,
-                          backgroundColor: const Color(0xFF16151D),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFF919AFF),
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgElev,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          widget.state.statusMessage ??
+                              widget.state.t('explore_modal_loading'),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13.0,
                           ),
-                          minHeight: 6.0,
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const SizedBox(height: 8.0),
-                      Text(
-                        widget.state.statusMessage ??
-                            widget.state.t('explore_modal_loading'),
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12.0,
-                          fontStyle: FontStyle.italic,
+                        const SizedBox(height: 10.0),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999.0),
+                          child: LinearProgressIndicator(
+                            value: widget.state.progress,
+                            minHeight: 4.0,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ] else ...[
                   // Warnings
                   if (!widget.state.isValidPath)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Text(
-                        widget.state.t('explore_modal_warn_path'),
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 12.0,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    StatusBanner(
+                      tone: BannerTone.danger,
+                      message: widget.state.t('explore_modal_warn_path'),
                     )
                   else if (!widget.state.isLoaderInstalled)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            widget.state.isUmmDetected
-                                ? widget.state.t('installed_umm_banner')
-                                : widget.state.t('explore_modal_warn_loader'),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.0,
-                              height: 1.4,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12.0),
-                          _DownloadButton(
-                            height: 44.0,
-                            backgroundColor: widget.state.isUmmDetected
-                                ? const Color(0xFFC8945A)
-                                : const Color(0xFF6C78FF),
-                            onTap: () async {
-                              if (widget.state.isUmmDetected) {
-                                showReplaceUmmDialog(context, widget.state);
-                              } else {
-                                await widget.state.installMelonLoader();
-                              }
-                            },
-                            child: Text(
-                              widget.state.isUmmDetected
-                                  ? widget.state.t('installed_btn_replace_loader')
-                                  : widget.state.t('explore_modal_btn_auto_loader'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        StatusBanner(
+                          tone: widget.state.isUmmDetected
+                              ? BannerTone.warning
+                              : BannerTone.info,
+                          message: widget.state.isUmmDetected
+                              ? widget.state.t('installed_umm_banner')
+                              : widget.state.t('explore_modal_warn_loader'),
+                        ),
+                        const SizedBox(height: 12.0),
+                        AppButton(
+                          size: AppButtonSize.lg,
+                          expand: true,
+                          variant: widget.state.isUmmDetected
+                              ? AppButtonVariant.beta
+                              : AppButtonVariant.primary,
+                          icon: widget.state.isUmmDetected
+                              ? Icons.swap_horiz_rounded
+                              : Icons.download_rounded,
+                          label: widget.state.isUmmDetected
+                              ? widget.state.t('installed_btn_replace_loader')
+                              : widget.state.t('explore_modal_btn_auto_loader'),
+                          onPressed: () async {
+                            if (widget.state.isUmmDetected) {
+                              showReplaceUmmDialog(context, widget.state);
+                            } else {
+                              await widget.state.installMelonLoader();
+                            }
+                          },
+                        ),
+                      ],
                     )
                   else ...[
                     // Stable version download button
                     if (_latestVersion != null) ...[
-                      _DownloadButton(
+                      OlButton(
                         height: 50.0,
-                        backgroundColor: const Color(0xFF5865F2),
-                        onTap: () async {
+                        fontSize: 16.0,
+                        expand: true,
+                        icon: Icons.download_rounded,
+                        label:
+                            '${widget.state.t('explore_modal_btn_install')} · v${_latestVersion!.version}',
+                        onClick: () async {
                           await widget.state.installMod(
                             mod,
                             version: _latestVersion!.version,
@@ -1544,40 +1418,20 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             checkAndPromptUmmCompat(context, widget.state);
                           }
                         },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.download,
-                              color: Colors.white,
-                              size: 20.0,
-                            ),
-                            const SizedBox(width: 8.0),
-                            Text(
-                              'v${_latestVersion!.version}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'SUIT',
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 8.0),
                     ],
 
                     // Beta version download button
                     if (mod.latestBetaVersion != null) ...[
-                      _DownloadButton(
-                        height: 50.0,
-                        backgroundColor: const Color(0xFF352920),
-                        border: Border.all(
-                          color: const Color(0xFFC8945A),
-                          width: 1.5,
-                        ),
-                        onTap: () async {
+                      AppButton(
+                        size: AppButtonSize.lg,
+                        expand: true,
+                        variant: AppButtonVariant.beta,
+                        icon: Icons.science_outlined,
+                        label:
+                            'v${mod.latestBetaVersion!.version} (${widget.state.t('explore_modal_beta')})',
+                        onPressed: () async {
                           await widget.state.installMod(
                             mod,
                             version: mod.latestBetaVersion!.version,
@@ -1587,26 +1441,6 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             checkAndPromptUmmCompat(context, widget.state);
                           }
                         },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.download,
-                              color: Color(0xFFC8945A),
-                              size: 20.0,
-                            ),
-                            const SizedBox(width: 8.0),
-                            Text(
-                              'v${mod.latestBetaVersion!.version} (${widget.state.t('explore_modal_beta')})',
-                              style: const TextStyle(
-                                color: Color(0xFFC8945A),
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'SUIT',
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 8.0),
                     ],
@@ -1616,86 +1450,51 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                   if ((mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty) ||
                       (mod.communityUrl != null &&
                           mod.communityUrl!.isNotEmpty)) ...[
+                    if (!widget.state.isValidPath ||
+                        !widget.state.isLoaderInstalled)
+                      const SizedBox(height: 8.0),
                     Row(
                       children: [
                         if (mod.sourceUrl != null && mod.sourceUrl!.isNotEmpty)
                           Expanded(
-                            child: _DownloadButton(
-                              height: 44.0,
-                              backgroundColor: const Color(0xFF1F2026),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                width: 1.0,
+                            child: AppButton(
+                              label: 'GitHub',
+                              variant: AppButtonVariant.secondary,
+                              expand: true,
+                              leading: SvgPicture.string(
+                                _githubSvg,
+                                width: 16.0,
+                                height: 16.0,
+                                colorFilter: const ColorFilter.mode(
+                                  AppColors.text,
+                                  BlendMode.srcIn,
+                                ),
                               ),
-                              onTap: () => _launchUrl(mod.sourceUrl!),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.string(
-                                    _githubSvg,
-                                    width: 18.0,
-                                    height: 18.0,
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.white,
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8.0),
-                                  const Text(
-                                    'GitHub',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14.0,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'SUIT',
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              onPressed: () => _launchUrl(mod.sourceUrl!),
                             ),
                           ),
                         if (mod.sourceUrl != null &&
                             mod.sourceUrl!.isNotEmpty &&
                             mod.communityUrl != null &&
                             mod.communityUrl!.isNotEmpty)
-                          const SizedBox(width: 12.0),
+                          const SizedBox(width: 8.0),
                         if (mod.communityUrl != null &&
                             mod.communityUrl!.isNotEmpty)
                           Expanded(
-                            child: _DownloadButton(
-                              height: 44.0,
-                              backgroundColor: const Color(0xFF1B1E30),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFF5865F2,
-                                ).withValues(alpha: 0.15),
-                                width: 1.0,
+                            child: AppButton(
+                              label: 'Discord',
+                              variant: AppButtonVariant.secondary,
+                              expand: true,
+                              leading: SvgPicture.string(
+                                _discordSvg,
+                                width: 16.0,
+                                height: 16.0,
+                                colorFilter: const ColorFilter.mode(
+                                  AppColors.discord,
+                                  BlendMode.srcIn,
+                                ),
                               ),
-                              onTap: () => _launchUrl(mod.communityUrl!),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.string(
-                                    _discordSvg,
-                                    width: 18.0,
-                                    height: 18.0,
-                                    colorFilter: const ColorFilter.mode(
-                                      Color(0xFF5865F2),
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8.0),
-                                  const Text(
-                                    'Discord',
-                                    style: TextStyle(
-                                      color: Color(0xFF5865F2),
-                                      fontSize: 14.0,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'SUIT',
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              onPressed: () => _launchUrl(mod.communityUrl!),
                             ),
                           ),
                       ],
@@ -1708,62 +1507,57 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                       widget.state.isValidPath &&
                       widget.state.isLoaderInstalled) ...[
                     const SizedBox(height: 8.0),
-                    _DownloadButton(
-                      height: 44.0,
-                      backgroundColor: const Color(0xFF2C1E21),
-                      border: Border.all(
-                        color: const Color(0xFFE74C3C).withValues(alpha: 0.3),
-                        width: 1.0,
-                      ),
-                      onTap: () async {
-                        final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
+                    OlButton(
+                      expand: true,
+                      tone: OlButtonTone.danger,
+                      icon: Icons.delete_outline_rounded,
+                      label:
+                          '${widget.state.t('explore_modal_btn_delete')} (v${localMod.version})',
+                      onClick: () async {
+                        final confirm = await showDeleteConfirmDialog(
+                          context,
+                          widget.state,
+                          mod.name,
+                        );
                         if (confirm) {
                           await widget.state.uninstallMod(mod.slug, mod.name);
                         }
                       },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.delete_outline,
-                            color: Color(0xFFE74C3C),
-                            size: 18.0,
-                          ),
-                          const SizedBox(width: 8.0),
-                          Text(
-                            '${widget.state.t('explore_modal_btn_delete')} (v${localMod.version})',
-                            style: const TextStyle(
-                              color: Color(0xFFE74C3C),
-                              fontSize: 14.0,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'SUIT',
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ],
                 ],
 
-                const SizedBox(height: 12.0),
                 // Global status response helper
-                if (widget.state.statusMessage != null &&
-                    !widget.state.isProcessing)
+                if (statusMessage != null && !widget.state.isProcessing)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      widget.state.statusMessage!,
-                      style: TextStyle(
-                        color: (widget.state.statusMessage!.toLowerCase().contains('실패') ||
-                                widget.state.statusMessage!.toLowerCase().contains('fail') ||
-                                widget.state.statusMessage!.toLowerCase().contains('失败') ||
-                                widget.state.statusMessage!.toLowerCase().contains('error'))
-                            ? Colors.redAccent
-                            : const Color(0xFF919AFF),
-                        fontSize: 12.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          statusIsError
+                              ? Icons.error_outline_rounded
+                              : Icons.check_circle_outline_rounded,
+                          size: 16.0,
+                          color: statusIsError
+                              ? AppColors.danger
+                              : AppColors.success,
+                        ),
+                        const SizedBox(width: 6.0),
+                        Flexible(
+                          child: Text(
+                            statusMessage,
+                            style: TextStyle(
+                              color: statusIsError
+                                  ? AppColors.danger
+                                  : AppColors.textSecondary,
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -1774,62 +1568,43 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     );
   }
 
-  Widget _buildAvatar(Author author, {double size = 24.0}) {
-    final double radius = size / 2;
-    if (author.avatar == null || author.avatar!.isEmpty) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: const Color(0xFF919AFF),
-        child: Text(
-          author.displayName.isNotEmpty
-              ? author.displayName[0].toUpperCase()
-              : 'A',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: size * 0.45,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-    }
-
-    if (author.avatar!.startsWith('data:image')) {
-      try {
-        final commaIndex = author.avatar!.indexOf(',');
-        if (commaIndex != -1) {
-          final base64Str = author.avatar!.substring(commaIndex + 1);
-          final bytes = base64.decode(base64Str);
-          return ClipOval(
-            child: Image.memory(
-              bytes,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
+  Widget _buildStat(String label, String value, IconData icon) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12.0,
+              ),
             ),
-          );
-        }
-      } catch (_) {}
-    }
-
-    return ClipOval(
-      child: Image.network(
-        author.avatar!,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => CircleAvatar(
-          radius: radius,
-          backgroundColor: const Color(0xFF919AFF),
-          child: Text(
-            author.displayName.isNotEmpty
-                ? author.displayName[0].toUpperCase()
-                : 'A',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: size * 0.45,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 4.0),
+            Row(
+              children: [
+                Icon(icon, size: 15.0, color: AppColors.textSecondary),
+                const SizedBox(width: 6.0),
+                Flexible(
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 15.0,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -1837,103 +1612,30 @@ class _ModDetailModalState extends State<_ModDetailModal> {
 
   Widget _buildUserBadge(Author author) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      height: 28.0,
+      padding: const EdgeInsets.only(left: 4.0, right: 10.0),
       decoration: BoxDecoration(
-        color: const Color(0xFF16151D),
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: AppColors.control,
+        borderRadius: BorderRadius.circular(999.0),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildAvatar(author, size: 20.0),
+          _buildAuthorAvatar(author, size: 20.0),
           const SizedBox(width: 6.0),
           Text(
             author.displayName,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.text,
               fontSize: 13.0,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
           if (author.isVerifiedDeveloper) ...[
             const SizedBox(width: 6.0),
-            Container(
-              padding: const EdgeInsets.all(1.0),
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF1B4D3E), width: 1.0),
-                borderRadius: BorderRadius.circular(4.0),
-                color: const Color(0xFF0F2C22),
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Color(0xFF2ECC71),
-                size: 10.0,
-              ),
-            ),
+            const VerifiedDot(size: 14.0),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _DownloadButton extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onTap;
-  final Color backgroundColor;
-  final Border? border;
-  final double height;
-
-  const _DownloadButton({
-    required this.child,
-    required this.onTap,
-    required this.backgroundColor,
-    this.border,
-    this.height = 50.0,
-  });
-
-  @override
-  State<_DownloadButton> createState() => _DownloadButtonState();
-}
-
-class _DownloadButtonState extends State<_DownloadButton> {
-  bool _isHovered = false;
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() {
-        _isHovered = false;
-        _isPressed = false;
-      }),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() => _isPressed = false),
-        onTapCancel: () => setState(() => _isPressed = false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _isPressed ? 0.97 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: _isPressed
-                  ? widget.backgroundColor.withValues(alpha: 0.8)
-                  : (_isHovered
-                        ? widget.backgroundColor.withValues(alpha: 0.9)
-                        : widget.backgroundColor),
-              borderRadius: BorderRadius.circular(12.0),
-              border: widget.border,
-            ),
-            alignment: Alignment.center,
-            child: widget.child,
-          ),
-        ),
       ),
     );
   }
@@ -1943,410 +1645,15 @@ bool _checkOverflow(String text, double maxWidth) {
   final tp = TextPainter(
     text: TextSpan(
       text: text,
-      style: const TextStyle(fontSize: 13.5, height: 1.4, fontFamily: 'SUIT'),
+      style: const TextStyle(
+        fontSize: 14.0,
+        height: 1.6,
+        fontFamily: appFontFamily,
+      ),
     ),
     maxLines: null,
     textDirection: TextDirection.ltr,
   )..layout(maxWidth: maxWidth);
 
   return tp.height > 160.0;
-}
-
-class _SortDropdown<T> extends StatefulWidget {
-  final T modelValue;
-  final T defaultValue;
-  final List<T> values;
-  final String Function(T) display;
-  final ValueChanged<T> onChanged;
-  final double? fontSize;
-  final bool disableReset;
-
-  const _SortDropdown({
-    super.key,
-    required this.modelValue,
-    required this.defaultValue,
-    required this.values,
-    required this.display,
-    required this.onChanged,
-    this.fontSize,
-    this.disableReset = false,
-  });
-
-  @override
-  State<_SortDropdown<T>> createState() => _SortDropdownState<T>();
-}
-
-class _SortDropdownState<T> extends State<_SortDropdown<T>> {
-  final LayerLink _layerLink = LayerLink();
-  bool _isHovered = false;
-  bool _isExpanded = false;
-  OverlayEntry? _overlayEntry;
-
-  bool get _isChanged {
-    if (widget.disableReset) return false;
-    return widget.modelValue != widget.defaultValue;
-  }
-
-  void _toggleDropdown() {
-    if (_isExpanded) {
-      _closeDropdown();
-    } else {
-      _openDropdown();
-    }
-  }
-
-  void _openDropdown() {
-    if (_isExpanded) return;
-    setState(() {
-      _isExpanded = true;
-    });
-
-    _overlayEntry = _createOverlayEntry();
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  void _closeDropdown() {
-    if (!_isExpanded) return;
-    setState(() {
-      _isExpanded = false;
-    });
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
-
-  void _selectItem(T item) {
-    widget.onChanged(item);
-    _closeDropdown();
-  }
-
-  OverlayEntry _createOverlayEntry() {
-    RenderBox renderBox = context.findRenderObject() as RenderBox;
-    Size size = renderBox.size;
-
-    double resolvedFontSize = widget.fontSize ?? 14.0;
-
-    return OverlayEntry(
-      builder: (context) {
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _closeDropdown,
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-            Positioned(
-              width: size.width,
-              child: CompositedTransformFollower(
-                link: _layerLink,
-                showWhenUnlinked: false,
-                offset: Offset(0.0, size.height + 6.0),
-                child: Material(
-                  color: Colors.transparent,
-                  child: _SortDropdownListOverlay<T>(
-                    values: widget.values,
-                    display: widget.display,
-                    fontSize: resolvedFontSize,
-                    onSelect: _selectItem,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _closeDropdown();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double resolvedFontSize = widget.fontSize ?? 14.0;
-
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: GestureDetector(
-          onTap: _toggleDropdown,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                height: double.infinity,
-                padding: const EdgeInsets.only(left: 16.0, right: 8.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3C3A4B),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.display(widget.modelValue),
-                        style: TextStyle(
-                          color: const Color(0xFFFFFFFF),
-                          fontFamily: 'SUIT',
-                          fontSize: resolvedFontSize,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0,
-                          overflow: TextOverflow.ellipsis,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 30.0,
-                      height: 30.0,
-                      child: TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 300),
-                        curve: const Cubic(0.175, 0.885, 0.32, 1.275),
-                        tween: Tween<double>(
-                          begin: 0.0,
-                          end: _isExpanded ? 180.0 : 0.0,
-                        ),
-                        builder: (context, angle, child) {
-                          final double radians = angle * 3.1415926535 / 180.0;
-                          final Color color = _isExpanded
-                              ? const Color(0xFF919AFF)
-                              : const Color(0xFFF3F4FF);
-                          return Transform.rotate(
-                            angle: radians,
-                            child: CustomPaint(
-                              size: const Size(30.0, 30.0),
-                              painter: _SortTrianglePainter(color: color),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 100),
-                    opacity: _isHovered ? 1.0 : 0.0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color(0xFF919AFF),
-                          width: 2.0,
-                        ),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (_isChanged)
-                Positioned(
-                  top: 4.0,
-                  left: 4.0,
-                  child: Container(
-                    width: 8.0,
-                    height: 8.0,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF626696),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SortTrianglePainter extends CustomPainter {
-  final Color color;
-
-  _SortTrianglePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final double sx = size.width / 24.0;
-    final double sy = size.height / 24.0;
-
-    final path = Path()
-      ..moveTo(6.0 * sx, 9.0 * sy)
-      ..lineTo(18.0 * sx, 9.0 * sy)
-      ..lineTo(12.0 * sx, 15.0 * sy)
-      ..close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SortTrianglePainter oldDelegate) {
-    return oldDelegate.color != color;
-  }
-}
-
-class _SortDropdownListOverlay<T> extends StatefulWidget {
-  final List<T> values;
-  final String Function(T) display;
-  final double fontSize;
-  final ValueChanged<T> onSelect;
-
-  const _SortDropdownListOverlay({
-    required this.values,
-    required this.display,
-    required this.fontSize,
-    required this.onSelect,
-  });
-
-  @override
-  State<_SortDropdownListOverlay<T>> createState() => _SortDropdownListOverlayState<T>();
-}
-
-class _SortDropdownListOverlayState<T> extends State<_SortDropdownListOverlay<T>>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _expandController;
-  late final Animation<double> _heightFactorAnimation;
-  late final Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _expandController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 160),
-    );
-    _heightFactorAnimation = CurvedAnimation(
-      parent: _expandController,
-      curve: Curves.easeOut,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _expandController,
-        curve: const Interval(0.0, 1.0, curve: Curves.easeOut),
-      ),
-    );
-    _expandController.forward();
-  }
-
-  @override
-  void dispose() {
-    _expandController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizeTransition(
-      sizeFactor: _heightFactorAnimation,
-      alignment: Alignment.topCenter,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF3C3A4B),
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
-                blurRadius: 25.0,
-                offset: const Offset(0.0, 10.0),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
-                blurRadius: 10.0,
-                offset: const Offset(0.0, 8.0),
-              ),
-            ],
-          ),
-          constraints: const BoxConstraints(
-            maxHeight: 350.0,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8.0),
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              itemCount: widget.values.length,
-              itemBuilder: (context, index) {
-                final item = widget.values[index];
-                return _SortDropdownRow(
-                  label: widget.display(item),
-                  fontSize: widget.fontSize,
-                  onTap: () => widget.onSelect(item),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SortDropdownRow extends StatefulWidget {
-  final String label;
-  final double fontSize;
-  final VoidCallback onTap;
-
-  const _SortDropdownRow({
-    required this.label,
-    required this.fontSize,
-    required this.onTap,
-  });
-
-  @override
-  State<_SortDropdownRow> createState() => _SortDropdownRowState();
-}
-
-class _SortDropdownRowState extends State<_SortDropdownRow> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          height: 42.0,
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          color: _isHovered ? const Color(0xFF919AFF) : Colors.transparent,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              color: const Color(0xFFFFFFFF),
-              fontFamily: 'SUIT',
-              fontSize: widget.fontSize,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0,
-              decoration: TextDecoration.none,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

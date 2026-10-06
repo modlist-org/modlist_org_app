@@ -1,137 +1,47 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'installer_state.dart';
 import 'version_utils.dart';
+
+class UpdateCheckResult {
+  final String latestVersion;
+  final String releaseUrl;
+  final bool hasUpdate;
+
+  const UpdateCheckResult({
+    required this.latestVersion,
+    required this.releaseUrl,
+    required this.hasUpdate,
+  });
+}
 
 class UpdateChecker {
   static const String currentVersion = '0.5.0';
   static const String repoOwner = 'modlist-org';
   static const String repoName = 'modlist_org_app';
 
-  static Future<void> check(
-    BuildContext context,
-    InstallerState state, {
-    bool showNoUpdate = false,
-  }) async {
-    try {
-      final url = Uri.parse(
-        'https://api.github.com/repos/$repoOwner/$repoName/releases/latest',
-      );
-      final response = await http.get(url).timeout(const Duration(seconds: 5));
-      if (response.statusCode != 200) return;
+  /// Fetches the latest GitHub release.
+  /// Returns null when the release info is unavailable (non-200 response or
+  /// missing tag); throws on network/parse errors.
+  static Future<UpdateCheckResult?> fetchLatest() async {
+    final url = Uri.parse(
+      'https://api.github.com/repos/$repoOwner/$repoName/releases/latest',
+    );
+    final response = await http.get(url).timeout(const Duration(seconds: 5));
+    if (response.statusCode != 200) return null;
 
-      final data = json.decode(response.body);
-      final latestVersion = data['tag_name'] as String? ?? '';
-      if (latestVersion.isEmpty) return;
+    final data = json.decode(response.body);
+    final latestVersion = data['tag_name'] as String? ?? '';
+    if (latestVersion.isEmpty) return null;
 
-      if (VersionUtils.isNewerVersion(currentVersion, latestVersion)) {
-        if (!context.mounted) return;
-        _showUpdateDialog(
-          context,
-          state,
-          latestVersion,
-          data['html_url'] as String? ?? '',
-        );
-      } else if (showNoUpdate) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(state.t('update_status_latest'))),
-        );
-      }
-    } catch (_) {
-      if (showNoUpdate && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.t('update_status_error'))));
-      }
-    }
-  }
-
-  static void _showUpdateDialog(
-    BuildContext context,
-    InstallerState state,
-    String latestVersion,
-    String releaseUrl,
-  ) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: const Color(0xFF1E1C28),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-          child: Container(
-            width: 450.0,
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  state.t('update_dialog_title'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16.0),
-                Text(
-                  state.t(
-                    'update_dialog_body',
-                    args: {
-                      'version': latestVersion,
-                      'currentVersion': currentVersion,
-                    },
-                  ),
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14.0,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24.0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: Text(
-                        state.t('update_dialog_btn_no'),
-                        style: const TextStyle(color: Colors.white54),
-                      ),
-                    ),
-                    const SizedBox(width: 12.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(dialogContext);
-                        _launchUrl(releaseUrl);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF919AFF),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                      ),
-                      child: Text(state.t('update_dialog_btn_yes')),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    return UpdateCheckResult(
+      latestVersion: latestVersion,
+      releaseUrl: data['html_url'] as String? ?? '',
+      hasUpdate: VersionUtils.isNewerVersion(currentVersion, latestVersion),
     );
   }
 
-  static Future<void> _launchUrl(String url) async {
+  static Future<void> launchUrl(String url) async {
     try {
       if (Platform.isWindows) {
         await Process.run('start', [url], runInShell: true);

@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/app_errors.dart';
 import '../core/installer_state.dart';
 import '../core/version_utils.dart';
 import 'dialogs.dart';
+import 'explore_tab.dart' show buildModLogo;
+import 'theme.dart';
+import 'widgets.dart';
 
 class InstalledTab extends StatefulWidget {
   final InstallerState state;
@@ -88,214 +90,99 @@ class _InstalledTabState extends State<InstalledTab> {
     final launchGuide = guideKey != null ? widget.state.t(guideKey) : null;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.fromLTRB(32.0, 28.0, 32.0, 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header
-          Text(
-            widget.state.t('installed_title'),
-            style: const TextStyle(
-              fontSize: 22.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 1.0,
-            ),
-          ),
+          PageHeader(title: widget.state.t('installed_title')),
           const SizedBox(height: 24.0),
 
           // 1. MelonLoader 관리 카드
-          _buildCard(
+          AppCard(
             title: widget.state.t('installed_loader_title'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          widget.state.isLoaderInstalled
-                              ? (widget.state.isLoaderOutdated ? Icons.warning_amber_rounded : Icons.check_circle)
-                              : (widget.state.isUmmDetected ? Icons.warning_amber_rounded : Icons.cancel),
-                          color: widget.state.isLoaderInstalled
-                              ? (widget.state.isLoaderOutdated ? Colors.orangeAccent : const Color(0xFF919AFF))
-                              : (widget.state.isUmmDetected ? Colors.orangeAccent : Colors.white30),
-                        ),
-                        const SizedBox(width: 12.0),
-                        Text(
-                          widget.state.isLoaderInstalled
-                              ? (widget.state.isLoaderOutdated
-                                  ? widget.state.t('installed_loader_outdated_title')
-                                  : widget.state.t('installed_loader_active', args: {'version': widget.state.loaderVersion}))
-                              : (widget.state.isUmmDetected
-                                  ? widget.state.t('installed_loader_umm_title')
-                                  : widget.state.t('installed_loader_inactive')),
-                          style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                        ),
-                      ],
-                    ),
-                    if (widget.state.isProcessing)
-                      const SizedBox(
-                        width: 20.0,
-                        height: 20.0,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.0,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF919AFF)),
-                        ),
-                      )
-                    else if (widget.state.isValidPath)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (widget.state.isLoaderInstalled && widget.state.isLoaderOutdated) ...[
-                            SizedBox(
-                              width: 150.0,
-                              height: 38.0,
-                              child: UIButton(
-                                label: widget.state.t('installed_btn_update_loader', args: {'version': '0.7.3'}),
-                                fontSize: 13.0,
-                                onClick: () async {
-                                  await widget.state.installMelonLoader();
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8.0),
-                          ],
-                          SizedBox(
-                            width: widget.state.isUmmDetected ? 200.0 : 150.0,
-                            height: 38.0,
-                            child: UIButton(
-                              label: widget.state.isLoaderInstalled
-                                  ? widget.state.t('installed_btn_uninstall')
-                                  : (widget.state.isUmmDetected ? widget.state.t('installed_btn_replace_loader') : widget.state.t('installed_btn_install')),
-                              fontSize: widget.state.isUmmDetected ? 13.0 : 14.0,
-                              onClick: () async {
-                                if (widget.state.isLoaderInstalled) {
-                                  final confirm = await showLoaderUninstallConfirmDialog(context, widget.state);
-                                  if (confirm) {
-                                    await widget.state.uninstallMelonLoader();
-                                  }
-                                } else {
-                                  if (widget.state.isUmmDetected) {
-                                    showReplaceUmmDialog(context, widget.state);
-                                  } else {
-                                    await widget.state.installMelonLoader();
-                                  }
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                
+                _buildLoaderStatusRow(),
+
                 // MelonLoader 구버전 안내 배너
                 if (widget.state.isLoaderInstalled && widget.state.isLoaderOutdated) ...[
-                  const SizedBox(height: 12.0),
-                  Container(
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: const Color(0x1FFF9800),
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.orangeAccent, size: 20.0),
-                        const SizedBox(width: 10.0),
-                        Expanded(
-                          child: Text(
-                            widget.state.t('installed_loader_outdated_banner', args: {
-                              'version': widget.state.loaderVersion,
-                              'targetVersion': '0.7.3'
-                            }),
-                            style: const TextStyle(color: Colors.orangeAccent, fontSize: 12.5, height: 1.4),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 14.0),
+                  StatusBanner(
+                    tone: BannerTone.warning,
+                    message: widget.state.t('installed_loader_outdated_banner', args: {
+                      'version': widget.state.loaderVersion,
+                      'targetVersion': '0.7.3'
+                    }),
                   ),
                 ],
 
                 // UMM 감지 안내 배너
                 if (widget.state.isUmmDetected) ...[
-                  const SizedBox(height: 12.0),
-                  Container(
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: const Color(0x1FFF9800),
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.orangeAccent, size: 20.0),
-                        const SizedBox(width: 10.0),
-                        Expanded(
-                          child: Text(
-                            widget.state.t('installed_umm_banner'),
-                            style: const TextStyle(color: Colors.orangeAccent, fontSize: 12.5, height: 1.4),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 14.0),
+                  StatusBanner(
+                    tone: BannerTone.warning,
+                    message: widget.state.t('installed_umm_banner'),
                   ),
                 ],
-                
+
                 // 스팀 런치 가이드 (Linux, macOS 등 비윈도우 플랫폼용)
                 if (widget.state.isLoaderInstalled && launchGuide != null) ...[
-                  const SizedBox(height: 16.0),
+                  const SizedBox(height: 14.0),
                   Container(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF16151D),
-                      borderRadius: BorderRadius.circular(8.0),
+                      color: AppColors.bgElev,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
                           widget.state.t('installed_launch_guide_title'),
-                          style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: AppColors.text,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 8.0),
-                        Text(
+                        SelectableText(
                           launchGuide,
-                          style: const TextStyle(color: Colors.white70, fontSize: 12.0, height: 1.4),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12.5,
+                            height: 1.55,
+                          ),
                         ),
-                        const SizedBox(height: 12.0),
-                        Row(
+                        const SizedBox(height: 14.0),
+                        Wrap(
+                          spacing: 8.0,
+                          runSpacing: 8.0,
                           children: [
-                            if (launchGuide.contains('setup_helper.sh')) ...[
-                              SizedBox(
-                                height: 36,
-                                child: UIButton(
-                                  label: widget.state.t('installed_btn_copy_native_launch'),
-                                  fontSize: 13.0,
-                                  onClick: () => _copyToClipboard(
-                                    // Steam on macOS does not resolve relative
-                                    // paths, so emit the absolute script path.
-                                    Platform.isMacOS
-                                        ? '"${widget.state.gamePath}/setup_helper.sh" %command%'
-                                        : './setup_helper.sh %command%',
-                                  ),
+                            if (launchGuide.contains('setup_helper.sh'))
+                              OlButton(
+                                label: widget.state.t('installed_btn_copy_native_launch'),
+                                icon: Icons.content_copy_rounded,
+                                height: 36.0,
+                                fontSize: 13.0,
+                                onClick: () => _copyToClipboard(
+                                  // Steam on macOS does not resolve relative
+                                  // paths, so emit the absolute script path.
+                                  Platform.isMacOS
+                                      ? '"${widget.state.gamePath}/setup_helper.sh" %command%'
+                                      : './setup_helper.sh %command%',
                                 ),
                               ),
-                              const SizedBox(width: 8.0),
-                            ],
-                            if (launchGuide.contains('WINEDLLOVERRIDES')) ...[
-                              SizedBox(
-                                height: 36,
-                                child: UIButton(
-                                  label: widget.state.t('installed_btn_copy_proton_launch'),
-                                  fontSize: 13.0,
-                                  onClick: () => _copyToClipboard('WINEDLLOVERRIDES="winhttp=n,b" %command%'),
-                                ),
+                            if (launchGuide.contains('WINEDLLOVERRIDES'))
+                              OlButton(
+                                label: widget.state.t('installed_btn_copy_proton_launch'),
+                                icon: Icons.content_copy_rounded,
+                                height: 36.0,
+                                fontSize: 13.0,
+                                onClick: () => _copyToClipboard('WINEDLLOVERRIDES="winhttp=n,b" %command%'),
                               ),
-                            ]
                           ],
                         ),
                       ],
@@ -305,46 +192,52 @@ class _InstalledTabState extends State<InstalledTab> {
               ],
             ),
           ),
-          const SizedBox(height: 24.0),
+          const SizedBox(height: 16.0),
 
           // 2. 로컬 설치 모드 관리 카드
-          _buildCard(
+          AppCard(
             title: widget.state.t('installed_list_title'),
+            padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 8.0),
             action: widget.state.isProcessing || !widget.state.isValidPath
                 ? null
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Tooltip(
-                        message: widget.state.t('installed_btn_add_mod_manually'),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.file_open_outlined,
-                            color: Color(0xFF919AFF),
-                            size: 20.0,
-                          ),
-                          hoverColor: const Color(0xFF919AFF).withValues(alpha: 0.08),
-                          splashRadius: 20.0,
-                          onPressed: _pickAndInstallMod,
-                        ),
-                      ),
-                    ],
+                : AppButton(
+                    label: widget.state.t('installed_btn_add_mod_manually'),
+                    icon: Icons.upload_file_outlined,
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.sm,
+                    onPressed: _pickAndInstallMod,
                   ),
             child: widget.state.installedMods.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32.0),
-                    child: Center(
-                      child: Text(
-                        widget.state.t('installed_no_mods'),
-                        style: const TextStyle(color: Colors.white24, fontSize: 14.0),
-                      ),
+                ? Container(
+                    margin: const EdgeInsets.only(bottom: 12.0),
+                    padding: const EdgeInsets.symmetric(vertical: 36.0),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgElev,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 28.0,
+                          color: AppColors.textTertiary,
+                        ),
+                        const SizedBox(height: 10.0),
+                        Text(
+                          widget.state.t('installed_no_mods'),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14.0,
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: widget.state.installedMods.length,
-                    separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+                    separatorBuilder: (context, index) => const Divider(),
                     itemBuilder: (context, index) {
                       final mod = widget.state.installedMods[index];
                       final onlineMod = widget.state.onlineModsCache[mod.slug];
@@ -352,75 +245,106 @@ class _InstalledTabState extends State<InstalledTab> {
                           onlineMod.latestVersion != null &&
                           VersionUtils.isNewerVersion(mod.version, onlineMod.latestVersion!.version);
                       final showSwitch = !mod.id.startsWith('umm-');
-                      final opacity = mod.isEnabled ? 1.0 : 0.38;
+                      final opacity = mod.isEnabled ? 1.0 : 0.45;
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             if (showSwitch) ...[
-                              SizedBox(
-                                height: 36.0,
-                                child: Switch(
-                                  value: mod.isEnabled,
-                                  activeThumbColor: const Color(0xFF919AFF),
-                                  activeTrackColor: const Color(0xFF919AFF).withValues(alpha: 0.3),
-                                  inactiveThumbColor: Colors.white60,
-                                  inactiveTrackColor: Colors.white10,
-                                  onChanged: widget.state.isProcessing
-                                      ? null
-                                      : (value) async {
-                                          await widget.state.toggleModActive(mod, value);
-                                        },
-                                ),
+                              OlSwitch(
+                                value: mod.isEnabled,
+                                onChanged: widget.state.isProcessing
+                                    ? null
+                                    : (value) async {
+                                        await widget.state.toggleModActive(mod, value);
+                                      },
                               ),
-                              const SizedBox(width: 12.0),
+                              const SizedBox(width: 14.0),
                             ],
                             Expanded(
                               child: Opacity(
                                 opacity: opacity,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      mod.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15.0,
+                                    Container(
+                                      width: 40.0,
+                                      height: 40.0,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.control,
+                                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: buildModLogo(
+                                        logoPath: onlineMod?.logo,
+                                        fallbackName: mod.name,
+                                        apiUrl: widget.state.apiUrl,
+                                        width: 40.0,
+                                        height: 40.0,
+                                        fallbackFontSize: 16.0,
+                                        getFallbackGradient: fallbackLogoGradient,
                                       ),
                                     ),
-                                    const SizedBox(height: 4.0),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          widget.state.t('installed_ver_prefix', args: {'version': mod.version}),
-                                          style: const TextStyle(color: Colors.white38, fontSize: 12.0),
-                                        ),
-                                        if (onlineMod != null) ...[
-                                          const SizedBox(width: 12.0),
-                                          Text(
-                                            widget.state.t('installed_latest_ver_prefix', args: {
-                                              'version': onlineMod.latestVersion?.version ?? "0.0.0"
-                                            }),
-                                            style: TextStyle(
-                                              color: hasUpdate ? Colors.orangeAccent : Colors.white38,
-                                              fontSize: 12.0,
-                                              fontWeight: hasUpdate ? FontWeight.bold : FontWeight.normal,
-                                            ),
+                                    const SizedBox(width: 12.0),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  mod.name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    color: AppColors.text,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14.5,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (mod.isBeta) ...[
+                                                const SizedBox(width: 8.0),
+                                                AppBadge(
+                                                  label: widget.state.t('explore_modal_beta'),
+                                                  tone: BadgeTone.warning,
+                                                ),
+                                              ],
+                                            ],
                                           ),
-                                          if (onlineMod.latestVersion?.gameVersion != null) ...[
-                                            const SizedBox(width: 12.0),
-                                            Text(
-                                              widget.state.t('installed_game_ver_prefix', args: {
-                                                'version': onlineMod.latestVersion!.gameVersion!
-                                              }),
-                                              style: const TextStyle(color: Colors.white38, fontSize: 12.0),
-                                            ),
-                                          ],
+                                          const SizedBox(height: 4.0),
+                                          Wrap(
+                                            spacing: 12.0,
+                                            runSpacing: 2.0,
+                                            children: [
+                                              Text(
+                                                widget.state.t('installed_ver_prefix', args: {'version': mod.version}),
+                                                style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
+                                              ),
+                                              if (onlineMod != null) ...[
+                                                Text(
+                                                  widget.state.t('installed_latest_ver_prefix', args: {
+                                                    'version': onlineMod.latestVersion?.version ?? "0.0.0"
+                                                  }),
+                                                  style: TextStyle(
+                                                    color: hasUpdate ? AppColors.warning : AppColors.textTertiary,
+                                                    fontSize: 12.5,
+                                                    fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.normal,
+                                                  ),
+                                                ),
+                                                if (onlineMod.latestVersion?.gameVersion != null)
+                                                  Text(
+                                                    widget.state.t('installed_game_ver_prefix', args: {
+                                                      'version': onlineMod.latestVersion!.gameVersion!
+                                                    }),
+                                                    style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
+                                                  ),
+                                              ],
+                                            ],
+                                          ),
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -432,28 +356,27 @@ class _InstalledTabState extends State<InstalledTab> {
                               runSpacing: 8.0,   // 줄바꿈 발생 시 세로 간격
                               children: [
                                 if (hasUpdate && !widget.state.isProcessing)
-                                  SizedBox(
+                                  OlButton(
+                                    label: widget.state.t('installed_btn_update_mod'),
+                                    icon: Icons.download_rounded,
                                     height: 36.0,
-                                    child: UIButton(
-                                      label: widget.state.t('installed_btn_update_mod'),
-                                      fontSize: 13.0,
-                                      onClick: () async {
-                                        await widget.state.installMod(onlineMod, version: onlineMod.latestVersion?.version);
-                                        if (context.mounted) checkAndPromptUmmCompat(context, widget.state);
-                                      },
-                                    ),
+                                    fontSize: 13.0,
+                                    onClick: () async {
+                                      await widget.state.installMod(onlineMod, version: onlineMod.latestVersion?.version);
+                                      if (context.mounted) checkAndPromptUmmCompat(context, widget.state);
+                                    },
                                   ),
                                 if (!widget.state.isProcessing)
-                                  SizedBox(
+                                  OlButton(
+                                    label: widget.state.t('installed_btn_delete_mod'),
+                                    icon: Icons.delete_outline_rounded,
+                                    tone: OlButtonTone.danger,
                                     height: 36.0,
-                                    child: UIButton(
-                                      label: widget.state.t('installed_btn_delete_mod'),
-                                      fontSize: 13.0,
-                                      onClick: () async {
-                                        final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
-                                        if (confirm) await widget.state.uninstallMod(mod.slug, mod.name);
-                                      },
-                                    ),
+                                    fontSize: 13.0,
+                                    onClick: () async {
+                                      final confirm = await showDeleteConfirmDialog(context, widget.state, mod.name);
+                                      if (confirm) await widget.state.uninstallMod(mod.slug, mod.name);
+                                    },
                                   ),
                               ],
                             ),
@@ -463,22 +386,13 @@ class _InstalledTabState extends State<InstalledTab> {
                     },
                   ),
           ),
-          
+
           // 전역 진행 상태 텍스트
           if (widget.state.statusMessage != null) ...[
-            const SizedBox(height: 24.0),
-            Container(
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1C28),
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(color: const Color(0xFF919AFF).withValues(alpha: 0.15)),
-              ),
-              child: Text(
-                widget.state.statusMessage!,
-                style: const TextStyle(color: Color(0xFF919AFF), fontSize: 13.0, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
+            const SizedBox(height: 16.0),
+            StatusBanner(
+              tone: BannerTone.info,
+              message: widget.state.statusMessage!,
             ),
           ]
         ],
@@ -486,40 +400,95 @@ class _InstalledTabState extends State<InstalledTab> {
     );
   }
 
+  Widget _buildLoaderStatusRow() {
+    final bool installed = widget.state.isLoaderInstalled;
+    final bool outdated = widget.state.isLoaderOutdated;
+    final bool umm = widget.state.isUmmDetected;
 
+    final IconData icon = installed
+        ? (outdated ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded)
+        : (umm ? Icons.warning_amber_rounded : Icons.cancel_outlined);
+    final Color color = installed
+        ? (outdated ? AppColors.warning : AppColors.accent)
+        : (umm ? AppColors.warning : AppColors.muted);
+    final Color tint = installed
+        ? (outdated ? AppColors.warningSoft : AppColors.accentSoft)
+        : (umm ? AppColors.warningSoft : AppColors.control);
 
-  Widget _buildCard({required String title, Widget? action, required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1C28),
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.04),
-          width: 1.0,
+    return Row(
+      children: [
+        Container(
+          width: 40.0,
+          height: 40.0,
+          decoration: BoxDecoration(
+            color: tint,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Icon(icon, color: color, size: 20.0),
         ),
-      ),
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        const SizedBox(width: 12.0),
+        Expanded(
+          child: Text(
+            installed
+                ? (outdated
+                    ? widget.state.t('installed_loader_outdated_title')
+                    : widget.state.t('installed_loader_active', args: {'version': widget.state.loaderVersion}))
+                : (umm
+                    ? widget.state.t('installed_loader_umm_title')
+                    : widget.state.t('installed_loader_inactive')),
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 14.0,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12.0),
+        if (widget.state.isProcessing)
+          const SizedBox(
+            width: 18.0,
+            height: 18.0,
+            child: CircularProgressIndicator(strokeWidth: 2.0),
+          )
+        else if (widget.state.isValidPath)
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF919AFF),
+              if (installed && outdated)
+                OlButton(
+                  label: widget.state.t('installed_btn_update_loader', args: {'version': '0.7.3'}),
+                  icon: Icons.download_rounded,
+                  onClick: () async {
+                    await widget.state.installMelonLoader();
+                  },
                 ),
+              OlButton(
+                label: installed
+                    ? widget.state.t('installed_btn_uninstall')
+                    : (umm ? widget.state.t('installed_btn_replace_loader') : widget.state.t('installed_btn_install')),
+                tone: installed ? OlButtonTone.danger : OlButtonTone.primary,
+                icon: installed
+                    ? Icons.delete_outline_rounded
+                    : (umm ? Icons.swap_horiz_rounded : Icons.download_rounded),
+                onClick: () async {
+                  if (widget.state.isLoaderInstalled) {
+                    final confirm = await showLoaderUninstallConfirmDialog(context, widget.state);
+                    if (confirm) {
+                      await widget.state.uninstallMelonLoader();
+                    }
+                  } else {
+                    if (widget.state.isUmmDetected) {
+                      showReplaceUmmDialog(context, widget.state);
+                    } else {
+                      await widget.state.installMelonLoader();
+                    }
+                  }
+                },
               ),
-              action ?? const SizedBox.shrink(),
             ],
           ),
-          const SizedBox(height: 16.0),
-          child,
-        ],
-      ),
+      ],
     );
   }
 }

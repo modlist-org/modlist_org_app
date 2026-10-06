@@ -67,7 +67,11 @@ class ModItem {
   final String slug;
   final String summary;
   final String? description;
+  /// Primary game (always `games.first`).
   final String game;
+
+  /// All games this mod targets, ordered; the first entry is the primary game.
+  final List<String> games;
   final List<String> categories;
   final int downloads;
   final String? logo;
@@ -100,7 +104,13 @@ class ModItem {
     this.sourceUrl,
     this.communityUrl,
     required this.dependencySlugs,
-  });
+    List<String>? games,
+  }) : games = (games != null && games.isNotEmpty)
+           ? List.unmodifiable(games)
+           : List.unmodifiable([game]);
+
+  /// Whether this mod targets [gameId] (any of [games]).
+  bool supportsGame(String gameId) => games.contains(gameId);
 
   ModItem copyWith({
     ModVersion? latestVersion,
@@ -126,6 +136,7 @@ class ModItem {
       sourceUrl: sourceUrl,
       communityUrl: communityUrl,
       dependencySlugs: dependencySlugs ?? this.dependencySlugs,
+      games: games,
     );
   }
 
@@ -149,6 +160,22 @@ class ModItem {
           .toList();
     }
 
+    final gameList = <String>[];
+    if (json['games'] is List) {
+      for (final g in json['games'] as List) {
+        if (g is String && g.isNotEmpty && !gameList.contains(g)) {
+          gameList.add(g);
+        }
+      }
+    }
+    final String primaryGame = (json['game'] as String?)?.isNotEmpty == true
+        ? json['game'] as String
+        : (gameList.isNotEmpty ? gameList.first : '');
+    if (primaryGame.isNotEmpty) {
+      gameList.remove(primaryGame);
+      gameList.insert(0, primaryGame);
+    }
+
     var depSlugs = <String>[];
     if (json['dependencies'] != null) {
       depSlugs = (json['dependencies'] as List)
@@ -163,7 +190,8 @@ class ModItem {
       slug: json['slug'] ?? '',
       summary: json['summary'] ?? '',
       description: json['description'],
-      game: json['game'] ?? '',
+      game: primaryGame,
+      games: gameList,
       categories: categoryList,
       downloads: json['downloads'] ?? 0,
       logo: json['logo'],

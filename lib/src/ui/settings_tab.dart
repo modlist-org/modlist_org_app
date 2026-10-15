@@ -295,6 +295,12 @@ class _SettingsTabState extends State<SettingsTab> {
                         widget.state.t('settings_sys_loader'),
                         'MelonLoader (Mono/IL2CPP)',
                       ),
+                      const Divider(),
+                      _buildSwitchRow(
+                        widget.state.t('settings_auto_update_mods'),
+                        widget.state.autoUpdateMods,
+                        widget.state.setAutoUpdateMods,
+                      ),
                     ],
                   ),
                 ),
@@ -302,6 +308,22 @@ class _SettingsTabState extends State<SettingsTab> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchRow(String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13.5),
+          ),
+          OlSwitch(value: value, onChanged: onChanged),
+        ],
       ),
     );
   }

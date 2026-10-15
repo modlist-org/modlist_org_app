@@ -54,6 +54,9 @@ class InstallerState extends ChangeNotifier {
   final Map<String, ModItem> _onlineModsCache = {};
   List<String> _modsWithUpdates = [];
   bool _isCheckingModUpdates = false;
+  bool _autoUpdateMods = true;
+  // 세션당 slug@version 하나씩만 시도 (설치 실패 시 무한 재시도 방지)
+  final Set<String> _autoUpdateAttempted = {};
 
   String get gamePath => _gamePath;
   String get apiUrl => _apiUrl;
@@ -85,6 +88,7 @@ class InstallerState extends ChangeNotifier {
   Map<String, ModItem> get onlineModsCache => _onlineModsCache;
   List<String> get modsWithUpdates => _modsWithUpdates;
   bool get isCheckingModUpdates => _isCheckingModUpdates;
+  bool get autoUpdateMods => _autoUpdateMods;
 
   InstallerState() {
     _init();
@@ -98,6 +102,7 @@ class InstallerState extends ChangeNotifier {
     
     // 언어 설정 로드
     _locale = prefs.getString('modlist_app_locale') ?? 'en-US';
+    _autoUpdateMods = prefs.getBool('modlist_auto_update_mods') ?? true;
     
     // API URL 로드
     _apiUrl = prefs.getString('modlist_api_base_url') ?? 'https://modlist.org';
@@ -288,6 +293,32 @@ class InstallerState extends ChangeNotifier {
       _isCheckingModUpdates = false;
       notifyListeners();
     }
+
+    await _autoUpdateNextMod();
+  }
+
+  // 업데이트 가능한 모드를 하나씩 자동 설치 (설치 후 refreshStatus가 다시 이 경로를 타서 다음 모드 처리)
+  Future<void> _autoUpdateNextMod() async {
+    if (!_autoUpdateMods || _isProcessing || !_isValidPath) return;
+    for (final slug in _modsWithUpdates) {
+      final local = _installedMods.where((m) => m.slug == slug).firstOrNull;
+      final online = _onlineModsCache[slug];
+      final latest = online?.latestVersion?.version;
+      if (local == null || !local.isEnabled || online == null || latest == null) continue;
+      if (activeTaskFor(slug) != null) continue;
+      if (!_autoUpdateAttempted.add('$slug@$latest')) continue;
+      await DebugLog.info('Auto-updating mod $slug ${local.version} -> $latest');
+      await installMod(online, version: latest);
+      return;
+    }
+  }
+
+  Future<void> setAutoUpdateMods(bool value) async {
+    _autoUpdateMods = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('modlist_auto_update_mods', value);
+    notifyListeners();
+    if (value) await _autoUpdateNextMod();
   }
 
   void _setLoaderInstallPhase(LoaderInstallPhase phase) {

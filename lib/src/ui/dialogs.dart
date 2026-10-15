@@ -261,6 +261,9 @@ void showReplaceUmmDialog(BuildContext context, InstallerState state) {
   );
 }
 
+// 주기 확인 때 같은 버전 안내를 반복하지 않도록 기억
+String? _promptedUpdateVersion;
+
 /// Checks GitHub for a newer app release and prompts the user to update.
 Future<void> checkForAppUpdate(
   BuildContext context,
@@ -273,11 +276,14 @@ Future<void> checkForAppUpdate(
 
     if (result.hasUpdate) {
       if (!context.mounted) return;
+      if (!showNoUpdate && _promptedUpdateVersion == result.latestVersion) return;
+      _promptedUpdateVersion = result.latestVersion;
       _showUpdateDialog(
         context,
         state,
         result.latestVersion,
         result.releaseUrl,
+        result.selfUpdateAsset,
       );
     } else if (showNoUpdate) {
       if (!context.mounted) return;
@@ -299,6 +305,7 @@ void _showUpdateDialog(
   InstallerState state,
   String latestVersion,
   String releaseUrl,
+  Map? asset,
 ) {
   showDialog(
     context: context,
@@ -325,11 +332,50 @@ void _showUpdateDialog(
             label: state.t('update_dialog_btn_yes'),
             onClick: () {
               Navigator.pop(dialogContext);
-              UpdateChecker.launchUrl(releaseUrl);
+              if (asset == null) {
+                UpdateChecker.launchUrl(releaseUrl);
+              } else {
+                _runSelfUpdate(context, state, asset, releaseUrl);
+              }
             },
           ),
         ],
       );
     },
   );
+}
+
+Future<void> _runSelfUpdate(
+  BuildContext context,
+  InstallerState state,
+  Map asset,
+  String releaseUrl,
+) async {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16.0),
+          Material(
+            type: MaterialType.transparency,
+            child: Text(state.t('update_downloading')),
+          ),
+        ],
+      ),
+    ),
+  );
+  try {
+    await UpdateChecker.selfUpdate(asset);
+  } catch (_) {
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(state.t('update_status_error'))),
+    );
+    UpdateChecker.launchUrl(releaseUrl);
+  }
 }

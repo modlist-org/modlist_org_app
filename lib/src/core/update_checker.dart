@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'background_service.dart';
 import 'version_utils.dart';
 
 class UpdateCheckResult {
@@ -72,6 +73,8 @@ class UpdateChecker {
     final file = File(p.join(tempDir.path, asset['name'] as String));
     await file.writeAsBytes(response.bodyBytes, flush: true);
 
+    // 재실행된 새 인스턴스가 기존 인스턴스로 전달되고 꺼지는 것 방지
+    await BackgroundService.instance.releaseInstanceLock();
     if (Platform.isWindows) {
       // 앱 종료 후 Inno Setup 설치본을 조용히 실행하고, 끝나면 앱 재실행 (cmd 인자 따옴표 문제 피하려고 .bat 사용)
       final bat = File(p.join(tempDir.path, 'modlist_update.bat'));

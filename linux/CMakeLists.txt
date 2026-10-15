@@ -73,6 +73,8 @@ set_target_properties(${BINARY_NAME}
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
+# tray_manager uses the deprecated app_indicator_new API; don't fail -Werror on it.
+target_compile_options(tray_manager_plugin PRIVATE -Wno-deprecated-declarations)
 
 # zstandard_linux is a shared-library plugin, but version 1.5.0 does not add
 # its own target to the list of libraries copied into the Flutter bundle. The

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../core/installer_state.dart';
 import '../core/update_checker.dart';
+import '../core/background_service.dart';
 import '../models/mod_model.dart';
 import 'explore_tab.dart';
 import 'installed_tab.dart';
@@ -35,11 +37,19 @@ class _MainLayoutState extends State<MainLayout> {
   int _activeTabIndex = 0; // 0: Explore, 1: Installed, 2: Settings
   String? _lastCheckedGameId;
   final Set<String> _notifiedModUpdates = {};
+  Timer? _backgroundCheckTimer;
 
   @override
   void initState() {
     super.initState();
     _installerState.addListener(_onStateChanged);
+    BackgroundService.instance.incomingDeepLink.addListener(_onIncomingDeepLink);
+    // 트레이에 상주하는 동안 앱/모드 업데이트 주기 확인
+    _backgroundCheckTimer = Timer.periodic(const Duration(hours: 3), (_) {
+      if (!mounted) return;
+      checkForAppUpdate(context, _installerState);
+      _installerState.checkForUpdatesInBackground();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkForAppUpdate(context, _installerState);
       if (widget.initialDeepLink != null) {
@@ -50,9 +60,18 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   void dispose() {
+    _backgroundCheckTimer?.cancel();
+    BackgroundService.instance.incomingDeepLink.removeListener(_onIncomingDeepLink);
     _installerState.removeListener(_onStateChanged);
     _installerState.dispose();
     super.dispose();
+  }
+
+  void _onIncomingDeepLink() {
+    final link = BackgroundService.instance.incomingDeepLink.value;
+    if (link == null || !mounted) return;
+    BackgroundService.instance.incomingDeepLink.value = null;
+    _handleDeepLink(link);
   }
 
   void _onStateChanged() {

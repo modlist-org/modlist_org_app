@@ -301,6 +301,12 @@ class _SettingsTabState extends State<SettingsTab> {
                         widget.state.autoUpdateMods,
                         widget.state.setAutoUpdateMods,
                       ),
+                      const Divider(),
+                      _buildSwitchRow(
+                        widget.state.t('settings_launch_at_startup'),
+                        widget.state.launchAtStartup,
+                        widget.state.setLaunchAtStartup,
+                      ),
                     ],
                   ),
                 ),

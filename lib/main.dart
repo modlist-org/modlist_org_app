@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import 'src/core/background_service.dart';
 import 'src/ui/main_layout.dart';
 import 'src/ui/theme.dart';
 
@@ -19,6 +20,12 @@ void main(List<String> args) async {
       break;
     }
   }
+
+  // 이미 실행 중이면 그쪽 창을 띄우고(딥링크 전달) 종료
+  if (await BackgroundService.instance.forwardToRunningInstance(args)) {
+    exit(0);
+  }
+  await BackgroundService.instance.init(args);
 
   // await clearFontCache(); for debug
 

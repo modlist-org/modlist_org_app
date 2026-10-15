@@ -14,6 +14,7 @@ import 'version_utils.dart';
 import 'app_errors.dart';
 import 'debug_log.dart';
 import 'protocol_helper.dart';
+import 'background_service.dart';
 import '../models/mod_model.dart';
 import '../services/api_service.dart';
 
@@ -55,6 +56,7 @@ class InstallerState extends ChangeNotifier {
   List<String> _modsWithUpdates = [];
   bool _isCheckingModUpdates = false;
   bool _autoUpdateMods = true;
+  bool _launchAtStartup = false;
   // 세션당 slug@version 하나씩만 시도 (설치 실패 시 무한 재시도 방지)
   final Set<String> _autoUpdateAttempted = {};
 
@@ -89,6 +91,7 @@ class InstallerState extends ChangeNotifier {
   List<String> get modsWithUpdates => _modsWithUpdates;
   bool get isCheckingModUpdates => _isCheckingModUpdates;
   bool get autoUpdateMods => _autoUpdateMods;
+  bool get launchAtStartup => _launchAtStartup;
 
   InstallerState() {
     _init();
@@ -103,6 +106,7 @@ class InstallerState extends ChangeNotifier {
     // 언어 설정 로드
     _locale = prefs.getString('modlist_app_locale') ?? 'en-US';
     _autoUpdateMods = prefs.getBool('modlist_auto_update_mods') ?? true;
+    _launchAtStartup = await BackgroundService.instance.isLaunchAtStartupEnabled();
     
     // API URL 로드
     _apiUrl = prefs.getString('modlist_api_base_url') ?? 'https://modlist.org';
@@ -311,6 +315,23 @@ class InstallerState extends ChangeNotifier {
       await installMod(online, version: latest);
       return;
     }
+  }
+
+  Future<void> setLaunchAtStartup(bool value) async {
+    try {
+      await BackgroundService.instance.setLaunchAtStartup(value);
+      _launchAtStartup = value;
+    } catch (e) {
+      await DebugLog.error('Failed to set launch at startup', error: e);
+    }
+    notifyListeners();
+  }
+
+  // 백그라운드 주기 확인: 온라인 캐시를 비워야 새로 올라온 모드 버전을 다시 받아옴
+  Future<void> checkForUpdatesInBackground() async {
+    if (isBusy || _isCheckingModUpdates) return;
+    _onlineModsCache.clear();
+    await refreshStatus();
   }
 
   Future<void> setAutoUpdateMods(bool value) async {

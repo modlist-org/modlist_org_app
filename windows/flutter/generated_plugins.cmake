@@ -3,6 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  screen_retriever_windows
+  tray_manager
+  window_manager
   zstandard_windows
 )
 

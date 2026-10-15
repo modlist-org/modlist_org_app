@@ -861,8 +861,23 @@ abstract class Game {
       return; // UMM 모드는 자체 기능이 있으므로 제외
     }
 
+    String normalize(String path) {
+      final n = path.toLowerCase().replaceAll('\\', '/');
+      return n.endsWith('.disabled') ? n.substring(0, n.length - '.disabled'.length) : n;
+    }
+
+    // 비활성화 시 다른 활성 모드가 함께 쓰는 파일(공유 의존성 DLL)은 건드리지 않음
+    final Set<String> sharedFiles = {};
+    if (!enable) {
+      for (final other in await getInstalledMods(gamePath)) {
+        if (other.id == mod.id || !other.isEnabled) continue;
+        sharedFiles.addAll(other.installedFiles.map(normalize));
+      }
+    }
+
     for (final relPath in mod.installedFiles) {
       final lowerPath = relPath.toLowerCase();
+      if (sharedFiles.contains(normalize(relPath))) continue;
       if (lowerPath.endsWith('.dll') || lowerPath.endsWith('.dll.disabled')) {
         final fullPath = p.join(gamePath, relPath);
         final disabledPath = lowerPath.endsWith('.dll.disabled')

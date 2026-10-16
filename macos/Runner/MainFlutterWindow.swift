@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import window_manager
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
@@ -11,5 +12,13 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+  }
+
+  // Started at login with --hidden: stay in the tray.
+  override public func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
+    super.order(place, relativeTo: otherWin)
+    if CommandLine.arguments.contains("--hidden") {
+      hiddenWindowAtLaunch()
+    }
   }
 }

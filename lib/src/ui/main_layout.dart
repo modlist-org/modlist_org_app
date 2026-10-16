@@ -34,7 +34,7 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   final OverlayerState _overlayerState = OverlayerState();
   final InstallerState _installerState = InstallerState();
-  int _activeTabIndex = 0; // 0: Explore, 1: Installed, 2: Settings
+  int _activeTabIndex = 1; // 0: Explore, 1: Installed, 2: Settings
   String? _lastCheckedGameId;
   final Set<String> _notifiedModUpdates = {};
   Timer? _backgroundCheckTimer;

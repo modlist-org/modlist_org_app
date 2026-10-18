@@ -450,7 +450,7 @@ class _InstalledTabState extends State<InstalledTab> {
             },
           ),
         ),
-      if (gameVersions.isNotEmpty || currentGameVersion.isNotEmpty)
+      if (gameVersions.length > 1)
         SizedBox(
           width: 170.0,
           height: 36.0,

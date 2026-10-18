@@ -1047,7 +1047,8 @@ class _ModDetailModalState extends State<_ModDetailModal> {
 
   List<Widget> _buildGameVersionPicker(ModItem mod) {
     final gameVersions = _gameVersionsOf(mod);
-    if (gameVersions.isEmpty) return const [];
+    // Every file now names its game version, so a single one leaves nothing to choose
+    if (gameVersions.length < 2) return const [];
     return [
       Text(
         widget.state.t('explore_modal_game_version'),

@@ -313,7 +313,7 @@ class InstallerState extends ChangeNotifier {
       if (activeTaskFor(slug) != null) continue;
       if (!_autoUpdateAttempted.add('$slug@$latest')) continue;
       await DebugLog.info('Auto-updating mod $slug ${local.version} -> $latest');
-      await installMod(online, version: latest, isBeta: online.isBetaBranch(local.branchId), branchId: local.branchId);
+      await installMod(online, version: latest, isBeta: online.isBetaBranch(local.branchId), branchId: local.branchId, gameVersion: local.gameVersion);
       return;
     }
   }
@@ -631,6 +631,7 @@ class InstallerState extends ChangeNotifier {
     String? version,
     bool isBeta = false,
     String? branchId,
+    String? gameVersion,
     required void Function(double progress, String message) onProgress,
   }) async {
     final targetVersion = version ?? mod.latestVersion?.version ?? '';
@@ -639,6 +640,7 @@ class InstallerState extends ChangeNotifier {
       version: targetVersion.isNotEmpty ? targetVersion : null,
       isBeta: isBeta,
       branch: branchId,
+      gameVersion: gameVersion,
       platform: platform,
     );
 
@@ -651,6 +653,7 @@ class InstallerState extends ChangeNotifier {
       version: targetVersion,
       isBeta: isBeta,
       branchId: branchId,
+      gameVersion: gameVersion,
       onProgress: (val) {
         onProgress(val, t('status_mod_downloading_progress', args: {'name': mod.name, 'progress': (val * 100).toStringAsFixed(1)}));
       },
@@ -685,6 +688,7 @@ class InstallerState extends ChangeNotifier {
     String? version,
     bool isBeta = false,
     String? branchId,
+    String? gameVersion,
     Set<String>? visited,
   }) async {
     visited ??= {};
@@ -699,7 +703,8 @@ class InstallerState extends ChangeNotifier {
         await _once(_resolvingDependencies, depSlug, () async {
           final result = await apiService.fetchModDetails(depSlug);
           final depMod = result['mod'] as ModItem;
-          await _installModWithDependencies(targetGame, gamePath, depMod, task, visited: visited);
+          // Dependencies follow the chosen game version too
+          await _installModWithDependencies(targetGame, gamePath, depMod, task, gameVersion: gameVersion, visited: visited);
         });
       } catch (e) {
         await DebugLog.error('Failed to install dependency: $depSlug', error: e);
@@ -714,12 +719,13 @@ class InstallerState extends ChangeNotifier {
       version: version,
       isBeta: isBeta,
       branchId: branchId,
+      gameVersion: gameVersion,
       onProgress: (val, message) => _updateTask(task, progress: val, message: message),
     ));
   }
 
   // 모드 설치 (여러 모드를 동시에 설치할 수 있음)
-  Future<void> installMod(ModItem mod, {String? version, bool isBeta = false, String? branchId}) async {
+  Future<void> installMod(ModItem mod, {String? version, bool isBeta = false, String? branchId, String? gameVersion}) async {
     if (_isProcessing || !_isValidPath) return;
     if (activeTaskFor(mod.slug) != null) return;
 
@@ -736,7 +742,7 @@ class InstallerState extends ChangeNotifier {
 
     await _runTask(
       task,
-      () => _installModWithDependencies(targetGame, gamePath, mod, task, version: version, isBeta: isBeta, branchId: branchId),
+      () => _installModWithDependencies(targetGame, gamePath, mod, task, version: version, isBeta: isBeta, branchId: branchId, gameVersion: gameVersion),
       onSuccess: () => t('status_mod_install_success', args: {'name': mod.name}),
       onFailure: (e) => t('status_mod_install_failed', args: {'name': mod.name, 'error': describeAppError(e)}),
     );
@@ -824,6 +830,7 @@ class InstallerState extends ChangeNotifier {
             installedFiles: m.installedFiles,
             isEnabled: enable,
             branchId: m.branchId,
+            gameVersion: m.gameVersion,
           );
         }
         await targetGame.saveInstalledMods(gamePath, current);

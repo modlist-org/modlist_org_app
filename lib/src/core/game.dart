@@ -344,6 +344,7 @@ abstract class Game {
     required String version,
     bool isBeta,
     String? branchId,
+    String? gameVersion,
     void Function(double)? onProgress,
   });
 
@@ -646,6 +647,7 @@ abstract class Game {
           installedFiles: files,
           isEnabled: mod.isEnabled,
           branchId: mod.branchId,
+          gameVersion: mod.gameVersion,
         ),
       );
     }
@@ -697,6 +699,7 @@ abstract class Game {
         installedFiles: mergedFiles,
         isEnabled: primary.isEnabled,
         branchId: primary.branchId,
+        gameVersion: primary.gameVersion,
       );
     }
     return result;
@@ -852,6 +855,7 @@ abstract class Game {
       installedFiles: metaMod.installedFiles,
       isEnabled: metaMod.isEnabled,
       branchId: metaMod.branchId,
+      gameVersion: metaMod.gameVersion,
     );
   }
 

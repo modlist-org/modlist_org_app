@@ -298,6 +298,7 @@ class DancingLineGame extends Game {
     required String version,
     bool isBeta = false,
     String? branchId,
+    String? gameVersion,
     void Function(double)? onProgress,
   }) async {
     try {
@@ -422,6 +423,7 @@ class DancingLineGame extends Game {
         installedAt: DateTime.now().toIso8601String(),
         installedFiles: installedFiles,
         branchId: branchId,
+        gameVersion: gameVersion,
       ),
     );
 

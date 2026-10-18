@@ -504,6 +504,7 @@ class AdofaiGame extends Game {
     required String version,
     bool isBeta = false,
     String? branchId,
+    String? gameVersion,
     void Function(double)? onProgress,
   }) async {
     // 임시 파일 다운로드 경로 설정
@@ -735,6 +736,7 @@ class AdofaiGame extends Game {
         installedAt: DateTime.now().toIso8601String(),
         installedFiles: installedFiles,
         branchId: branchId,
+        gameVersion: gameVersion,
       ),
     );
 

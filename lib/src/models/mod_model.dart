@@ -43,6 +43,9 @@ class ModVersion {
   /// Null on old servers.
   final bool? hasGenericDownload;
 
+  /// Game versions that have their own file in this version (empty: one file for every game version).
+  final List<String> availableGameVersions;
+
   ModVersion({
     required this.version,
     this.downloadUrl,
@@ -55,6 +58,7 @@ class ModVersion {
     this.branchId,
     this.availableLoaders,
     this.hasGenericDownload,
+    this.availableGameVersions = const [],
   });
 
   /// The app only installs MelonLoader mods; old servers (no loader info) are assumed installable.
@@ -76,6 +80,9 @@ class ModVersion {
       branchId: json['branchId'],
       availableLoaders: json['availableLoaders'] is List ? List<String>.from(json['availableLoaders']) : null,
       hasGenericDownload: json['hasGenericDownload'],
+      availableGameVersions: json['availableGameVersions'] is List
+          ? List<String>.from(json['availableGameVersions'])
+          : const [],
     );
   }
 }
@@ -359,6 +366,9 @@ class InstalledMod {
   final bool isEnabled;
   final String? branchId;
 
+  /// Game version picked at install time; updates download the same game version's file.
+  final String? gameVersion;
+
   InstalledMod({
     required this.id,
     required this.slug,
@@ -369,6 +379,7 @@ class InstalledMod {
     required this.installedFiles,
     this.isEnabled = true,
     this.branchId,
+    this.gameVersion,
   });
 
   Map<String, dynamic> toJson() {
@@ -382,6 +393,7 @@ class InstalledMod {
       'installedFiles': installedFiles,
       'isEnabled': isEnabled,
       if (branchId != null) 'branchId': branchId,
+      if (gameVersion != null) 'gameVersion': gameVersion,
     };
   }
 
@@ -396,6 +408,7 @@ class InstalledMod {
       installedFiles: List<String>.from(json['installedFiles'] ?? []),
       isEnabled: json['isEnabled'] ?? true,
       branchId: json['branchId'],
+      gameVersion: json['gameVersion'],
     );
   }
 }

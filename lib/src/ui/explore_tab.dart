@@ -972,6 +972,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
   ModItem? _mod;
   ModVersion? _latestVersion;
   bool _loading = true;
+
+  /// Game version whose file to install; empty picks the file made for every game version.
+  String _gameVersion = '';
   String? _error;
 
   @override
@@ -1003,6 +1006,48 @@ class _ModDetailModalState extends State<_ModDetailModal> {
       ),
     ];
   }
+
+  // 설치 대상 버전들이 게임 버전별 파일을 가지고 있으면 게임 버전 선택지를 보여줌
+  List<String> _gameVersionsOf(ModItem mod) {
+    final versions = <ModVersion?>[
+      _latestVersion,
+      mod.latestBetaVersion,
+      for (final branch in mod.branches) branch.latestVersion,
+    ];
+    final result = <String>[];
+    for (final v in versions) {
+      for (final gv in v?.availableGameVersions ?? const <String>[]) {
+        if (!result.contains(gv)) result.add(gv);
+      }
+    }
+    return result;
+  }
+
+  List<Widget> _buildGameVersionPicker(ModItem mod) {
+    final gameVersions = _gameVersionsOf(mod);
+    if (gameVersions.isEmpty) return const [];
+    return [
+      Text(
+        widget.state.t('explore_modal_game_version'),
+        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13.0, fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 6.0),
+      SizedBox(
+        height: 42,
+        child: UIDropdown<String>(
+          modelValue: _gameVersion,
+          defaultValue: '',
+          values: ['', ...gameVersions],
+          display: (val) => val.isEmpty ? widget.state.t('explore_modal_game_version_any') : val,
+          fontSize: 14.0,
+          onChanged: (val) => setState(() => _gameVersion = val),
+        ),
+      ),
+      const SizedBox(height: 12.0),
+    ];
+  }
+
+  String? get _selectedGameVersion => _gameVersion.isEmpty ? null : _gameVersion;
 
   // 브랜치가 여러 개인 모드: 브랜치마다 최신 버전과 설치 버튼 표시
   List<Widget> _buildBranchInstallList(BuildContext context, ModItem mod) {
@@ -1053,6 +1098,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 version: branch.latestVersion!.version,
                 isBeta: mod.isBetaBranch(branch.id),
                 branchId: branch.id,
+                gameVersion: _selectedGameVersion,
               );
               if (context.mounted) {
                 checkAndPromptUmmCompat(context, widget.state);
@@ -1487,6 +1533,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                       ],
                     )
                   else ...[
+                    ..._buildGameVersionPicker(mod),
                     if (mod.branches.length > 1)
                       ..._buildBranchInstallList(context, mod)
                     // Stable version download button
@@ -1502,6 +1549,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                           await widget.state.installMod(
                             mod,
                             version: _latestVersion!.version,
+                            gameVersion: _selectedGameVersion,
                           );
                           if (context.mounted) {
                             checkAndPromptUmmCompat(context, widget.state);
@@ -1526,6 +1574,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             mod,
                             version: mod.latestBetaVersion!.version,
                             isBeta: true,
+                            gameVersion: _selectedGameVersion,
                           );
                           if (context.mounted) {
                             checkAndPromptUmmCompat(context, widget.state);

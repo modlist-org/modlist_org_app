@@ -93,7 +93,7 @@ class ApiService {
   }
 
   // 302 리디렉션 헤더에서 실제 다운로드 URL 추출 및 다운로드 카운팅 트리거
-  Future<String> getDownloadUrl(String slug, {String? version, bool isBeta = false, String? branch, String? platform}) async {
+  Future<String> getDownloadUrl(String slug, {String? version, bool isBeta = false, String? branch, String? gameVersion, String? platform}) async {
     final baseUrl = await getBaseUrl();
     
     // 앱은 MelonLoader 모드만 설치함
@@ -106,6 +106,9 @@ class ApiService {
     }
     if (branch != null && branch.isNotEmpty) {
       queryParams['branch'] = branch;
+    }
+    if (gameVersion != null && gameVersion.isNotEmpty) {
+      queryParams['gameVersion'] = gameVersion;
     }
     if (platform != null && platform.isNotEmpty) {
       queryParams['platform'] = platform;

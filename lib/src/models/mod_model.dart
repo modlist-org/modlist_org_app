@@ -123,14 +123,18 @@ class Organization {
   final String id;
   final String name;
   final String slug;
+  final String? logo;
+  final List<String> memberIds;
 
-  Organization({required this.id, required this.name, required this.slug});
+  Organization({required this.id, required this.name, required this.slug, this.logo, this.memberIds = const []});
 
   factory Organization.fromJson(Map<String, dynamic> json) {
     return Organization(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       slug: json['slug'] ?? '',
+      logo: json['logo'],
+      memberIds: json['memberIds'] is List ? List<String>.from(json['memberIds']) : const [],
     );
   }
 }
@@ -168,6 +172,14 @@ class ModItem {
   final String? defaultBranchId;
   final String? betaBranchId;
   final Organization? organization;
+
+  /// People credited next to the mod. An organization-owned mod is credited to the organization (like the site),
+  /// so the author is dropped and only collaborators outside the organization remain.
+  List<Author> get creditedPeople {
+    final org = organization;
+    if (org == null) return [?author, ...collaborators];
+    return collaborators.where((c) => !org.memberIds.contains(c.id)).toList();
+  }
 
   ModItem({
     required this.id,

@@ -242,6 +242,28 @@ Widget _buildAuthorAvatar(Author author, {double size = 24.0}) {
   );
 }
 
+/// Organization logo (web `OrgAvatar`): rounded square, letter fallback.
+Widget _buildOrgLogo(Organization org, String apiUrl, {double size = 18.0}) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: AppColors.control,
+      borderRadius: BorderRadius.circular(size * 0.28),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: buildModLogo(
+      logoPath: org.logo,
+      fallbackName: org.name,
+      apiUrl: apiUrl,
+      width: size,
+      height: size,
+      fallbackFontSize: size * 0.5,
+      getFallbackGradient: fallbackLogoGradient,
+    ),
+  );
+}
+
 /// Overlapping avatar stack (web `.avatar-stack`).
 Widget _buildAvatarStack(
   List<Author> authors, {
@@ -656,28 +678,18 @@ class _ExploreTabState extends State<ExploreTab> {
   }
 
   Widget _buildModCard(ModItem mod) {
-    // Authors list
-    final List<Author> authors = [];
-    if (mod.author != null) {
-      authors.add(mod.author!);
-    }
-    authors.addAll(mod.collaborators);
-    final List<String> names = [];
-    if (mod.author != null) {
-      names.add(mod.author!.displayName);
-    }
-    if (mod.collaborators.isNotEmpty) {
-      final displayed = mod.collaborators.take(2);
-      for (final collab in displayed) {
-        names.add(collab.displayName);
-      }
-    }
-    String authorNamesStr = names.join(', ');
-    if (mod.collaborators.length > 2) {
+    // Credits: the organization first for an org-owned mod, then the people outside it
+    final List<Author> authors = mod.creditedPeople;
+    final List<String> names = [
+      if (mod.organization != null) mod.organization!.name,
+      ...authors.map((a) => a.displayName),
+    ];
+    String authorNamesStr = names.take(3).join(', ');
+    if (names.length > 3) {
       authorNamesStr += widget.state.t('explore_card_author_more');
     }
     final String authorNames = authorNamesStr;
-    final bool isAnyAuthorVerified = authors.any((a) => a.isVerifiedDeveloper);
+    final bool isAnyAuthorVerified = mod.organization == null && authors.any((a) => a.isVerifiedDeveloper);
 
     final List<String> shownCategories = mod.categories.take(3).toList();
 
@@ -772,9 +784,14 @@ class _ExploreTabState extends State<ExploreTab> {
                       // Authors
                       Row(
                         children: [
+                          if (mod.organization != null) ...[
+                            _buildOrgLogo(mod.organization!, widget.state.apiUrl, size: 22.0),
+                            const SizedBox(width: 4.0),
+                          ],
                           if (authors.isNotEmpty) ...[
                             _buildAvatarStack(
                               authors,
+                              max: mod.organization != null ? 2 : 3,
                               ringColor: hovered
                                   ? AppColors.surfaceHover
                                   : AppColors.surface,
@@ -1167,11 +1184,8 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     }
 
     final mod = _mod!;
-    final List<Author> authors = [];
-    if (mod.author != null) {
-      authors.add(mod.author!);
-    }
-    authors.addAll(mod.collaborators);
+    // An organization-owned mod shows the organization badge plus only collaborators outside it
+    final List<Author> outsideCollaborators = mod.organization == null ? mod.collaborators : mod.creditedPeople;
     final isInstalled = widget.state.installedMods.any((m) {
       return m.slug.toLowerCase() == mod.slug.toLowerCase() ||
           widget.state.game.isModMatched(m.slug, mod.slug);
@@ -1259,32 +1273,23 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             ],
                           ),
                           const SizedBox(height: 8.0),
-                          if (mod.organization != null) ...[
-                            Text(
-                              widget.state.t('explore_modal_by_org', args: {'name': mod.organization!.name}),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13.0,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 6.0),
-                          ],
                           Row(
                             children: [
-                              if (mod.author != null)
+                              if (mod.organization != null)
+                                _buildOrgBadge(mod.organization!)
+                              else if (mod.author != null)
                                 _buildUserBadge(mod.author!),
 
-                              if (mod.collaborators.isNotEmpty) ...[
+                              if (outsideCollaborators.isNotEmpty) ...[
                                 const SizedBox(width: 10.0),
                                 _buildAvatarStack(
-                                  mod.collaborators,
+                                  outsideCollaborators,
                                   size: 20.0,
                                   max: 8,
                                 ),
                                 const SizedBox(width: 6.0),
                                 Text(
-                                  '+${mod.collaborators.length}',
+                                  '+${outsideCollaborators.length}',
                                   style: const TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 12.5,
@@ -1746,6 +1751,32 @@ class _ModDetailModalState extends State<_ModDetailModal> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOrgBadge(Organization org) {
+    return Container(
+      height: 28.0,
+      padding: const EdgeInsets.only(left: 4.0, right: 10.0),
+      decoration: BoxDecoration(
+        color: AppColors.control,
+        borderRadius: BorderRadius.circular(999.0),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildOrgLogo(org, widget.state.apiUrl, size: 20.0),
+          const SizedBox(width: 6.0),
+          Text(
+            org.name,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 13.0,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

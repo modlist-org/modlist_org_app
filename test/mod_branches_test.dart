@@ -63,4 +63,15 @@ void main() {
     expect(InstalledMod.fromJson(mod.toJson()).branchId, 'beta');
     expect(InstalledMod.fromJson({'id': 'm', 'slug': 'm'}).branchId, isNull);
   });
+
+  test('organization-owned mods credit only people outside the organization', () {
+    Map<String, dynamic> user(String id) => {'_id': id, 'username': id};
+    final json = _json(organization: {'_id': 'o', 'name': 'Team', 'slug': 'team', 'logo': '/logos/t.webp', 'memberIds': ['a', 'm']})
+      ..['authorId'] = user('a')
+      ..['collaboratorIds'] = [user('m'), user('out')];
+    final mod = ModItem.fromJson(json);
+    expect(mod.organization?.logo, '/logos/t.webp');
+    expect(mod.creditedPeople.map((p) => p.id), ['out']);
+    expect(ModItem.fromJson(_json()..['authorId'] = user('a')).creditedPeople.map((p) => p.id), ['a']);
+  });
 }

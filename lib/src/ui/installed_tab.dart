@@ -2,9 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:overlayer_ui_flutter/overlayer_ui_flutter.dart';
 import '../core/app_errors.dart';
 import '../core/installer_state.dart';
 import '../core/version_utils.dart';
+import '../models/mod_model.dart';
 import 'dialogs.dart';
 import 'explore_tab.dart' show buildModLogo;
 import 'theme.dart';
@@ -248,6 +250,7 @@ class _InstalledTabState extends State<InstalledTab> {
                       final showSwitch = !mod.id.startsWith('umm-');
                       final bool modBusy = widget.state.isProcessing || widget.state.activeTaskFor(mod.slug) != null;
                       final opacity = mod.isEnabled ? 1.0 : 0.45;
+                      final switchers = onlineMod != null ? _buildSwitchers(mod, onlineMod, modBusy) : const <Widget>[];
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -324,7 +327,7 @@ class _InstalledTabState extends State<InstalledTab> {
                                                 widget.state.t('installed_ver_prefix', args: {'version': mod.version}),
                                                 style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
                                               ),
-                                              if (onlineMod != null) ...[
+                                              if (switchers.isNotEmpty) ...[
                                                 Text(
                                                   widget.state.t('installed_latest_ver_prefix', args: {
                                                     'version': onlineLatest?.version ?? "0.0.0"
@@ -345,6 +348,14 @@ class _InstalledTabState extends State<InstalledTab> {
                                               ],
                                             ],
                                           ),
+                                          if (onlineMod != null) ...[
+                                            const SizedBox(height: 8.0),
+                                            Wrap(
+                                              spacing: 8.0,
+                                              runSpacing: 8.0,
+                                              children: switchers,
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ),
@@ -399,6 +410,66 @@ class _InstalledTabState extends State<InstalledTab> {
         ],
       ),
     );
+  }
+
+  // Branch / game version pickers; changing one reinstalls that branch's latest version with the chosen file
+  List<Widget> _buildSwitchers(InstalledMod mod, ModItem online, bool busy) {
+    final branchId = mod.branchId ?? online.defaultBranchId ?? (online.branches.isNotEmpty ? online.branches.first.id : null);
+    final latest = online.latestVersionForBranch(branchId);
+    final gameVersions = latest?.availableGameVersions ?? const <String>[];
+    final currentGameVersion = mod.gameVersion ?? '';
+
+    Future<void> reinstall(String? newBranchId, String gameVersion) async {
+      final target = online.latestVersionForBranch(newBranchId);
+      if (target == null) return;
+      await widget.state.installMod(
+        online,
+        version: target.version,
+        isBeta: online.isBetaBranch(newBranchId),
+        branchId: newBranchId,
+        gameVersion: gameVersion.isEmpty ? null : gameVersion,
+      );
+      if (mounted) checkAndPromptUmmCompat(context, widget.state);
+    }
+
+    return [
+      if (online.branches.length > 1 && branchId != null)
+        SizedBox(
+          width: 150.0,
+          height: 36.0,
+          child: UIDropdown<String>(
+            modelValue: branchId,
+            defaultValue: branchId,
+            values: [for (final b in online.branches) if (b.latestVersion != null) b.id],
+            display: (id) => online.branches.firstWhere((b) => b.id == id).name,
+            fontSize: 13.0,
+            blocked: busy,
+            disableReset: true,
+            onChanged: (id) {
+              if (id != branchId) reinstall(id, currentGameVersion);
+            },
+          ),
+        ),
+      if (gameVersions.isNotEmpty || currentGameVersion.isNotEmpty)
+        SizedBox(
+          width: 170.0,
+          height: 36.0,
+          child: UIDropdown<String>(
+            modelValue: currentGameVersion,
+            defaultValue: '',
+            values: ['', ...{...gameVersions, if (currentGameVersion.isNotEmpty) currentGameVersion}],
+            display: (val) => val.isEmpty
+                ? widget.state.t('explore_modal_game_version_any')
+                : '${widget.state.t('explore_modal_game_version')}: $val',
+            fontSize: 13.0,
+            blocked: busy,
+            disableReset: true,
+            onChanged: (val) {
+              if (val != currentGameVersion) reinstall(branchId, val);
+            },
+          ),
+        ),
+    ];
   }
 
   Widget _buildLoaderStatusRow() {

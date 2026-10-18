@@ -689,7 +689,8 @@ class _ExploreTabState extends State<ExploreTab> {
       authorNamesStr += widget.state.t('explore_card_author_more');
     }
     final String authorNames = authorNamesStr;
-    final bool isAnyAuthorVerified = mod.organization == null && authors.any((a) => a.isVerifiedDeveloper);
+    final bool isAnyAuthorVerified =
+        mod.organization == null && authors.any((a) => a.isVerifiedDeveloper);
 
     final List<String> shownCategories = mod.categories.take(3).toList();
 
@@ -785,7 +786,11 @@ class _ExploreTabState extends State<ExploreTab> {
                       Row(
                         children: [
                           if (mod.organization != null) ...[
-                            _buildOrgLogo(mod.organization!, widget.state.apiUrl, size: 22.0),
+                            _buildOrgLogo(
+                              mod.organization!,
+                              widget.state.apiUrl,
+                              size: 22.0,
+                            ),
                             const SizedBox(width: 4.0),
                           ],
                           if (authors.isNotEmpty) ...[
@@ -1046,7 +1051,11 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     return [
       Text(
         widget.state.t('explore_modal_game_version'),
-        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13.0, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 13.0,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       const SizedBox(height: 6.0),
       SizedBox(
@@ -1054,8 +1063,10 @@ class _ModDetailModalState extends State<_ModDetailModal> {
         child: UIDropdown<String>(
           modelValue: _gameVersion,
           defaultValue: '',
-          values: ['', ...gameVersions],
-          display: (val) => val.isEmpty ? widget.state.t('explore_modal_game_version_any') : val,
+          values: ['', ...{...gameVersions, if (_gameVersion.isNotEmpty) _gameVersion}],
+          display: (val) => val.isEmpty
+              ? widget.state.t('explore_modal_game_version_any')
+              : val,
           fontSize: 14.0,
           onChanged: (val) => setState(() => _gameVersion = val),
         ),
@@ -1064,7 +1075,8 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     ];
   }
 
-  String? get _selectedGameVersion => _gameVersion.isEmpty ? null : _gameVersion;
+  String? get _selectedGameVersion =>
+      _gameVersion.isEmpty ? null : _gameVersion;
 
   // 브랜치가 여러 개인 모드: 브랜치마다 최신 버전과 설치 버튼 표시
   List<Widget> _buildBranchInstallList(BuildContext context, ModItem mod) {
@@ -1109,18 +1121,20 @@ class _ModDetailModalState extends State<_ModDetailModal> {
             icon: Icons.download_rounded,
             label:
                 '${widget.state.t('explore_modal_btn_install')} · v${branch.latestVersion!.version}',
-            onClick: !branch.latestVersion!.isInstallableWithMelonLoader ? null : () async {
-              await widget.state.installMod(
-                mod,
-                version: branch.latestVersion!.version,
-                isBeta: mod.isBetaBranch(branch.id),
-                branchId: branch.id,
-                gameVersion: _selectedGameVersion,
-              );
-              if (context.mounted) {
-                checkAndPromptUmmCompat(context, widget.state);
-              }
-            },
+            onClick: !branch.latestVersion!.isInstallableWithMelonLoader
+                ? null
+                : () async {
+                    await widget.state.installMod(
+                      mod,
+                      version: branch.latestVersion!.version,
+                      isBeta: mod.isBetaBranch(branch.id),
+                      branchId: branch.id,
+                      gameVersion: _selectedGameVersion,
+                    );
+                    if (context.mounted) {
+                      checkAndPromptUmmCompat(context, widget.state);
+                    }
+                  },
           ),
           ..._buildNotInstallableReason(branch.latestVersion!),
           const SizedBox(height: 12.0),
@@ -1138,6 +1152,12 @@ class _ModDetailModalState extends State<_ModDetailModal> {
           _mod = result['mod'] as ModItem;
           _latestVersion = result['latestVersion'] as ModVersion?;
           _loading = false;
+          // Start from the game version the installed copy was set up for
+          _gameVersion = widget.state.installedMods
+                  .where((m) => m.slug.toLowerCase() == _mod!.slug.toLowerCase())
+                  .firstOrNull
+                  ?.gameVersion ??
+              '';
         });
       }
     } catch (e) {
@@ -1185,7 +1205,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
 
     final mod = _mod!;
     // An organization-owned mod shows the organization badge plus only collaborators outside it
-    final List<Author> outsideCollaborators = mod.organization == null ? mod.collaborators : mod.creditedPeople;
+    final List<Author> outsideCollaborators = mod.organization == null
+        ? mod.collaborators
+        : mod.creditedPeople;
     final isInstalled = widget.state.installedMods.any((m) {
       return m.slug.toLowerCase() == mod.slug.toLowerCase() ||
           widget.state.game.isModMatched(m.slug, mod.slug);
@@ -1203,11 +1225,18 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     final bool showProgress = widget.state.isProcessing || modBusy;
     // Without a task for this mod, fall back to the last loader operation result
     final String? loaderMessage = widget.state.statusMessage;
-    final String? statusMessage = modBusy ? null : (modTask?.message ?? loaderMessage);
+    final String? statusMessage = modBusy
+        ? null
+        : (modTask?.message ?? loaderMessage);
     final bool statusIsError = modTask != null
         ? modTask.isFailed
         : loaderMessage != null &&
-            ['실패', 'fail', '失败', 'error'].any((w) => loaderMessage.toLowerCase().contains(w));
+              [
+                '실패',
+                'fail',
+                '失败',
+                'error',
+              ].any((w) => loaderMessage.toLowerCase().contains(w));
 
     return Dialog(
       insetPadding: const EdgeInsets.all(40.0),
@@ -1273,30 +1302,17 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             ],
                           ),
                           const SizedBox(height: 8.0),
-                          Row(
+                          // Same as the site: organization (or author) chip, then a chip per collaborator outside it
+                          Wrap(
+                            spacing: 8.0,
+                            runSpacing: 6.0,
                             children: [
                               if (mod.organization != null)
                                 _buildOrgBadge(mod.organization!)
                               else if (mod.author != null)
                                 _buildUserBadge(mod.author!),
-
-                              if (outsideCollaborators.isNotEmpty) ...[
-                                const SizedBox(width: 10.0),
-                                _buildAvatarStack(
-                                  outsideCollaborators,
-                                  size: 20.0,
-                                  max: 8,
-                                ),
-                                const SizedBox(width: 6.0),
-                                Text(
-                                  '+${outsideCollaborators.length}',
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                              for (final c in outsideCollaborators)
+                                _buildUserBadge(c),
                             ],
                           ),
                         ],
@@ -1371,7 +1387,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                 // Description
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final text = mod.descriptionFor(widget.state.locale) ?? mod.summaryFor(widget.state.locale);
+                    final text =
+                        mod.descriptionFor(widget.state.locale) ??
+                        mod.summaryFor(widget.state.locale);
 
                     final overflow = _checkOverflow(
                       text,
@@ -1446,7 +1464,12 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                                         child: SingleChildScrollView(
                                           child: MarkdownBody(
                                             data:
-                                                mod.descriptionFor(widget.state.locale) ?? mod.summaryFor(widget.state.locale),
+                                                mod.descriptionFor(
+                                                  widget.state.locale,
+                                                ) ??
+                                                mod.summaryFor(
+                                                  widget.state.locale,
+                                                ),
                                             styleSheet: markdownStyleSheet,
                                           ),
                                         ),
@@ -1476,7 +1499,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          (modBusy ? modTask!.message : widget.state.statusMessage) ??
+                          (modBusy
+                                  ? modTask!.message
+                                  : widget.state.statusMessage) ??
                               widget.state.t('explore_modal_loading'),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
@@ -1488,7 +1513,9 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(999.0),
                           child: LinearProgressIndicator(
-                            value: modBusy ? modTask!.progress : widget.state.progress,
+                            value: modBusy
+                                ? modTask!.progress
+                                : widget.state.progress,
                             minHeight: 4.0,
                           ),
                         ),
@@ -1550,23 +1577,29 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         icon: Icons.download_rounded,
                         label:
                             '${widget.state.t('explore_modal_btn_install')} · v${_latestVersion!.version}',
-                        onClick: !_latestVersion!.isInstallableWithMelonLoader ? null : () async {
-                          await widget.state.installMod(
-                            mod,
-                            version: _latestVersion!.version,
-                            gameVersion: _selectedGameVersion,
-                          );
-                          if (context.mounted) {
-                            checkAndPromptUmmCompat(context, widget.state);
-                          }
-                        },
+                        onClick: !_latestVersion!.isInstallableWithMelonLoader
+                            ? null
+                            : () async {
+                                await widget.state.installMod(
+                                  mod,
+                                  version: _latestVersion!.version,
+                                  gameVersion: _selectedGameVersion,
+                                );
+                                if (context.mounted) {
+                                  checkAndPromptUmmCompat(
+                                    context,
+                                    widget.state,
+                                  );
+                                }
+                              },
                       ),
                       ..._buildNotInstallableReason(_latestVersion!),
                       const SizedBox(height: 8.0),
                     ],
 
                     // Beta version download button
-                    if (mod.branches.length <= 1 && mod.latestBetaVersion != null) ...[
+                    if (mod.branches.length <= 1 &&
+                        mod.latestBetaVersion != null) ...[
                       AppButton(
                         size: AppButtonSize.lg,
                         expand: true,
@@ -1574,17 +1607,23 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         icon: Icons.science_outlined,
                         label:
                             'v${mod.latestBetaVersion!.version} (${widget.state.t('explore_modal_beta')})',
-                        onPressed: !mod.latestBetaVersion!.isInstallableWithMelonLoader ? null : () async {
-                          await widget.state.installMod(
-                            mod,
-                            version: mod.latestBetaVersion!.version,
-                            isBeta: true,
-                            gameVersion: _selectedGameVersion,
-                          );
-                          if (context.mounted) {
-                            checkAndPromptUmmCompat(context, widget.state);
-                          }
-                        },
+                        onPressed:
+                            !mod.latestBetaVersion!.isInstallableWithMelonLoader
+                            ? null
+                            : () async {
+                                await widget.state.installMod(
+                                  mod,
+                                  version: mod.latestBetaVersion!.version,
+                                  isBeta: true,
+                                  gameVersion: _selectedGameVersion,
+                                );
+                                if (context.mounted) {
+                                  checkAndPromptUmmCompat(
+                                    context,
+                                    widget.state,
+                                  );
+                                }
+                              },
                       ),
                       ..._buildNotInstallableReason(mod.latestBetaVersion!),
                       const SizedBox(height: 8.0),
@@ -1756,27 +1795,30 @@ class _ModDetailModalState extends State<_ModDetailModal> {
   }
 
   Widget _buildOrgBadge(Organization org) {
-    return Container(
-      height: 28.0,
-      padding: const EdgeInsets.only(left: 4.0, right: 10.0),
-      decoration: BoxDecoration(
-        color: AppColors.control,
-        borderRadius: BorderRadius.circular(999.0),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildOrgLogo(org, widget.state.apiUrl, size: 20.0),
-          const SizedBox(width: 6.0),
-          Text(
-            org.name,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontSize: 13.0,
-              fontWeight: FontWeight.w600,
+    return HoverBuilder(
+      onTap: () => _launchUrl('${widget.state.apiUrl}/orgs/${org.slug}'),
+      builder: (context, hovered) => Container(
+        height: 28.0,
+        padding: const EdgeInsets.only(left: 4.0, right: 10.0),
+        decoration: BoxDecoration(
+          color: hovered ? AppColors.surfaceHover : AppColors.control,
+          borderRadius: BorderRadius.circular(999.0),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildOrgLogo(org, widget.state.apiUrl, size: 20.0),
+            const SizedBox(width: 6.0),
+            Text(
+              org.name,
+              style: const TextStyle(
+                color: AppColors.text,
+                fontSize: 13.0,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

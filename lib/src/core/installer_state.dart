@@ -283,8 +283,9 @@ class InstallerState extends ChangeNotifier {
       final List<String> updatedSlugs = [];
       for (final localMod in localMods) {
         final onlineMod = _onlineModsCache[localMod.slug];
-        if (onlineMod != null && onlineMod.latestVersion != null) {
-          if (VersionUtils.isNewerVersion(localMod.version, onlineMod.latestVersion!.version)) {
+        final latest = onlineMod?.latestVersionForBranch(localMod.branchId);
+        if (latest != null) {
+          if (VersionUtils.isNewerVersion(localMod.version, latest.version)) {
             updatedSlugs.add(localMod.slug);
           }
         }
@@ -307,12 +308,12 @@ class InstallerState extends ChangeNotifier {
     for (final slug in _modsWithUpdates) {
       final local = _installedMods.where((m) => m.slug == slug).firstOrNull;
       final online = _onlineModsCache[slug];
-      final latest = online?.latestVersion?.version;
+      final latest = online?.latestVersionForBranch(local?.branchId)?.version;
       if (local == null || !local.isEnabled || online == null || latest == null) continue;
       if (activeTaskFor(slug) != null) continue;
       if (!_autoUpdateAttempted.add('$slug@$latest')) continue;
       await DebugLog.info('Auto-updating mod $slug ${local.version} -> $latest');
-      await installMod(online, version: latest);
+      await installMod(online, version: latest, isBeta: online.isBetaBranch(local.branchId), branchId: local.branchId);
       return;
     }
   }
@@ -629,6 +630,7 @@ class InstallerState extends ChangeNotifier {
     ModItem mod, {
     String? version,
     bool isBeta = false,
+    String? branchId,
     required void Function(double progress, String message) onProgress,
   }) async {
     final targetVersion = version ?? mod.latestVersion?.version ?? '';
@@ -636,6 +638,7 @@ class InstallerState extends ChangeNotifier {
       mod.slug,
       version: targetVersion.isNotEmpty ? targetVersion : null,
       isBeta: isBeta,
+      branch: branchId,
       platform: platform,
     );
 
@@ -647,6 +650,7 @@ class InstallerState extends ChangeNotifier {
       redirectUrl,
       version: targetVersion,
       isBeta: isBeta,
+      branchId: branchId,
       onProgress: (val) {
         onProgress(val, t('status_mod_downloading_progress', args: {'name': mod.name, 'progress': (val * 100).toStringAsFixed(1)}));
       },
@@ -680,6 +684,7 @@ class InstallerState extends ChangeNotifier {
     ModTask task, {
     String? version,
     bool isBeta = false,
+    String? branchId,
     Set<String>? visited,
   }) async {
     visited ??= {};
@@ -708,12 +713,13 @@ class InstallerState extends ChangeNotifier {
       mod,
       version: version,
       isBeta: isBeta,
+      branchId: branchId,
       onProgress: (val, message) => _updateTask(task, progress: val, message: message),
     ));
   }
 
   // 모드 설치 (여러 모드를 동시에 설치할 수 있음)
-  Future<void> installMod(ModItem mod, {String? version, bool isBeta = false}) async {
+  Future<void> installMod(ModItem mod, {String? version, bool isBeta = false, String? branchId}) async {
     if (_isProcessing || !_isValidPath) return;
     if (activeTaskFor(mod.slug) != null) return;
 
@@ -730,7 +736,7 @@ class InstallerState extends ChangeNotifier {
 
     await _runTask(
       task,
-      () => _installModWithDependencies(targetGame, gamePath, mod, task, version: version, isBeta: isBeta),
+      () => _installModWithDependencies(targetGame, gamePath, mod, task, version: version, isBeta: isBeta, branchId: branchId),
       onSuccess: () => t('status_mod_install_success', args: {'name': mod.name}),
       onFailure: (e) => t('status_mod_install_failed', args: {'name': mod.name, 'error': describeAppError(e)}),
     );
@@ -817,6 +823,7 @@ class InstallerState extends ChangeNotifier {
             installedAt: m.installedAt,
             installedFiles: m.installedFiles,
             isEnabled: enable,
+            branchId: m.branchId,
           );
         }
         await targetGame.saveInstalledMods(gamePath, current);

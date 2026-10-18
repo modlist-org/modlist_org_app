@@ -993,6 +993,78 @@ class _ModDetailModalState extends State<_ModDetailModal> {
     }
   }
 
+  List<Widget> _buildNotInstallableReason(ModVersion version) {
+    if (version.isInstallableWithMelonLoader) return const [];
+    return [
+      const SizedBox(height: 4.0),
+      Text(
+        widget.state.t('explore_modal_not_melonloader'),
+        style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
+      ),
+    ];
+  }
+
+  // 브랜치가 여러 개인 모드: 브랜치마다 최신 버전과 설치 버튼 표시
+  List<Widget> _buildBranchInstallList(BuildContext context, ModItem mod) {
+    return [
+      for (final branch in mod.branches)
+        if (branch.latestVersion != null) ...[
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  branch.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14.0,
+                  ),
+                ),
+              ),
+              if (branch.id == mod.defaultBranchId) ...[
+                const SizedBox(width: 8.0),
+                AppBadge(
+                  label: widget.state.t('explore_modal_branch_default'),
+                  tone: BadgeTone.accent,
+                ),
+              ],
+              if (branch.id == mod.betaBranchId) ...[
+                const SizedBox(width: 8.0),
+                AppBadge(
+                  label: widget.state.t('explore_modal_branch_default_beta'),
+                  tone: BadgeTone.warning,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 6.0),
+          OlButton(
+            height: 44.0,
+            fontSize: 15.0,
+            expand: true,
+            icon: Icons.download_rounded,
+            label:
+                '${widget.state.t('explore_modal_btn_install')} · v${branch.latestVersion!.version}',
+            onClick: !branch.latestVersion!.isInstallableWithMelonLoader ? null : () async {
+              await widget.state.installMod(
+                mod,
+                version: branch.latestVersion!.version,
+                isBeta: mod.isBetaBranch(branch.id),
+                branchId: branch.id,
+              );
+              if (context.mounted) {
+                checkAndPromptUmmCompat(context, widget.state);
+              }
+            },
+          ),
+          ..._buildNotInstallableReason(branch.latestVersion!),
+          const SizedBox(height: 12.0),
+        ],
+    ];
+  }
+
   Future<void> _loadDetails() async {
     try {
       final result = await widget.state.apiService.fetchModDetails(
@@ -1141,6 +1213,17 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                             ],
                           ),
                           const SizedBox(height: 8.0),
+                          if (mod.organization != null) ...[
+                            Text(
+                              widget.state.t('explore_modal_by_org', args: {'name': mod.organization!.name}),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6.0),
+                          ],
                           Row(
                             children: [
                               if (mod.author != null)
@@ -1404,8 +1487,10 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                       ],
                     )
                   else ...[
+                    if (mod.branches.length > 1)
+                      ..._buildBranchInstallList(context, mod)
                     // Stable version download button
-                    if (_latestVersion != null) ...[
+                    else if (_latestVersion != null) ...[
                       OlButton(
                         height: 50.0,
                         fontSize: 16.0,
@@ -1413,7 +1498,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         icon: Icons.download_rounded,
                         label:
                             '${widget.state.t('explore_modal_btn_install')} · v${_latestVersion!.version}',
-                        onClick: () async {
+                        onClick: !_latestVersion!.isInstallableWithMelonLoader ? null : () async {
                           await widget.state.installMod(
                             mod,
                             version: _latestVersion!.version,
@@ -1423,11 +1508,12 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                           }
                         },
                       ),
+                      ..._buildNotInstallableReason(_latestVersion!),
                       const SizedBox(height: 8.0),
                     ],
 
                     // Beta version download button
-                    if (mod.latestBetaVersion != null) ...[
+                    if (mod.branches.length <= 1 && mod.latestBetaVersion != null) ...[
                       AppButton(
                         size: AppButtonSize.lg,
                         expand: true,
@@ -1435,7 +1521,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                         icon: Icons.science_outlined,
                         label:
                             'v${mod.latestBetaVersion!.version} (${widget.state.t('explore_modal_beta')})',
-                        onPressed: () async {
+                        onPressed: !mod.latestBetaVersion!.isInstallableWithMelonLoader ? null : () async {
                           await widget.state.installMod(
                             mod,
                             version: mod.latestBetaVersion!.version,
@@ -1446,6 +1532,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                           }
                         },
                       ),
+                      ..._buildNotInstallableReason(mod.latestBetaVersion!),
                       const SizedBox(height: 8.0),
                     ],
                   ],

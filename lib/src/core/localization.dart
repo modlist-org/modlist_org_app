@@ -171,6 +171,10 @@ class Localization {
       'game_dancing_line': '댄싱 라인 (Dancing Line)',
       'game_rhythm_doctor': '리듬닥터 (Rhythm Doctor)',
       'explore_modal_beta': '베타',
+      'explore_modal_branch_default': '기본',
+      'explore_modal_branch_default_beta': '기본 베타',
+      'explore_modal_not_melonloader': 'MelonLoader용 파일이 없어 설치할 수 없습니다.',
+      'explore_modal_by_org': '{name} 제작',
       'update_dialog_title': '새로운 버전 업데이트 안내',
       'update_dialog_body':
           '새로운 버전 {version}이 출시되었습니다!\n\n현재 버전: v{currentVersion}\n\n최신 버전을 다운로드하고 설치하시겠습니까?',
@@ -367,6 +371,10 @@ class Localization {
       'game_dancing_line': 'Dancing Line',
       'game_rhythm_doctor': 'Rhythm Doctor',
       'explore_modal_beta': 'Beta',
+      'explore_modal_branch_default': 'Default',
+      'explore_modal_branch_default_beta': 'Default beta',
+      'explore_modal_not_melonloader': 'No MelonLoader file for this version; cannot install.',
+      'explore_modal_by_org': 'by {name}',
       'update_dialog_title': 'New Update Available',
       'update_dialog_body':
           'A new version v{version} is available!\n\nCurrent version: v{currentVersion}\n\nWould you like to download and install the update now?',
@@ -592,6 +600,10 @@ class Localization {
       'game_dancing_line': '跳舞的线 (Dancing Line)',
       'game_rhythm_doctor': '节奏医生 (Rhythm Doctor)',
       'explore_modal_beta': '测试版 (Beta)',
+      'explore_modal_branch_default': '默认',
+      'explore_modal_branch_default_beta': '默认测试版',
+      'explore_modal_not_melonloader': '此版本没有 MelonLoader 文件，无法安装。',
+      'explore_modal_by_org': '由 {name} 制作',
       'update_dialog_title': '新版本更新通知',
       'update_dialog_body':
           '新版本 {version} 已发布！\n\n当前版本: v{currentVersion}\n\n您要下载并安装最新版本吗？',

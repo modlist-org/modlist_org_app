@@ -503,6 +503,7 @@ class AdofaiGame extends Game {
     String downloadUrl, {
     required String version,
     bool isBeta = false,
+    String? branchId,
     void Function(double)? onProgress,
   }) async {
     // 임시 파일 다운로드 경로 설정
@@ -733,6 +734,7 @@ class AdofaiGame extends Game {
         isBeta: isBeta,
         installedAt: DateTime.now().toIso8601String(),
         installedFiles: installedFiles,
+        branchId: branchId,
       ),
     );
 

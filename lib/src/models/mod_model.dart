@@ -35,6 +35,13 @@ class ModVersion {
   final String createdAt;
   final String? gameVersion;
   final List<String> availablePlatforms;
+  final String? branchId;
+
+  /// Loader-specific files (subset of melonloader/umm/bepinex). Null on old servers.
+  final List<String>? availableLoaders;
+
+  /// Null on old servers.
+  final bool? hasGenericDownload;
 
   ModVersion({
     required this.version,
@@ -45,7 +52,16 @@ class ModVersion {
     required this.createdAt,
     this.gameVersion,
     this.availablePlatforms = const [],
+    this.branchId,
+    this.availableLoaders,
+    this.hasGenericDownload,
   });
+
+  /// The app only installs MelonLoader mods; old servers (no loader info) are assumed installable.
+  bool get isInstallableWithMelonLoader {
+    if (availableLoaders == null && hasGenericDownload == null) return true;
+    return hasGenericDownload == true || (availableLoaders?.contains('melonloader') ?? false);
+  }
 
   factory ModVersion.fromJson(Map<String, dynamic> json) {
     return ModVersion(
@@ -57,6 +73,57 @@ class ModVersion {
       createdAt: json['createdAt'] ?? '',
       gameVersion: json['gameVersion'],
       availablePlatforms: List<String>.from(json['availablePlatforms'] ?? []),
+      branchId: json['branchId'],
+      availableLoaders: json['availableLoaders'] is List ? List<String>.from(json['availableLoaders']) : null,
+      hasGenericDownload: json['hasGenericDownload'],
+    );
+  }
+}
+
+class ModBranch {
+  final String id;
+  final String name;
+  final String description;
+  final bool isDefault;
+  final bool isBeta;
+  final int position;
+  final ModVersion? latestVersion;
+
+  ModBranch({
+    required this.id,
+    required this.name,
+    this.description = '',
+    this.isDefault = false,
+    this.isBeta = false,
+    this.position = 0,
+    this.latestVersion,
+  });
+
+  factory ModBranch.fromJson(Map<String, dynamic> json) {
+    return ModBranch(
+      id: json['_id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      isDefault: json['isDefault'] ?? false,
+      isBeta: json['isBeta'] ?? false,
+      position: json['position'] ?? 0,
+      latestVersion: json['latestVersion'] != null ? ModVersion.fromJson(json['latestVersion']) : null,
+    );
+  }
+}
+
+class Organization {
+  final String id;
+  final String name;
+  final String slug;
+
+  Organization({required this.id, required this.name, required this.slug});
+
+  factory Organization.fromJson(Map<String, dynamic> json) {
+    return Organization(
+      id: json['_id'] ?? '',
+      name: json['name'] ?? '',
+      slug: json['slug'] ?? '',
     );
   }
 }
@@ -89,6 +156,12 @@ class ModItem {
   final String? communityUrl;
   final List<String> dependencySlugs;
 
+  /// Ordered by position; empty on old servers.
+  final List<ModBranch> branches;
+  final String? defaultBranchId;
+  final String? betaBranchId;
+  final Organization? organization;
+
   ModItem({
     required this.id,
     required this.name,
@@ -110,6 +183,10 @@ class ModItem {
     required this.dependencySlugs,
     List<String>? games,
     this.translations = const {},
+    this.branches = const [],
+    this.defaultBranchId,
+    this.betaBranchId,
+    this.organization,
   }) : games = (games != null && games.isNotEmpty)
            ? List.unmodifiable(games)
            : List.unmodifiable([game]);
@@ -128,6 +205,17 @@ class ModItem {
 
   /// Whether this mod targets [gameId] (any of [games]).
   bool supportsGame(String gameId) => games.contains(gameId);
+
+  ModBranch? branchById(String? branchId) =>
+      branchId == null ? null : branches.where((b) => b.id == branchId).firstOrNull;
+
+  bool isBetaBranch(String? branchId) => branchId != null && branchId == betaBranchId;
+
+  /// Latest version an installed copy should update to: its own branch when known, else [latestVersion].
+  ModVersion? latestVersionForBranch(String? branchId) {
+    final branch = branchById(branchId);
+    return branch != null ? branch.latestVersion : latestVersion;
+  }
 
   ModItem copyWith({
     ModVersion? latestVersion,
@@ -155,6 +243,10 @@ class ModItem {
       dependencySlugs: dependencySlugs ?? this.dependencySlugs,
       games: games,
       translations: translations,
+      branches: branches,
+      defaultBranchId: defaultBranchId,
+      betaBranchId: betaBranchId,
+      organization: organization,
     );
   }
 
@@ -242,6 +334,15 @@ class ModItem {
       sourceUrl: json['sourceUrl'],
       communityUrl: json['communityUrl'],
       dependencySlugs: depSlugs,
+      branches: json['branches'] is List
+          ? ((json['branches'] as List).map((b) => ModBranch.fromJson(b)).toList()
+            ..sort((a, b) => a.position.compareTo(b.position)))
+          : const [],
+      defaultBranchId: json['defaultBranchId'],
+      betaBranchId: json['betaBranchId'],
+      organization: json['organization'] is Map<String, dynamic>
+          ? Organization.fromJson(json['organization'])
+          : null,
     );
   }
 }
@@ -256,6 +357,7 @@ class InstalledMod {
   final String installedAt;
   final List<String> installedFiles;
   final bool isEnabled;
+  final String? branchId;
 
   InstalledMod({
     required this.id,
@@ -266,6 +368,7 @@ class InstalledMod {
     required this.installedAt,
     required this.installedFiles,
     this.isEnabled = true,
+    this.branchId,
   });
 
   Map<String, dynamic> toJson() {
@@ -278,6 +381,7 @@ class InstalledMod {
       'installedAt': installedAt,
       'installedFiles': installedFiles,
       'isEnabled': isEnabled,
+      if (branchId != null) 'branchId': branchId,
     };
   }
 
@@ -291,6 +395,7 @@ class InstalledMod {
       installedAt: json['installedAt'] ?? '',
       installedFiles: List<String>.from(json['installedFiles'] ?? []),
       isEnabled: json['isEnabled'] ?? true,
+      branchId: json['branchId'],
     );
   }
 }

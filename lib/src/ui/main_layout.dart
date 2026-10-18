@@ -480,14 +480,14 @@ class _MainLayoutState extends State<MainLayout> {
 
       if (host == 'install' || host == 'mods') {
         final bool isBeta = uri.queryParameters['beta'] == 'true';
-        await _showModInstallDialog(target, isBeta: isBeta);
+        await _showModInstallDialog(target, isBeta: isBeta, branch: uri.queryParameters['branch']);
       }
     } catch (e) {
       debugPrint('Failed to handle deep link $url: $e');
     }
   }
 
-  Future<void> _showModInstallDialog(String slug, {bool isBeta = false}) async {
+  Future<void> _showModInstallDialog(String slug, {bool isBeta = false, String? branch}) async {
     try {
       showDialog(
         context: context,
@@ -509,9 +509,28 @@ class _MainLayoutState extends State<MainLayout> {
       final latest = isBeta
           ? res['latestBetaVersion'] as ModVersion?
           : res['latestVersion'] as ModVersion?;
-      if (mod == null || latest == null) {
+      if (mod == null) {
         throw Exception('Mod or version info not found on the server.');
       }
+      // `branch` is a branch id or name; old servers without branches ignore it
+      List<ModBranch> branches = mod.branches.length > 1
+          ? mod.branches.where((b) => b.latestVersion != null).toList()
+          : const [];
+      if (branch != null && branch.isNotEmpty && mod.branches.isNotEmpty) {
+        final selected = mod.branchById(branch) ??
+            mod.branches.where((b) => b.name.toLowerCase() == branch.toLowerCase()).firstOrNull;
+        if (selected?.latestVersion == null) {
+          throw Exception('Branch "$branch" or its version info not found on the server.');
+        }
+        branches = [selected!];
+      }
+      if (branches.isEmpty && latest == null) {
+        throw Exception('Mod or version info not found on the server.');
+      }
+      final notInstallableText = Text(
+        _installerState.t('explore_modal_not_melonloader'),
+        style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
+      );
 
       if (!mod.supportsGame(_installerState.game.id)) {
         final confirmSwitch = await showDialog<bool>(
@@ -553,11 +572,57 @@ class _MainLayoutState extends State<MainLayout> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(mod.summaryFor(_installerState.locale)),
-              const SizedBox(height: 14.0),
-              AppBadge(
-                label: 'Version: v${latest.version}',
-                tone: isBeta ? BadgeTone.warning : BadgeTone.accent,
-              ),
+              if (branches.isEmpty) ...[
+                const SizedBox(height: 14.0),
+                AppBadge(
+                  label: 'Version: v${latest!.version}',
+                  tone: isBeta ? BadgeTone.warning : BadgeTone.accent,
+                ),
+                if (!latest.isInstallableWithMelonLoader) ...[
+                  const SizedBox(height: 8.0),
+                  notInstallableText,
+                ],
+              ],
+              for (final b in branches) ...[
+                const SizedBox(height: 14.0),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 6.0,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(b.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    AppBadge(label: 'v${b.latestVersion!.version}'),
+                    if (b.id == mod.defaultBranchId)
+                      AppBadge(
+                        label: _installerState.t('explore_modal_branch_default'),
+                        tone: BadgeTone.accent,
+                      ),
+                    if (b.id == mod.betaBranchId)
+                      AppBadge(
+                        label: _installerState.t('explore_modal_branch_default_beta'),
+                        tone: BadgeTone.warning,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8.0),
+                OlButton(
+                  label: 'Install',
+                  icon: Icons.download_rounded,
+                  onClick: !b.latestVersion!.isInstallableWithMelonLoader ? null : () async {
+                    Navigator.pop(context);
+                    await _installerState.installMod(
+                      mod,
+                      version: b.latestVersion!.version,
+                      isBeta: mod.isBetaBranch(b.id),
+                      branchId: b.id,
+                    );
+                  },
+                ),
+                if (!b.latestVersion!.isInstallableWithMelonLoader) ...[
+                  const SizedBox(height: 4.0),
+                  notInstallableText,
+                ],
+              ],
             ],
           ),
           actionsPadding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 20.0),
@@ -566,18 +631,19 @@ class _MainLayoutState extends State<MainLayout> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
-            OlButton(
-              label: 'Install',
-              icon: Icons.download_rounded,
-              onClick: () async {
-                Navigator.pop(context);
-                await _installerState.installMod(
-                  mod,
-                  version: latest.version,
-                  isBeta: isBeta,
-                );
-              },
-            ),
+            if (branches.isEmpty)
+              OlButton(
+                label: 'Install',
+                icon: Icons.download_rounded,
+                onClick: !latest!.isInstallableWithMelonLoader ? null : () async {
+                  Navigator.pop(context);
+                  await _installerState.installMod(
+                    mod,
+                    version: latest.version,
+                    isBeta: isBeta,
+                  );
+                },
+              ),
           ],
         ),
       );

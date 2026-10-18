@@ -299,6 +299,7 @@ class RhythmDoctorGame extends Game {
     String downloadUrl, {
     required String version,
     bool isBeta = false,
+    String? branchId,
     void Function(double)? onProgress,
   }) async {
     try {
@@ -422,6 +423,7 @@ class RhythmDoctorGame extends Game {
         isBeta: isBeta,
         installedAt: DateTime.now().toIso8601String(),
         installedFiles: installedFiles,
+        branchId: branchId,
       ),
     );
 

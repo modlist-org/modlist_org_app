@@ -242,9 +242,9 @@ class _InstalledTabState extends State<InstalledTab> {
                     itemBuilder: (context, index) {
                       final mod = widget.state.installedMods[index];
                       final onlineMod = widget.state.onlineModsCache[mod.slug];
-                      final hasUpdate = onlineMod != null &&
-                          onlineMod.latestVersion != null &&
-                          VersionUtils.isNewerVersion(mod.version, onlineMod.latestVersion!.version);
+                      final onlineLatest = onlineMod?.latestVersionForBranch(mod.branchId);
+                      final hasUpdate = onlineLatest != null &&
+                          VersionUtils.isNewerVersion(mod.version, onlineLatest.version);
                       final showSwitch = !mod.id.startsWith('umm-');
                       final bool modBusy = widget.state.isProcessing || widget.state.activeTaskFor(mod.slug) != null;
                       final opacity = mod.isEnabled ? 1.0 : 0.45;
@@ -327,7 +327,7 @@ class _InstalledTabState extends State<InstalledTab> {
                                               if (onlineMod != null) ...[
                                                 Text(
                                                   widget.state.t('installed_latest_ver_prefix', args: {
-                                                    'version': onlineMod.latestVersion?.version ?? "0.0.0"
+                                                    'version': onlineLatest?.version ?? "0.0.0"
                                                   }),
                                                   style: TextStyle(
                                                     color: hasUpdate ? AppColors.warning : AppColors.textTertiary,
@@ -335,10 +335,10 @@ class _InstalledTabState extends State<InstalledTab> {
                                                     fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.normal,
                                                   ),
                                                 ),
-                                                if (onlineMod.latestVersion?.gameVersion != null)
+                                                if (onlineLatest?.gameVersion != null)
                                                   Text(
                                                     widget.state.t('installed_game_ver_prefix', args: {
-                                                      'version': onlineMod.latestVersion!.gameVersion!
+                                                      'version': onlineLatest!.gameVersion!
                                                     }),
                                                     style: const TextStyle(color: AppColors.textTertiary, fontSize: 12.5),
                                                   ),
@@ -364,7 +364,7 @@ class _InstalledTabState extends State<InstalledTab> {
                                     height: 36.0,
                                     fontSize: 13.0,
                                     onClick: modBusy ? null : () async {
-                                      await widget.state.installMod(onlineMod, version: onlineMod.latestVersion?.version);
+                                      await widget.state.installMod(onlineMod!, version: onlineLatest.version, isBeta: onlineMod.isBetaBranch(mod.branchId), branchId: mod.branchId);
                                       if (context.mounted) checkAndPromptUmmCompat(context, widget.state);
                                     },
                                   ),

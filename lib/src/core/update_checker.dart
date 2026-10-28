@@ -22,7 +22,7 @@ class UpdateCheckResult {
 }
 
 class UpdateChecker {
-  static const String currentVersion = '0.8.4';
+  static const String currentVersion = '0.8.5';
   static const String repoOwner = 'modlist-org';
   static const String repoName = 'modlist_org_app';
 

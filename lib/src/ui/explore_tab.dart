@@ -635,36 +635,18 @@ class _ExploreTabState extends State<ExploreTab> {
               : Column(
                   children: [
                     Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          const double minCardWidth = 400.0;
-                          const double spacing = 16.0;
-
-                          final count =
-                              ((constraints.maxWidth - 64.0 + spacing) /
-                                      (minCardWidth + spacing))
-                                  .floor()
-                                  .clamp(1, 999);
-
-                          return GridView.builder(
-                            padding: const EdgeInsets.fromLTRB(
-                              32.0,
-                              0.0,
-                              32.0,
-                              24.0,
-                            ),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: count,
-                                  crossAxisSpacing: spacing,
-                                  mainAxisSpacing: spacing,
-                                  mainAxisExtent: 168.0,
-                                ),
-                            itemCount: _mods.length,
-                            itemBuilder: (context, index) {
-                              return _buildModCard(_mods[index]);
-                            },
-                          );
+                      // The mod index: full-width rows parted by hairlines
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(
+                          32.0,
+                          0.0,
+                          32.0,
+                          24.0,
+                        ),
+                        itemCount: _mods.length,
+                        separatorBuilder: (context, index) => const Divider(),
+                        itemBuilder: (context, index) {
+                          return _buildModCard(_mods[index]);
                         },
                       ),
                     ),
@@ -697,223 +679,204 @@ class _ExploreTabState extends State<ExploreTab> {
     return HoverBuilder(
       onTap: () => _showModDetailDialog(mod),
       builder: (context, hovered) {
-        final Color base = hovered ? AppColors.surfaceHover : AppColors.surface;
-
-        return HoverOutline(
-          visible: hovered,
-          radius: AppRadius.lg,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            decoration: BoxDecoration(
-              color: mod.isFeatured ? null : base,
-              gradient: mod.isFeatured
-                  ? LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: const [0.0, 0.65],
-                      colors: [
-                        Color.alphaBlend(
-                          AppColors.warning.withValues(alpha: 0.06),
-                          base,
-                        ),
-                        base,
-                      ],
-                    )
-                  : null,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(
-                color: mod.isFeatured
-                    ? AppColors.warning.withValues(alpha: 0.18)
-                    : AppColors.border,
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            color: hovered ? AppColors.surfaceHover : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          child: Row(
+            children: [
+              // Logo
+              Container(
+                width: 72.0,
+                height: 72.0,
+                decoration: BoxDecoration(
+                  color: AppColors.control,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: buildModLogo(
+                  logoPath: mod.logo,
+                  fallbackName: mod.name,
+                  apiUrl: widget.state.apiUrl,
+                  width: 72.0,
+                  height: 72.0,
+                  fallbackFontSize: 26.0,
+                  getFallbackGradient: _getFallbackGradient,
+                ),
               ),
-            ),
-            padding: const EdgeInsets.all(18.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Logo
-                Container(
-                  width: 56.0,
-                  height: 56.0,
-                  decoration: BoxDecoration(
-                    color: AppColors.control,
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: buildModLogo(
-                    logoPath: mod.logo,
-                    fallbackName: mod.name,
-                    apiUrl: widget.state.apiUrl,
-                    width: 56.0,
-                    height: 56.0,
-                    fallbackFontSize: 22.0,
-                    getFallbackGradient: _getFallbackGradient,
-                  ),
-                ),
-                const SizedBox(width: 16.0),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Heading
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              mod.name,
-                              style: const TextStyle(
-                                fontSize: 17.0,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.text,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 24.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Heading
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            mod.name,
+                            style: const TextStyle(
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.4,
+                              color: AppColors.text,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          if (mod.isFeatured) ...[
-                            const SizedBox(width: 8.0),
-                            AppBadge(
-                              label:
-                                  '★ ${widget.state.t('explore_card_featured')}',
-                              tone: BadgeTone.warning,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 6.0),
-
-                      // Authors
-                      Row(
-                        children: [
-                          if (mod.organization != null) ...[
-                            _buildOrgLogo(
-                              mod.organization!,
-                              widget.state.apiUrl,
-                              size: 22.0,
-                            ),
-                            const SizedBox(width: 4.0),
-                          ],
-                          if (authors.isNotEmpty) ...[
-                            _buildAvatarStack(
-                              authors,
-                              max: mod.organization != null ? 2 : 3,
-                              ringColor: hovered
-                                  ? AppColors.surfaceHover
-                                  : AppColors.surface,
-                            ),
-                            const SizedBox(width: 6.0),
-                          ],
-                          Flexible(
-                            child: Text(
-                              authorNames,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13.0,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isAnyAuthorVerified) ...[
-                            const SizedBox(width: 6.0),
-                            const VerifiedDot(),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 8.0),
-
-                      // Summary
-                      Expanded(
-                        child: Text(
-                          mod.summaryFor(widget.state.locale),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13.5,
-                            height: 1.5,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-
-                      // Meta: badges + stats
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 22.0,
-                              child: Wrap(
-                                spacing: 6.0,
-                                runSpacing: 6.0,
-                                clipBehavior: Clip.hardEdge,
-                                children: [
-                                  for (final g in mod.games)
-                                    AppBadge(
-                                      label: _gameLabel(widget.state, g),
-                                      tone: BadgeTone.game,
-                                    ),
-                                  for (final cat in shownCategories)
-                                    AppBadge(
-                                      label: widget.state.t('category_$cat'),
-                                    ),
-                                  if (mod.categories.length > 3)
-                                    AppBadge(
-                                      label: '+${mod.categories.length - 3}',
-                                    ),
-                                ],
-                              ),
-                            ),
+                        if (mod.isFeatured) ...[
+                          const SizedBox(width: 8.0),
+                          AppBadge(
+                            label: widget.state.t('explore_card_featured'),
+                            tone: BadgeTone.warning,
                           ),
-                          const SizedBox(width: 10.0),
-                          _buildCardStats(mod),
                         ],
+                      ],
+                    ),
+                    const SizedBox(height: 8.0),
+
+                    // Authors
+                    Row(
+                      children: [
+                        if (mod.organization != null) ...[
+                          _buildOrgLogo(
+                            mod.organization!,
+                            widget.state.apiUrl,
+                            size: 20.0,
+                          ),
+                          const SizedBox(width: 4.0),
+                        ],
+                        if (authors.isNotEmpty) ...[
+                          _buildAvatarStack(
+                            authors,
+                            max: mod.organization != null ? 2 : 3,
+                            ringColor: hovered
+                                ? AppColors.surfaceHover
+                                : AppColors.bg,
+                          ),
+                          const SizedBox(width: 8.0),
+                        ],
+                        Flexible(
+                          child: Text(
+                            authorNames,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14.0,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isAnyAuthorVerified) ...[
+                          const SizedBox(width: 8.0),
+                          const VerifiedDot(),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8.0),
+
+                    // Summary
+                    Text(
+                      mod.summaryFor(widget.state.locale),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 16.0,
+                        height: 1.5,
                       ),
-                    ],
-                  ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8.0),
+
+                    // Tags
+                    Wrap(
+                      spacing: 4.0,
+                      runSpacing: 4.0,
+                      children: [
+                        for (final g in mod.games)
+                          AppBadge(
+                            label: _gameLabel(widget.state, g),
+                            tone: BadgeTone.game,
+                          ),
+                        for (final cat in shownCategories)
+                          AppBadge(label: widget.state.t('category_$cat')),
+                        if (mod.categories.length > 3)
+                          AppBadge(label: '+${mod.categories.length - 3}'),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 24.0),
+              _buildCardStats(mod),
+            ],
           ),
         );
       },
     );
   }
 
+  /// The row's figures: downloads large, versions beneath, numerals tabular.
   Widget _buildCardStats(ModItem mod) {
-    const TextStyle statStyle = TextStyle(
+    const TextStyle metaStyle = TextStyle(
       color: AppColors.textTertiary,
-      fontSize: 12.5,
-      fontWeight: FontWeight.w600,
+      fontSize: 14.0,
+      fontWeight: FontWeight.w500,
       fontFeatures: [FontFeature.tabularFigures()],
     );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Mod Version
-        if (mod.latestVersion != null) ...[
-          Text('v${mod.latestVersion!.version}', style: statStyle),
-          const SizedBox(width: 10.0),
-        ],
-        // Game Version
-        if (mod.latestVersion?.gameVersion != null) ...[
-          const Icon(
-            Icons.sports_esports_outlined,
-            color: AppColors.textTertiary,
-            size: 14.0,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 96.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.download_rounded,
+                color: AppColors.textTertiary,
+                size: 18.0,
+              ),
+              const SizedBox(width: 8.0),
+              Text(
+                '${mod.downloads}',
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 25.0,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 3.0),
-          Text(mod.latestVersion!.gameVersion!, style: statStyle),
-          const SizedBox(width: 10.0),
+          if (mod.latestVersion != null) ...[
+            const SizedBox(height: 4.0),
+            Text('v${mod.latestVersion!.version}', style: metaStyle),
+          ],
+          if (mod.latestVersion?.gameVersion != null) ...[
+            const SizedBox(height: 4.0),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.sports_esports_outlined,
+                  color: AppColors.textTertiary,
+                  size: 14.0,
+                ),
+                const SizedBox(width: 4.0),
+                Text(mod.latestVersion!.gameVersion!, style: metaStyle),
+              ],
+            ),
+          ],
         ],
-        // Download count
-        const Icon(
-          Icons.download_rounded,
-          color: AppColors.textTertiary,
-          size: 14.0,
-        ),
-        const SizedBox(width: 3.0),
-        Text('${mod.downloads}', style: statStyle),
-      ],
+      ),
     );
   }
 
@@ -1296,7 +1259,7 @@ class _ModDetailModalState extends State<_ModDetailModal> {
                                 const SizedBox(width: 10.0),
                                 AppBadge(
                                   label:
-                                      '★ ${widget.state.t('explore_card_featured')}',
+                                      widget.state.t('explore_card_featured'),
                                   tone: BadgeTone.warning,
                                 ),
                               ],

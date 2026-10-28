@@ -23,7 +23,13 @@ class AppColors {
 
   static const Color text = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFB3B2C6);
-  static const Color textTertiary = Color(0xFF75738F);
+  static const Color textTertiary = Color(0xFF8D8BA6);
+
+  /// Edge of a text field, 3:1 against the page.
+  static const Color fieldEdge = Color(0xFF75738F);
+
+  /// Text on accent and status fills (dark ink keeps 4.5:1 on #6C78FF).
+  static const Color onAccent = Color(0xFF14131E);
 
   static const Color accent = Color(0xFF919AFF);
   static const Color button = Color(0xFF6C78FF);
@@ -65,14 +71,14 @@ const List<String> appFontFamilyFallback = ['NotoSansSC'];
 ThemeData buildAppTheme() {
   const colorScheme = ColorScheme.dark(
     primary: AppColors.button,
-    onPrimary: Colors.white,
+    onPrimary: AppColors.onAccent,
     primaryContainer: AppColors.accentSoft,
     onPrimaryContainer: AppColors.accent,
     secondary: AppColors.accent,
     onSecondary: AppColors.bg,
     tertiary: AppColors.success,
     error: AppColors.danger,
-    onError: Colors.white,
+    onError: AppColors.onAccent,
     surface: AppColors.surface,
     onSurface: AppColors.text,
     onSurfaceVariant: AppColors.textSecondary,
@@ -108,8 +114,8 @@ ThemeData buildAppTheme() {
     fontWeight: FontWeight.w500,
   );
 
-  // Overlayer inputs: filled control, no border line; 2px accent outline on
-  // focus (hover outline is added by HoverOutline in the widgets).
+  // Overlayer inputs: filled control with a 1px field edge; 2px accent outline
+  // on focus (hover outline is added by HoverOutline in the widgets).
   final noBorder = OutlineInputBorder(
     borderRadius: controlRadius,
     borderSide: BorderSide.none,
@@ -182,7 +188,10 @@ ThemeData buildAppTheme() {
       prefixIconColor: AppColors.textSecondary,
       suffixIconColor: AppColors.textSecondary,
       border: noBorder,
-      enabledBorder: noBorder,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: controlRadius,
+        borderSide: const BorderSide(color: AppColors.fieldEdge),
+      ),
       disabledBorder: noBorder,
       focusedBorder: outline(AppColors.accent),
       errorBorder: outline(AppColors.danger),
@@ -208,7 +217,7 @@ ThemeData buildAppTheme() {
         foregroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.disabled)
               ? AppColors.textTertiary
-              : Colors.white,
+              : AppColors.onAccent,
         ),
         overlayColor: buttonOverlay,
         elevation: const WidgetStatePropertyAll(0),

@@ -709,7 +709,7 @@ class StatusBanner extends StatelessWidget {
   }
 }
 
-/// Hue-based gradient used for logo tiles when a mod has no logo
+/// Flat hue fill used for logo tiles when a mod has no logo
 /// (same hashing as the website's getFallbackGradientStyle).
 LinearGradient fallbackLogoGradient(String name) {
   int hash = 0;
@@ -717,12 +717,9 @@ LinearGradient fallbackLogoGradient(String name) {
     hash = name.codeUnitAt(i) + ((hash << 5) - hash);
   }
   final double h1 = (hash.abs() % 360).toDouble();
-  final double h2 = ((h1 + 40) % 360).toDouble();
+  final Color fill = HSLColor.fromAHSL(1.0, h1, 0.35, 0.38).toColor();
   return LinearGradient(
-    colors: [
-      HSLColor.fromAHSL(1.0, h1, 0.7, 0.5).toColor(),
-      HSLColor.fromAHSL(1.0, h2, 0.7, 0.4).toColor(),
-    ],
+    colors: [fill, fill],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

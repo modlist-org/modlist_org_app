@@ -101,7 +101,8 @@ jobs:
 
   build-linux:
     name: Build Linux
-    runs-on: ubuntu-latest
+    # Pinned: rpmbuild on ubuntu-26.04 runs %install from a different build dir and breaks the fastforge rpm
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
